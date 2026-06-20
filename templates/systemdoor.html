@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시스템도어 작업지시서</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#111}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+
+/* ── 상단바 ── */
+.topbar{background:#1a3a5c;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.topbar h1{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.topbar .badge{background:#e85d04;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.sheet-tabs{display:flex;gap:5px;margin-left:8px}
+.sheet-tab{padding:5px 14px;border:1px solid rgba(255,255,255,.4);background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-radius:4px;font-size:12px;font-weight:700;transition:all .15s}
+.sheet-tab.active{background:#fff;color:#1a3a5c;border-color:#fff}
+.sheet-tab:hover:not(.active){background:rgba(255,255,255,.15);color:#fff}
+.back-btn{margin-left:auto;padding:5px 12px;border:1px solid rgba(255,255,255,.4);background:transparent;color:rgba(255,255,255,.8);cursor:pointer;border-radius:4px;font-size:12px}
+.back-btn:hover{background:rgba(255,255,255,.15)}
+
+/* ── 레이아웃 ── */
+.layout{display:grid;grid-template-columns:420px 360px 1fr;min-height:calc(100vh - 46px)}
+
+/* ── 입력 패널 공통 ── */
+.input-panel{background:#fff;border-right:2px solid #dde3eb;overflow-y:auto;height:calc(100vh - 46px);padding:16px;display:flex;flex-direction:column;gap:14px}
+.sec-box{border:1px solid #dde3eb;border-radius:6px;overflow:hidden}
+.sec-hd{background:#1a3a5c;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.sec-body{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sec-body.col3{grid-template-columns:1fr 1fr 1fr}
+.sec-body.col1{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:11px;font-weight:700;color:#555}
+.fg label .ref{font-weight:400;color:#aaa;font-size:10px;margin-left:2px}
+.fg input,.fg select,.fg textarea{width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;background:#fafbfc;transition:border-color .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#2563a8;outline:none;background:#fff;box-shadow:0 0 0 2px rgba(37,99,168,.1)}
+.fg textarea{resize:vertical;min-height:52px}
+
+/* 출력값 테이블 */
+.out-table{width:100%;border-collapse:collapse;font-size:12px}
+.out-table th{background:#e8ecf0;padding:5px 8px;text-align:left;font-weight:700;color:#1a3a5c;border:1px solid #ccc;font-size:11px}
+.out-table td{padding:6px 8px;border:1px solid #e0e6ec}
+.out-table tr:nth-child(even) td{background:#f8fafc}
+.ov{font-weight:700;color:#1a5cba;font-size:13px}
+.ov.empty{color:#bbb;font-weight:400;font-style:italic;font-size:11px}
+
+/* 경고 */
+.warn{display:none;margin-top:6px;padding:6px 10px;border-radius:4px;font-size:12px;font-weight:700;line-height:1.4}
+.warn.water{background:#dbeafe;border:1px solid #3b82f6;color:#1e40af}
+.warn.danger{background:#fee2e2;border:1px solid #f87171;color:#991b1b}
+.warn.caution{background:#fef3c7;border:1px solid #fbbf24;color:#92400e}
+
+/* 저장 버튼 */
+.save-btn{width:100%;padding:10px;background:#1a3a5c;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.save-btn:hover{background:#122b45}
+.print-btn{width:100%;padding:8px;background:#555;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px}
+.print-btn:hover{background:#333}
+
+/* ── 우측 미리보기 ── */
+.preview-panel{background:#e4e8ed;padding:20px;overflow:auto;display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.pv-label{font-size:11px;font-weight:700;color:#777;text-transform:uppercase;letter-spacing:.8px;align-self:flex-start}
+
+/* 작업지시서 용지 — A4 비율(600px × 848px) */
+.wo-sheet{background:#fff;width:600px;min-height:848px;flex-shrink:0;border:1px solid #aab;box-shadow:0 3px 16px rgba(0,0,0,.12);font-size:11px}
+.wo-hd{background:#1a3a5c;color:#fff;padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
+.wo-hd .wo-title{font-size:14px;font-weight:700}
+.wo-hd .wo-sub{font-size:10px;color:rgba(255,255,255,.65);margin-top:2px}
+.wo-hd .wo-type{background:#e85d04;padding:2px 9px;border-radius:3px;font-size:11px;font-weight:700}
+.wo-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.wo-sec{background:#1a3a5c;color:#fff;padding:3px 8px;font-size:11px;font-weight:700;margin-bottom:0}
+
+/* 그리드 셀 */
+.wg{display:grid;border:1px solid #334155;border-right:none;border-bottom:none}
+.wg.col4{grid-template-columns:repeat(4,1fr)}
+.wg.col2{grid-template-columns:1fr 1fr}
+.wg.col3{grid-template-columns:repeat(3,1fr)}
+.wg-cell{border-right:1px solid #334155;border-bottom:1px solid #334155}
+.wg-cell.s2{grid-column:span 2}
+.wg-cell.s3{grid-column:span 3}
+.wg-cell.s4{grid-column:span 4}
+.wc-lbl{background:#e8ecf0;padding:3px 6px;font-size:10px;font-weight:700;color:#334155;border-bottom:1px solid #334155}
+.wc-val{padding:4px 6px;font-size:12px;min-height:24px}
+.wc-val.hi{color:#1a5cba;font-weight:700}
+.wc-val.accent{color:#e85d04;font-weight:700}
+
+/* 치수 계산 테이블 */
+.calc-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.calc-tbl th{background:#e8ecf0;padding:4px 6px;text-align:center;border:1px solid #334155;font-weight:700;color:#334155;font-size:10px}
+.calc-tbl td{padding:4px 6px;border:1px solid #334155;text-align:center;background:#fff}
+.calc-tbl .row-lbl{background:#e8ecf0;font-weight:700;color:#334155;text-align:left;font-size:10px}
+.calc-tbl .cv{font-weight:700;color:#1a5cba;font-size:12px}
+
+/* 체크 그리드 */
+.check-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #334155;border-right:none;border-bottom:none}
+.ck-cell{border-right:1px solid #334155;border-bottom:1px solid #334155}
+.ck-lbl{display:block;background:#e8ecf0;padding:3px 6px;font-size:10px;font-weight:700;color:#334155;border-bottom:1px solid #334155}
+.ck-val{display:block;padding:4px 6px;font-size:12px;font-weight:700;min-height:22px;color:#1a5cba}
+
+/* 특이사항 */
+.note-box{border:1px solid #334155;padding:6px 8px;min-height:30px;font-size:11px;color:#999;font-style:italic;white-space:pre-wrap;word-break:break-word}
+.note-box.has{color:#e85d04;font-style:normal;font-weight:600}
+.waterhole-note{display:none;padding:4px 8px;background:#dbeafe;border:1px solid #3b82f6;font-size:11px;font-weight:700;color:#1e40af;margin-top:2px}
+
+/* 빈 상태 */
+.empty-state{text-align:center;padding:60px 20px;color:#aaa}
+.empty-state .icon{font-size:44px;opacity:.4;margin-bottom:10px}
+
+/* 토스트 */
+.toast{position:fixed;bottom:20px;right:20px;background:#1a3a5c;color:#fff;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.2);transform:translateY(60px);opacity:0;transition:all .25s;z-index:9999}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:#16a34a}
+.toast.err{background:#dc2626}
+
+/* ── 라벨 미리보기 ── */
+.preview-inner-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:nowrap}
+.preview-main-col{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex-shrink:0}
+.label-preview-outer{width:340px;flex-shrink:0}
+.cal-btn{padding:5px 7px;border:1px solid #ccc;border-radius:4px;background:#f3f4f6;cursor:pointer;font-size:13px;line-height:1;flex-shrink:0}
+.cal-btn:hover{background:#e5e7eb}
+.date-wrap{display:flex;gap:3px;align-items:center}
+.label-tpl-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.label-tpl-row label{font-size:11px;font-weight:700;color:#555;white-space:nowrap}
+.label-tpl-row select{flex:1;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-size:12px;background:#fafbfc;outline:none;cursor:pointer}
+.label-tpl-row select:focus{border-color:#2563a8}
+.lp-box{border:2px solid #1a3a5c;border-radius:4px;overflow:hidden;background:#fff;font-family:"맑은 고딕",Arial,sans-serif;min-height:40px;width:100%}
+.lp-hd{background:#1a3a5c;color:#fff;text-align:center;padding:6px 4px;font-size:11px;font-weight:700;letter-spacing:.5px}
+.lp-row{display:flex;border-top:1px solid #d0d7de;min-height:32px}
+.lp-key{background:#eef2f7;font-size:10px;font-weight:700;color:#1a3a5c;padding:4px 6px;width:58px;min-width:58px;border-right:1px solid #d0d7de;display:flex;align-items:center;justify-content:center;text-align:center;word-break:keep-all;line-height:1.3}
+.lp-val{padding:4px 8px;font-size:12px;font-weight:600;flex:1;display:flex;align-items:center;word-break:break-all;line-height:1.3}
+.lp-val.big{font-size:14px;font-weight:700}
+.lp-val.dim{color:#bbb;font-style:italic;font-size:11px;font-weight:400}
+
+.date-input{font-family:inherit;font-size:13px}
+/* 거래처 정보 박스 (index.html과 동일) */
+.sd-cust-result{margin-top:4px;border:1px solid #ccc;background:#fafafa;padding:6px;font-size:12px;line-height:1.45;white-space:pre-wrap}
+.sd-cust-warning{border:2px solid #d83b01;background:#fff0ec;color:#a80000;font-weight:800;padding:7px;margin:6px 0;white-space:pre-wrap}
+.sd-cust-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;background:#fff}
+.sd-cust-table th,.sd-cust-table td{border:1px solid #ccc;padding:4px;text-align:center}
+.sd-cust-memo{margin-top:6px;display:grid;gap:3px}
+.sd-cust-memo label{margin:4px 0 1px;font-size:11px;font-weight:700}
+.sd-cust-memo input,.sd-cust-memo textarea{width:100%;padding:5px;border:1px solid #aaa;font-size:12px;font-family:inherit;box-sizing:border-box}
+.sd-cust-memo textarea{height:34px;min-height:34px;resize:vertical;overflow:hidden}
+.sd-cust-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
+@media print{
+  @page{size:A4;margin:10mm}
+  .input-panel,.topbar,.save-btn,.print-btn,.pv-label,.label-preview-outer{display:none!important}
+  .layout{grid-template-columns:1fr}
+  .preview-panel{background:#fff;padding:0;overflow:visible}
+  .wo-sheet{box-shadow:none;border:none;width:100%;min-height:0}
+  .preview-inner-row{display:block}
+}
+@media(max-width:1300px){
+  .layout{grid-template-columns:1fr 1fr}
+  .preview-panel{grid-column:1/-1}
+}
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  .input-panel{height:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>시스템도어 작업지시서</h1>
+  <span class="badge">자동계산</span>
+  <div class="sheet-tabs">
+    <button class="sheet-tab active" id="tab_단열90" onclick="setSheet('단열90')">단열90</button>
+    <button class="sheet-tab" id="tab_비단열50" onclick="setSheet('비단열50')">비단열50</button>
+  </div>
+  <button class="back-btn" onclick="history.back()">← 작업지시서 목록</button>
+</div>
+
+<div class="layout">
+
+  <!-- ══ 좌측: 기본정보 (생산스케줄 등록과 동일) ══ -->
+  <div class="input-panel">
+    <div class="sec-hd" style="background:#1a3a5c;color:#fff;padding:10px 14px;font-size:13px;font-weight:700">📋 기본정보</div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:8px">
+      <!-- 날짜 3개 -->
+      <div style="display:grid;grid-template-columns:1fr;gap:6px">
+        <div class="fg"><label>주문일</label><div class="date-wrap"><input type="text" id="f_order_date" class="date-input" placeholder="yyyy-mm-dd" maxlength="10" inputmode="numeric" style="flex:1;min-width:0"><button class="cal-btn" onclick="openDp('dp_od')" type="button">📅</button><input type="date" id="dp_od" style="position:absolute;opacity:0;width:0;height:0" tabindex="-1" onchange="applyDp(this,'f_order_date')"></div></div>
+        <div class="fg"><label>생산일</label><div class="date-wrap"><input type="text" id="f_prod_date" class="date-input" placeholder="yyyy-mm-dd" maxlength="10" inputmode="numeric" style="flex:1;min-width:0" oninput="syncDueDate()"><button class="cal-btn" onclick="openDp('dp_pd')" type="button">📅</button><input type="date" id="dp_pd" style="position:absolute;opacity:0;width:0;height:0" tabindex="-1" onchange="applyDp(this,'f_prod_date');syncDueDate()"></div></div>
+        <div class="fg"><label>납기일 <span style="font-size:10px;color:#aaa;font-weight:400">(생산일과 다를 때)</span></label><div class="date-wrap"><input type="text" id="f_due_date" class="date-input" placeholder="yyyy-mm-dd" maxlength="10" inputmode="numeric" style="flex:1;min-width:0"><button class="cal-btn" onclick="openDp('dp_dd')" type="button">📅</button><input type="date" id="dp_dd" style="position:absolute;opacity:0;width:0;height:0" tabindex="-1" onchange="applyDp(this,'f_due_date')"></div></div>
+      </div>
+      <!-- 거래처 + 등록 -->
+      <div class="fg">
+        <label>거래처</label>
+        <div class="customer-row" style="display:flex;gap:4px">
+          <input type="text" id="f_customer" placeholder="거래처 선택 또는 입력" list="sdCustomerList" autocomplete="off" style="flex:1" oninput="updatePreview();loadSdCustomerInfo()" onchange="updatePreview();loadSdCustomerInfo()">
+          <button type="button" onclick="addSdCustomer()" style="padding:6px 10px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;font-family:inherit;font-size:12px">등록</button>
+        </div>
+        <datalist id="sdCustomerList"></datalist>
+      </div>
+      <!-- 제품군+수량 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="fg"><label>제품군</label><input type="text" value="시스템도어" readonly style="background:#f3f4f6;color:#666"></div>
+        <div class="fg"><label>수량</label><input type="number" id="f_qty" value="1" min="1" oninput="updatePreview()"></div>
+      </div>
+      <!-- 모델 -->
+      <div class="fg"><label>모델</label><input type="text" id="f_model" placeholder="자동입력" style="background:#f3f4f6;color:#1a3a5c;font-weight:700" readonly></div>
+      <!-- 상세내용 -->
+      <div class="fg"><label>상세내용</label><textarea id="f_detail" placeholder="색상, 유리사양, 옵션 등 상세정보" rows="2"></textarea></div>
+      <!-- 상태+출고구분 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="fg"><label>상태</label>
+          <select id="f_status">
+            <option>접수</option><option>제작중</option><option>완료</option><option>출고</option><option>보류</option>
+          </select>
+        </div>
+        <div class="fg"><label>출고구분</label>
+          <select id="f_ship" onchange="updatePreview()">
+            <option>납품</option><option>시공</option><option>화물</option><option>택배</option><option>직접픽업</option>
+          </select>
+        </div>
+      </div>
+      <!-- 현장명 -->
+      <div class="fg"><label>현장명</label><input type="text" id="f_site" placeholder="현장명" oninput="updatePreview()"></div>
+      <!-- 비고 -->
+      <div class="fg"><label>비고</label><textarea id="f_memo" placeholder="비고사항" rows="2" oninput="updatePreview()"></textarea></div>
+      <!-- 거래처담당자 -->
+      <div class="fg"><label>거래처 담당자</label><textarea id="f_contact" placeholder="담당자/연락처/메모" rows="2"></textarea></div>
+
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button class="save-btn" style="flex:1" onclick="saveOrder()">💾 작업지시서 저장</button>
+      </div>
+    </div>
+
+    <!-- 거래처 정보 박스 (index.html 방식과 동일) -->
+    <div class="customer-info-box" style="margin:0 12px 12px">
+      <div class="customer-info-title" style="background:#eef2f7;padding:6px 10px;font-size:11px;font-weight:700;color:#1a3a5c">거래처 정보</div>
+      <div style="padding:8px 10px;display:flex;flex-direction:column;gap:6px">
+        <label style="margin:0;font-size:11px;font-weight:700">거래처 조회</label>
+        <div style="display:flex;gap:4px">
+          <input id="sdCustomerInfoName" placeholder="거래처명 입력 또는 선택" autocomplete="off" style="flex:1;padding:5px;border:1px solid #aaa;font-size:12px;font-family:inherit">
+          <button type="button" onclick="loadSdCustomerInfoByName()" style="padding:5px 10px;font-family:inherit;font-size:12px">조회</button>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button type="button" onclick="sdCustomerInfoName.value=f_customer.value;loadSdCustomerInfoByName()" style="padding:4px 8px;font-size:11px;font-family:inherit;background:#f3f4f6;border:1px solid #ccc">현재 거래처</button>
+          <button type="button" onclick="resetSdCustomerInfo()" style="padding:4px 8px;font-size:11px;font-family:inherit;background:#f3f4f6;border:1px solid #ccc">초기화</button>
+        </div>
+        <div id="sdCustomerInfoResult" class="sd-cust-result">거래처를 선택하면 제품군별 사용량과 마지막 거래일이 표시됩니다.</div>
+      </div>
+    </div>
+  </div><!-- /기본정보 패널 -->
+
+  <!-- ══ 중앙: 제원 입력 + 계산 출력 ══ -->
+  <div class="input-panel">
+
+    <!-- 시스템도어 제원 -->
+    <div class="sec-box">
+      <div class="sec-hd">🚪 제원 입력 <span id="sheetLabel" style="font-weight:400;opacity:.8;font-size:11px">— 단열90</span></div>
+      <div class="sec-body">
+
+        <div class="fg"><label>색상 <span class="ref">A11</span></label>
+          <select id="sd_color" onchange="calc()">
+            <option value="블랙">블랙</option>
+            <option value="실버">실버</option>
+            <option value="백색">백색</option>
+            <option value="도장">도장</option>
+          </select>
+        </div>
+        <div class="fg"><label>유리두께 <span class="ref">C11</span></label>
+          <select id="sd_glass" onchange="calc()"></select>
+        </div>
+
+        <div class="fg"><label>가로(mm) <span class="ref">B15</span></label>
+          <input type="number" id="sd_width" placeholder="예: 900" oninput="calc()">
+        </div>
+        <div class="fg"><label>세로(mm) <span class="ref">E15</span></label>
+          <input type="number" id="sd_height" placeholder="예: 2100" oninput="calc()">
+        </div>
+
+        <div class="fg"><label>손잡이 높이 <span class="ref">F21</span></label>
+          <input type="number" id="sd_handle" value="1000" oninput="calc()">
+        </div>
+        <div class="fg"><label>경첩방향 <span class="ref">B17</span></label>
+          <select id="sd_hinge" onchange="calc()">
+            <option value="좌경첩">좌경첩</option>
+            <option value="우경첩">우경첩</option>
+            <option value="양개 대칭">양개 대칭</option>
+            <option value="양개 비대칭">양개 비대칭</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>문지방 <span class="ref">B21</span></label>
+          <select id="sd_thresh" onchange="calc()">
+            <option value="기본">기본</option>
+            <option value="없음">없음</option>
+            <option value="하부낮은턱">하부낮은턱</option>
+          </select>
+        </div>
+        <div class="fg"><label>도어클로저 <span class="ref">B19</span></label>
+          <select id="sd_closer" onchange="calc()">
+            <option value="매립형 도어클로져 부착">매립형 부착</option>
+            <option value="없음">없음</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>잠금장치 <span class="ref">F19</span></label>
+          <select id="sd_lock" onchange="calc()">
+            <option value="레바키">레바키</option>
+            <option value="전자키(MSD400)">전자키(MSD400)</option>
+            <option value="전자키(MSD400B)">전자키(MSD400B)</option>
+            <option value="타공만">타공만</option>
+          </select>
+        </div>
+        <div class="fg"><label>경첩수량 <span class="ref">B20</span></label>
+          <select id="sd_hinge_qty" onchange="calc()">
+            <option value="기본">기본</option>
+            <option value="추가부착">추가부착</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>개폐방향 <span class="ref">E11</span></label>
+          <select id="sd_open" onchange="calc()">
+            <option value="밖으로 당기는문">밖으로 당기는문</option>
+            <option value="안으로 미는문">안으로 미는문</option>
+          </select>
+        </div>
+        <div class="fg"><label>주사용문 <span class="ref">E17</span></label>
+          <select id="sd_main_dir" onchange="calc()">
+            <option value="우">우</option>
+            <option value="좌">좌</option>
+          </select>
+        </div>
+        <div class="fg"><label>주사용문 폭(mm) <span class="ref">F17</span></label>
+          <input type="number" id="sd_main_w" placeholder="양개 비대칭만" oninput="calc()">
+        </div>
+
+        <div class="fg full"><label>특이사항</label>
+          <textarea id="sd_note" placeholder="시스템도어 특이사항" oninput="updatePreview()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 경고 -->
+    <div class="warn water" id="warnWater">⚠️ 밖으로 당기는 문 → <strong>물구멍 타공</strong> 필요</div>
+    <div class="warn danger" id="warnCloser">⛔ 가로 750mm 이하 → 매립형 도어클로저 설치 <strong>불가</strong></div>
+    <div class="warn caution" id="warnHandle">⚠️ 문지방없음/낮은턱 → 손잡이 위치 확인 (장애인용 850mm)</div>
+
+    <!-- 출력값 -->
+    <div class="sec-box">
+      <div class="sec-hd">📐 계산 출력값</div>
+      <div style="padding:10px">
+        <table class="out-table">
+          <thead>
+            <tr>
+              <th style="width:90px">항목</th>
+              <th>가로</th><th>세로</th><th>종류</th><th>가스켓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#eef3ff">
+              <td><b>프레임</b></td>
+              <td><span class="ov" id="o_fw" style="color:#1a3a5c">-</span></td>
+              <td><span class="ov" id="o_fh" style="color:#1a3a5c">-</span></td>
+              <td colspan="2" style="color:#aaa;font-size:10px">입력값</td>
+            </tr>
+            <tr>
+              <td><b>문짝</b><br><span style="color:#aaa;font-size:10px">B24 D24 F24</span></td>
+              <td><span class="ov empty" id="o_dw">-</span></td>
+              <td><span class="ov empty" id="o_dh">-</span></td>
+              <td><span class="ov empty" id="o_ot_d">-</span></td>
+              <td><span class="ov empty" id="o_dg">-</span></td>
+            </tr>
+            <tr>
+              <td><b>오사이</b><br><span style="color:#aaa;font-size:10px">B27 D27 F27</span></td>
+              <td><span class="ov empty" id="o_ow">-</span></td>
+              <td><span class="ov empty" id="o_oh">-</span></td>
+              <td><span class="ov empty" id="o_ot">-</span></td>
+              <td><span class="ov empty" id="o_og">-</span></td>
+            </tr>
+            <tr>
+              <td><b>유리</b><br><span style="color:#aaa;font-size:10px">B30 D30 F30</span></td>
+              <td><span class="ov empty" id="o_gw">-</span></td>
+              <td><span class="ov empty" id="o_gh">-</span></td>
+              <td><span class="ov empty" id="o_gt">-</span></td>
+              <td style="color:#aaa;font-size:10px">-</td>
+            </tr>
+            <tr>
+              <td><b>경첩수량</b></td>
+              <td colspan="4"><span class="ov empty" id="o_hc">-</span></td>
+            </tr>
+            <tr>
+              <td><b>도어클로저</b></td>
+              <td colspan="4"><span class="ov empty" id="o_cl">-</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /제원+계산 패널 -->
+
+  <!-- ══ 우측 미리보기 ══ -->
+  <div class="preview-panel">
+  <div class="preview-inner-row">
+  <div class="preview-main-col">
+    <div class="pv-label">작업지시서 미리보기</div>
+
+    <div id="emptyState" class="empty-state">
+      <div class="icon">📋</div>
+      <p>가로·세로를 입력하면<br>미리보기가 표시됩니다</p>
+    </div>
+
+    <div class="wo-sheet" id="woSheet" style="display:none">
+
+      <!-- 헤더 -->
+      <div class="wo-hd">
+        <div>
+          <div class="wo-title">시스템도어 작업지시서</div>
+          <div class="wo-sub" id="p_sheet_name">단열90 시스템도어</div>
+        </div>
+        <span class="wo-type" id="p_ship">납품</span>
+      </div>
+
+      <div class="wo-body">
+
+        <!-- 기본정보 -->
+        <div class="wo-sec">기본정보</div>
+        <div class="wg col4">
+          <div class="wg-cell"><div class="wc-lbl">주문일</div><div class="wc-val" id="p_order">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">생산일</div><div class="wc-val" id="p_prod">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">납기일</div><div class="wc-val" id="p_due">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">수량</div><div class="wc-val hi" id="p_qty">1</div></div>
+          <div class="wg-cell s2"><div class="wc-lbl">거래처</div><div class="wc-val hi" id="p_customer">-</div></div>
+          <div class="wg-cell s2"><div class="wc-lbl">현장명</div><div class="wc-val" id="p_site">-</div></div>
+        </div>
+
+        <!-- 입력 제원 -->
+        <div class="wo-sec">입력 제원</div>
+        <div class="wg col4">
+          <div class="wg-cell"><div class="wc-lbl">색상</div><div class="wc-val hi" id="p_color">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">유리두께</div><div class="wc-val hi" id="p_glass_t">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">개폐방향</div><div class="wc-val" id="p_open">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">잠금장치</div><div class="wc-val" id="p_lock">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">후레임 가로</div><div class="wc-val hi" id="p_width">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">후레임 세로</div><div class="wc-val hi" id="p_height">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">경첩방향</div><div class="wc-val" id="p_hinge">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">경첩수량</div><div class="wc-val hi" id="p_hinge_cnt">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">도어클로저</div><div class="wc-val" id="p_closer">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">문지방</div><div class="wc-val" id="p_thresh">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">손잡이 높이</div><div class="wc-val" id="p_handle">-</div></div>
+        </div>
+
+        <!-- 도어 다이어그램 -->
+        <div class="wo-sec">도어 다이어그램</div>
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0 4px">
+          <svg id="doorSvg" width="260" height="375" viewBox="0 0 165 220" style="flex-shrink:0;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc">
+            <rect x="6" y="6" width="138" height="196" fill="#1a3a5c" stroke="#0f2843" stroke-width="1.5" rx="2"/>
+            <rect x="13" y="13" width="124" height="182" fill="#94a3b8" stroke="#475569" stroke-width="1"/>
+            <rect x="33" y="37" width="84" height="134" fill="rgba(147,210,255,0.4)" stroke="#60a5fa" stroke-width="0.8" stroke-dasharray="3,2"/>
+            <rect x="130" y="35" width="7" height="14" fill="#64748b" rx="1"/>
+            <rect x="130" y="157" width="7" height="14" fill="#64748b" rx="1"/>
+            <rect x="13" y="96" width="9" height="22" fill="#1e40af" rx="2"/>
+            <line x1="6" y1="208" x2="144" y2="208" stroke="#64748b" stroke-width="1"/>
+            <line x1="6" y1="205" x2="6" y2="211" stroke="#64748b" stroke-width="1"/>
+            <line x1="144" y1="205" x2="144" y2="211" stroke="#64748b" stroke-width="1"/>
+            <text x="75" y="217" text-anchor="middle" font-size="7" fill="#334155" font-family="Arial">-</text>
+            <line x1="150" y1="6" x2="150" y2="202" stroke="#64748b" stroke-width="1"/>
+            <line x1="147" y1="6" x2="153" y2="6" stroke="#64748b" stroke-width="1"/>
+            <line x1="147" y1="202" x2="153" y2="202" stroke="#64748b" stroke-width="1"/>
+            <text x="160" y="105" text-anchor="middle" font-size="7" fill="#334155" font-family="Arial" transform="rotate(90,160,105)">-</text>
+          </svg>
+          <div style="flex:1;font-size:11px;line-height:1.8;display:flex;flex-direction:column;gap:2px">
+            <div id="svgInfoHinge" style="font-weight:700;color:#1a3a5c">경첩: -</div>
+            <div id="svgInfoCloser" style="color:#f97316;display:none">▶ 도어클로저 부착</div>
+            <div id="svgInfoWater" style="color:#2563a8;display:none">▶ 물구멍 타공</div>
+            <div id="svgInfoOpen" style="color:#555">개폐: -</div>
+            <div id="svgInfoHandle" style="color:#555">손잡이: -mm</div>
+            <div style="margin-top:8px;font-size:10px;font-weight:700;color:#334155;border-bottom:1px solid #dde3eb;padding-bottom:2px">특이사항</div>
+            <div class="note-box" id="p_note" style="margin-top:2px;line-height:1.4">-</div>
+            <div class="waterhole-note" id="p_waterhole" style="margin-top:4px">※ 물구멍 타공 필요 (밖으로 당기는 문)</div>
+          </div>
+        </div>
+
+        <!-- 계산치수 + 작업확인 나란히 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start;margin-top:2px">
+          <div>
+            <div class="wo-sec">계산 치수 (출력값)</div>
+            <table class="calc-tbl">
+              <thead>
+                <tr><th style="width:60px">항목</th><th>가로</th><th>세로</th><th>종류</th><th>가스켓</th></tr>
+              </thead>
+              <tbody>
+                <tr style="background:#eef3ff">
+                  <td class="row-lbl" style="color:#1a3a5c">프레임</td>
+                  <td class="cv" id="p_fw" style="color:#1a3a5c">-</td>
+                  <td class="cv" id="p_fh" style="color:#1a3a5c">-</td>
+                  <td colspan="2" style="font-size:10px;color:#aaa">입력값</td>
+                </tr>
+                <tr>
+                  <td class="row-lbl">문짝</td>
+                  <td class="cv" id="p_dw">-</td><td class="cv" id="p_dh">-</td>
+                  <td class="cv">-</td><td class="cv" id="p_dg">-</td>
+                </tr>
+                <tr>
+                  <td class="row-lbl">오사이</td>
+                  <td class="cv" id="p_ow">-</td><td class="cv" id="p_oh">-</td>
+                  <td class="cv" id="p_ot">-</td><td class="cv" id="p_og">-</td>
+                </tr>
+                <tr>
+                  <td class="row-lbl">유리</td>
+                  <td class="cv" id="p_gw">-</td><td class="cv" id="p_gh">-</td>
+                  <td class="cv" id="p_gt">-</td><td class="cv">-</td>
+                </tr>
+                <tr>
+                  <td class="row-lbl">경첩수량</td>
+                  <td class="cv" id="p_calc_hcnt" colspan="4">-</td>
+                </tr>
+                <tr>
+                  <td class="row-lbl">도어클로저</td>
+                  <td class="cv" id="p_closer_ok" colspan="4">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="wo-sec">작업 확인 체크</div>
+            <div class="check-grid">
+              <div class="ck-cell"><div class="ck-lbl">사이즈</div><div class="ck-val" id="ck_size">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">색상</div><div class="ck-val" id="ck_color">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">경첩 방향</div><div class="ck-val" id="ck_hinge">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">경첩 개수</div><div class="ck-val" id="ck_hcnt">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">문열림/닫힘</div><div class="ck-val">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">유리/오사이</div><div class="ck-val" id="ck_glass">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">도어클로저</div><div class="ck-val" id="ck_closer">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">손잡이 높이</div><div class="ck-val" id="ck_handle">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">키 잠금</div><div class="ck-val">□</div></div>
+              <div class="ck-cell"><div class="ck-lbl">키 높이</div><div class="ck-val" id="ck_key_h">□</div></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /wo-body -->
+    </div><!-- /wo-sheet -->
+
+    <button class="print-btn" onclick="window.print()" style="width:100%">🖨️ 작업지시서 인쇄</button>
+  </div><!-- /preview-main-col -->
+
+  <div style="display:flex;flex-direction:column;gap:16px;flex-shrink:0">
+    <!-- 업체전송용 -->
+    <div>
+      <div class="pv-label">📤 업체전송용</div>
+      <canvas id="vendorCanvas" width="340" height="510" style="display:block;border:2px solid #1a3a5c;border-radius:4px;background:#fff;cursor:pointer" title="클릭하면 클립보드에 복사"></canvas>
+      <div style="margin-top:6px;display:flex;gap:6px">
+        <button class="print-btn" style="flex:1" onclick="copyVendorCanvas()">📋 이미지 복사</button>
+        <button class="print-btn" onclick="downloadVendorCanvas()" style="flex:0 0 auto;width:auto;padding:8px 12px">💾 저장</button>
+      </div>
+      <div id="vendorCopyMsg" style="font-size:11px;color:#16a34a;text-align:center;min-height:16px;margin-top:4px"></div>
+    </div>
+    <!-- 라벨 미리보기 -->
+    <div class="label-preview-outer">
+      <div class="pv-label" style="margin-bottom:8px">🏷️ 라벨 미리보기</div>
+      <div class="label-tpl-row">
+        <label>양식</label>
+        <select id="labelTemplateSelectPreview" onchange="syncLabelTemplate(this.value)">
+          <option value="기본양식">기본양식</option>
+          <option value="현장형">현장형</option>
+          <option value="상세형">상세형</option>
+          <option value="소형">소형</option>
+        </select>
+      </div>
+      <div class="lp-box" id="labelPreviewBox"></div>
+      <div style="margin-top:8px">
+        <button class="print-btn" onclick="printLabel()">🏷️ 라벨 인쇄</button>
+      </div>
+    </div><!-- /label-preview-outer -->
+  </div>
+  </div><!-- /preview-inner-row -->
+  </div><!-- /preview-panel -->
+</div><!-- /layout -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+// 수식 데이터 — 엑셀 시트에서 그대로 추출
+// 수치 변경 시 이 객체만 수정하면 됩니다
+// ════════════════════════════════════════════
+const F = {
+  단열90: {
+    label: "단열90 시스템도어",
+    hinge_limit: 1800,   // 이하 → 경첩 2개
+    closer_limit: 750,   // 이하 → 클로저 불가
+
+    // 문짝 가로 B24 (경첩방향 코드별)
+    door_w(W, hCode, mainW) {
+      if (hCode === 1 || hCode === 2) return W - 100;
+      if (hCode === 3) return (W - 105) / 2;
+      if (hCode === 4) return (W - 105) - mainW;
+      return null;
+    },
+    // 문짝 세로 D24 (문지방 코드별)
+    door_h(H, tCode) {
+      if (tCode === 1) return H - 100;
+      if (tCode === 2) return H - 58;
+      if (tCode === 3) return H - 62;
+      return null;
+    },
+    osai_w: (dW) => dW - 145,           // B27
+    osai_h(dH, color, osaiType) {        // D27
+      if (color === "블랙" && osaiType === "대") return dH - 188;
+      return dH - 190;                   // 대/중/소 모두 190 (블랙 대 제외)
+    },
+    glass_w: (dW) => dW - 160,           // B30
+    glass_h: (dH) => dH - 165,           // D30
+
+    // 가스켓 테이블 AN24:AQ32 → [문짝가스켓, 오사이가스켓, 오사이종류]
+    gasket: {
+      24: [500, 113, "대"],
+      26: [300, 113, "대"],
+      28: [150, 113, "대"],
+      34: [300, 113, "중"],
+      35: [300, 305, "중"],
+      36: [150, 113, "중"],
+      39: [700,  74, "소"],
+      43: [500, 113, "소"],
+    },
+    glass_opts: [24, 26, 28, 34, 35, 36, 39, 43],
+  },
+
+  비단열50: {
+    label: "비단열50 시스템도어",
+    hinge_limit: 2300,
+    closer_limit: 750,
+
+    door_w: (W) => W - 37.5 - 37.7,     // B24 — 고정 빼기
+    door_h(H, tCode) {                    // D24
+      if (tCode === 1) return H - 37.5 - 37.5 - 2;
+      if (tCode === 2) return H - 37.5 - 8.5 - 2;
+      if (tCode === 3) return H - 37.5 - 5 - 8.5 - 2;
+      return null;
+    },
+    osai_w: (dW) => dW - 157,            // B27
+    osai_h: (dH) => dH - 157,            // D27 (비단열은 단순)
+    glass_w: (dW) => dW - 165,           // B30
+    glass_h: (dH) => dH - 165,           // D30
+
+    // 가스켓 테이블 AN24:AQ36
+    gasket: {
+       4: [700, 409, "대"],
+       5: [700, 343, "대"],
+       6: [700, 308, "대"],
+       8: [500, 308, "대"],
+      10: [300, 308, "대"],
+      12: [150, 308, "대"],
+      16: [500, 308, "중"],
+      18: [300, 308, "중"],
+      20: [343, 343, "중"],
+      22: [500, 308, "소"],
+      24: [300, 308, "소"],
+      26: [343, 343, "소"],
+      28: [343, "없음", "소"],
+    },
+    glass_opts: [4, 5, 6, 8, 10, 12, 16, 18, 20, 22, 24, 26, 28],
+  }
+};
+
+// ════════════════════════════════════════════
+// 상태
+// ════════════════════════════════════════════
+let curSheet = "단열90";
+let lastR    = null;
+
+// ════════════════════════════════════════════
+// 시트 전환
+// ════════════════════════════════════════════
+function setSheet(s) {
+  curSheet = s;
+  document.querySelectorAll(".sheet-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab_" + s).classList.add("active");
+  document.getElementById("sheetLabel").textContent = "— " + s;
+  const mEl = document.getElementById("f_model");
+  if(mEl) mEl.value = s;
+  rebuildGlass();
+  calc();
+}
+
+function rebuildGlass() {
+  const sel = document.getElementById("sd_glass");
+  const cur = parseInt(sel.value);
+  const opts = F[curSheet].glass_opts;
+  sel.innerHTML = opts.map(v => `<option value="${v}">${v}T</option>`).join("");
+  if (opts.includes(cur)) sel.value = cur;
+}
+
+// ════════════════════════════════════════════
+// 헬퍼
+// ════════════════════════════════════════════
+const hingeCode  = v => ({좌경첩:1,우경첩:2,"양개 대칭":3,"양개 비대칭":4}[v] || 1);
+const threshCode = v => ({기본:1,없음:2,하부낮은턱:3}[v] || 1);
+const hingeCnt   = (H, qty, lim) => (H <= lim ? 2 : 3) + (qty === "추가부착" ? 1 : 0);
+const rnd        = v => Math.round(v * 10) / 10;
+const fmt        = v => (v === null || v === undefined || v === "") ? "-" : (typeof v === "number" ? v.toLocaleString() : v);
+const $          = id => document.getElementById(id);
+const txt        = (id, v) => { const el=$(id); if(el) el.textContent = fmt(v); };
+const show       = (id, b) => { const el=$(id); if(el) el.style.display = b ? "block" : "none"; };
+
+function setOv(id, v) {
+  const el = $(id);
+  if (!el) return;
+  if (!v || v === "-") { el.textContent = "-"; el.className = "ov empty"; }
+  else                 { el.textContent = v;   el.className = "ov"; }
+}
+
+// ════════════════════════════════════════════
+// 핵심 계산
+// ════════════════════════════════════════════
+function doCalc() {
+  const Fd = F[curSheet];
+  const W  = parseFloat($("sd_width")?.value);
+  const H  = parseFloat($("sd_height")?.value);
+  if (!W || !H) return null;
+
+  const glass  = parseInt($("sd_glass")?.value);
+  const color  = $("sd_color")?.value || "블랙";
+  const open   = $("sd_open")?.value || "";
+  const hinge  = $("sd_hinge")?.value || "우경첩";
+  const closer = $("sd_closer")?.value || "없음";
+  const lock   = $("sd_lock")?.value || "";
+  const thresh = $("sd_thresh")?.value || "기본";
+  const hQty   = $("sd_hinge_qty")?.value || "기본";
+  const handle = parseFloat($("sd_handle")?.value) || 1000;
+  const mainW  = parseFloat($("sd_main_w")?.value) || 0;
+
+  const hCode  = hingeCode(hinge);
+  const tCode  = threshCode(thresh);
+  const gRow   = Fd.gasket[glass] || ["-", "-", "-"];
+  const [dGasket, oGasket, oType] = gRow;
+
+  const dW = rnd(Fd.door_w(W, hCode, mainW));
+  const dH = rnd(Fd.door_h(H, tCode));
+  const oW = rnd(Fd.osai_w(dW));
+  const oH = rnd(Fd.osai_h(dH, color, oType));
+  const gW = rnd(Fd.glass_w(dW));
+  const gH = rnd(Fd.glass_h(dH));
+  const hCnt    = hingeCnt(H, hQty, Fd.hinge_limit);
+  const closerOk = W > Fd.closer_limit ? closer : "설치불가(750이하)";
+
+  return {
+    W, H, glass, color, open, hinge, closer, lock, thresh, hQty, handle, mainW,
+    dW, dH, dGasket, oW, oH, oType, oGasket, gW, gH,
+    hCnt, closerOk,
+    isWater:  open === "밖으로 당기는문",
+    isHandle: thresh !== "기본",
+    label:    Fd.label,
+  };
+}
+
+// ════════════════════════════════════════════
+// 계산 + UI 반영
+// ════════════════════════════════════════════
+function calc() {
+  const r = doCalc();
+  lastR = r;
+
+  if (!r) {
+    ["o_fw","o_fh","o_dw","o_dh","o_dg","o_ot_d","o_ow","o_oh","o_ot","o_og",
+     "o_gw","o_gh","o_gt","o_hc","o_cl"].forEach(id => setOv(id, null));
+    show("emptyState", true);
+    show("woSheet", false);
+    return;
+  }
+
+  // 프레임(입력값)
+  setOv("o_fw", fmt(r.W));  setOv("o_fh", fmt(r.H));
+  // 문짝
+  setOv("o_dw", fmt(r.dW)); setOv("o_dh", fmt(r.dH));
+  setOv("o_ot_d", "-");     setOv("o_dg", fmt(r.dGasket));
+  // 오사이
+  setOv("o_ow", fmt(r.oW)); setOv("o_oh", fmt(r.oH));
+  setOv("o_ot", r.oType);   setOv("o_og", fmt(r.oGasket));
+  // 유리
+  setOv("o_gw", fmt(r.gW)); setOv("o_gh", fmt(r.gH));
+  setOv("o_gt", r.glass+"T");
+  // 기타
+  setOv("o_hc", r.hCnt+"개");
+  setOv("o_cl", r.closerOk);
+
+  // 경고
+  show("warnWater",  r.isWater);
+  show("warnCloser", r.W <= 750 && r.closer !== "없음");
+  show("warnHandle", r.isHandle);
+
+  updateSvg(r);
+  updatePreview(r);
+}
+
+// ════════════════════════════════════════════
+// SVG 도어 다이어그램 (양개 포함, 7px 프레임)
+// ════════════════════════════════════════════
+function updateSvg(r) {
+  if (!r) return;
+  const svg = $("doorSvg");
+  if (!svg) return;
+
+  const colorMap = {블랙:"#374151", 실버:"#9ca3af", 백색:"#f1f5f9", 도장:"#a78bfa"};
+  const doorColor = colorMap[r.color] || "#94a3b8";
+  const isDouble  = r.hinge.includes("양개");
+  const isRight   = r.hinge === "우경첩";
+  const hasCloser = r.closer !== "없음" && r.closerOk && r.closerOk.indexOf("불가") < 0;
+
+  // 좌표계: 프레임 7px, 도어 x=13~137, y=13~195
+  const Dx=13, Dy=13, Dw=124, Dh=182, DR=137, DB=195;
+  const HW=7, HH=14;
+  const hingeYs = r.hCnt>=3 ? [Dy+22, Math.round(Dy+Dh/2-HH/2), DB-22-HH]
+                             : [Dy+22, DB-22-HH];
+  let c = '';
+
+  // 네이비 프레임
+  c += `<rect x="6" y="6" width="138" height="196" fill="#1a3a5c" stroke="#0f2843" stroke-width="1.5" rx="2"/>`;
+
+  if (isDouble) {
+    // 양개: 각 60px 문짝, 4px 간격
+    const lW=60, gapX=4, rX=Dx+lW+gapX, rW=Dw-lW-gapX;
+    c += `<rect x="${Dx}" y="${Dy}" width="${lW}" height="${Dh}" fill="${doorColor}" stroke="#475569" stroke-width="1"/>`;
+    c += `<rect x="${rX}" y="${Dy}" width="${rW}" height="${Dh}" fill="${doorColor}" stroke="#475569" stroke-width="1"/>`;
+    // 유리 (각 패널 안쪽)
+    c += `<rect x="${Dx+13}" y="${Dy+22}" width="${lW-20}" height="${Dh-44}" fill="rgba(147,210,255,0.4)" stroke="#60a5fa" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+    c += `<rect x="${rX+7}" y="${Dy+22}" width="${rW-20}" height="${Dh-44}" fill="rgba(147,210,255,0.4)" stroke="#60a5fa" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+    // 중앙 경계선
+    c += `<line x1="${Dx+lW}" y1="${Dy}" x2="${Dx+lW}" y2="${DB}" stroke="#475569" stroke-width="1.5"/>`;
+    c += `<line x1="${rX}" y1="${Dy}" x2="${rX}" y2="${DB}" stroke="#475569" stroke-width="1.5"/>`;
+    // 경첩: 좌문 좌측, 우문 우측
+    hingeYs.forEach(hy => {
+      c += `<rect x="${Dx}" y="${hy}" width="${HW}" height="${HH}" fill="#64748b" rx="1"/>`;
+      c += `<rect x="${DR-HW}" y="${hy}" width="${HW}" height="${HH}" fill="#64748b" rx="1"/>`;
+    });
+    // 손잡이: 중앙 마주보기
+    const hY = Math.round(Dy+Dh/2-11);
+    c += `<rect x="${Dx+lW-9}" y="${hY}" width="9" height="22" fill="#1e40af" rx="2"/>`;
+    c += `<rect x="${rX}" y="${hY}" width="9" height="22" fill="#1e40af" rx="2"/>`;
+  } else {
+    // 단개
+    const hx   = isRight ? DR-HW : Dx;
+    const hndX = isRight ? Dx    : DR-9;
+    c += `<rect x="${Dx}" y="${Dy}" width="${Dw}" height="${Dh}" fill="${doorColor}" stroke="#475569" stroke-width="1"/>`;
+    c += `<rect x="${Dx+20}" y="${Dy+24}" width="${Dw-40}" height="${Dh-48}" fill="rgba(147,210,255,0.4)" stroke="#60a5fa" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+    hingeYs.forEach(hy => c += `<rect x="${hx}" y="${hy}" width="${HW}" height="${HH}" fill="#64748b" rx="1"/>`);
+    c += `<rect x="${hndX}" y="${Math.round(Dy+Dh/2-11)}" width="9" height="22" fill="#1e40af" rx="2"/>`;
+  }
+
+  // 도어클로저 오렌지 바
+  if (hasCloser) {
+    c += `<rect x="${Dx}" y="${Dy}" width="${Dw}" height="7" fill="#f97316" rx="1"/>`;
+    c += `<text x="75" y="${Dy+5.5}" text-anchor="middle" font-size="5" font-weight="bold" fill="#fff" font-family="Arial">도어클로저</text>`;
+  }
+
+  // 물구멍 타공 → 문짝 하단 가운데
+  if (r.isWater) {
+    c += `<rect x="45" y="183" width="60" height="11" fill="rgba(255,255,255,0.85)" rx="2"/>`;
+    c += `<text x="75" y="191" text-anchor="middle" font-size="6" fill="#1d4ed8" font-family="Arial" font-weight="bold">◉ 물구멍타공</text>`;
+  }
+
+  // 치수선
+  c += `<line x1="6" y1="207" x2="144" y2="207" stroke="#64748b" stroke-width="1"/>`;
+  c += `<line x1="6" y1="204" x2="6" y2="210" stroke="#64748b" stroke-width="1"/>`;
+  c += `<line x1="144" y1="204" x2="144" y2="210" stroke="#64748b" stroke-width="1"/>`;
+  c += `<text x="75" y="216" text-anchor="middle" font-size="7" fill="#334155" font-family="Arial">${r.W?fmt(r.W)+'mm':'-'}</text>`;
+  c += `<line x1="150" y1="6" x2="150" y2="202" stroke="#64748b" stroke-width="1"/>`;
+  c += `<line x1="147" y1="6" x2="153" y2="6" stroke="#64748b" stroke-width="1"/>`;
+  c += `<line x1="147" y1="202" x2="153" y2="202" stroke="#64748b" stroke-width="1"/>`;
+  c += `<text x="160" y="105" text-anchor="middle" font-size="7" fill="#334155" font-family="Arial" transform="rotate(90,160,105)">${r.H?fmt(r.H)+'mm':'-'}</text>`;
+
+  svg.innerHTML = c;
+
+  // 사이드 텍스트
+  const hi=$("svgInfoHinge"); if(hi) hi.textContent="경첩: "+r.hinge+" "+r.hCnt+"개";
+  const ci=$("svgInfoCloser"); if(ci) ci.style.display=hasCloser?"block":"none";
+  const wi=$("svgInfoWater"); if(wi) wi.style.display=r.isWater?"block":"none";
+  const oi=$("svgInfoOpen");  if(oi) oi.textContent="개폐: "+r.open;
+  const hdi=$("svgInfoHandle"); if(hdi) hdi.textContent="손잡이: "+fmt(r.handle)+"mm";
+}
+
+// ════════════════════════════════════════════
+// 미리보기 갱신
+// ════════════════════════════════════════════
+function updatePreview(r) {
+  r = r || lastR;
+
+  const customer = $("f_customer")?.value || "";
+  const site     = $("f_site")?.value || "";
+  const qty      = $("f_qty")?.value || "1";
+  const ship     = $("f_ship")?.value || "납품";
+  const note     = $("sd_note")?.value || "";
+
+  txt("p_order",    $("f_order_date")?.value || "-");
+  txt("p_prod",     $("f_prod_date")?.value  || "-");
+  txt("p_due",      $("f_due_date")?.value   || "-");
+  txt("p_qty",      qty);
+  txt("p_customer", customer || "-");
+  txt("p_site",     site || "-");
+  txt("p_ship",     ship);
+
+  if (!r) return;
+
+  show("emptyState", false);
+  show("woSheet",    true);
+
+  txt("p_sheet_name", r.label);
+  txt("p_color",      r.color);
+  txt("p_glass_t",    r.glass+"T");
+  txt("p_open",       r.open);
+  txt("p_lock",       r.lock);
+  txt("p_width",      fmt(r.W)+" mm");
+  txt("p_height",     fmt(r.H)+" mm");
+  txt("p_hinge",      r.hinge);
+  txt("p_hinge_cnt",  r.hCnt+"개");
+  txt("p_closer",     r.closer);
+  txt("p_thresh",     r.thresh);
+  txt("p_handle",     fmt(r.handle)+" mm");
+  txt("p_closer_ok",  r.closerOk);
+
+  // 계산 치수
+  txt("p_calc_hcnt", r.hCnt+"개");
+  txt("p_fw", fmt(r.W));   txt("p_fh", fmt(r.H));
+  txt("p_dw", fmt(r.dW));  txt("p_dh", fmt(r.dH));  txt("p_dg", fmt(r.dGasket));
+  txt("p_ow", fmt(r.oW));  txt("p_oh", fmt(r.oH));  txt("p_ot", r.oType); txt("p_og", fmt(r.oGasket));
+  txt("p_gw", fmt(r.gW));  txt("p_gh", fmt(r.gH));  txt("p_gt", r.glass+"T");
+
+  // 체크항목
+  const ckSizeEl=$("ck_size");if(ckSizeEl)ckSizeEl.textContent=fmt(r.W)+" × "+fmt(r.H);
+  txt("ck_color",  r.color);
+  txt("ck_hinge",  r.hinge);
+  txt("ck_hcnt",   r.hCnt+"ea");
+  txt("ck_glass",  r.glass+"T / "+r.oType);
+  txt("ck_closer", r.closerOk === "없음" ? "없음" : "매립형");
+  txt("ck_handle", fmt(r.handle)+" mm");
+  txt("ck_key_h",  fmt(r.handle)+" mm");
+
+  // 특이사항
+  const nb = $("p_note");
+  if(nb){ nb.textContent = note||"-"; nb.className = note ? "note-box has":"note-box"; }
+  show("p_waterhole", r.isWater);
+  updateLabelPreview();
+  drawVendorCanvas();
+}
+
+// ════════════════════════════════════════════
+// 라벨 미리보기
+// ════════════════════════════════════════════
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function openDp(id){const el=document.getElementById(id);if(!el)return;try{el.showPicker();}catch(e){el.click();}}
+function applyDp(picker,textId){const t=document.getElementById(textId);if(t&&picker.value){t.value=picker.value;t.dispatchEvent(new Event("input"));t.dispatchEvent(new Event("change"));}}
+function syncDueDate(){const p=document.getElementById("f_prod_date");const d=document.getElementById("f_due_date");if(p&&d&&p.value.length===10) d.value=p.value;}
+
+const LABEL_PREVIEW_RENDERERS = {
+  "기본양식": function(d){
+    return '<div class="lp-hd">PLUSDOOR 작업지시서</div>'
+      +'<div class="lp-row"><div class="lp-key">거래처명</div><div class="lp-val big">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">비고</div><div class="lp-val'+(d.memo?'':' dim')+'">'+esc(d.memo||'비고 없음')+'</div></div>';
+  },
+  "현장형": function(d){
+    return '<div class="lp-hd">PLUSDOOR</div>'
+      +'<div class="lp-row"><div class="lp-key">거래처명</div><div class="lp-val big">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">현장명</div><div class="lp-val">'+esc(d.site)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>';
+  },
+  "상세형": function(d){
+    return '<div class="lp-hd">PLUSDOOR 작업지시서</div>'
+      +'<div class="lp-row"><div class="lp-key">거래처명</div><div class="lp-val">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">현장명</div><div class="lp-val">'+esc(d.site)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">수량</div><div class="lp-val">'+esc(d.qty)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">납기일</div><div class="lp-val">'+esc(d.due)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">비고</div><div class="lp-val'+(d.memo?'':' dim')+'">'+esc(d.memo||'비고 없음')+'</div></div>';
+  },
+  "소형": function(d){
+    return '<div class="lp-hd" style="font-size:9px">PLUSDOOR</div>'
+      +'<div class="lp-row" style="min-height:40px"><div class="lp-key">거래처명</div><div class="lp-val big">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>';
+  },
+};
+
+function getLabelDataSd(){
+  const W = $("sd_width")?.value || "";
+  const H = $("sd_height")?.value || "";
+  const color = $("sd_color")?.value || "";
+  const sizeStr = (W && H) ? W + " × " + H + " mm" : "-";
+  return {
+    customer: $("f_customer")?.value || "-",
+    site:     $("f_site")?.value || "-",
+    product:  "시스템도어" + (color ? " " + color : ""),
+    size:     sizeStr,
+    qty:      $("f_qty")?.value || "-",
+    due:      $("f_due_date")?.value || "-",
+    memo:     ($("f_memo")?.value || "").substring(0, 100),
+  };
+}
+
+function updateLabelPreview(){
+  const tpl = document.getElementById("labelTemplateSelectPreview")?.value || "기본양식";
+  const box = document.getElementById("labelPreviewBox");
+  if(!box) return;
+  const fn = LABEL_PREVIEW_RENDERERS[tpl];
+  box.innerHTML = fn ? fn(getLabelDataSd()) : "";
+}
+
+function drawVendorCanvas(){
+  const canvas = document.getElementById("vendorCanvas");
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const CW = canvas.width, CH = canvas.height;
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle="#fff";
+  ctx.fillRect(0,0,CW,CH);
+
+  const r = lastR;
+  const customer = document.getElementById("f_customer")?.value||"";
+  const site = document.getElementById("f_site")?.value||"";
+
+  if(!r){
+    ctx.fillStyle="#aaa";
+    ctx.font="12px Arial";
+    ctx.textAlign="center";
+    ctx.fillText("제원을 입력하면 표시됩니다",CW/2,CH/2);
+    return;
+  }
+
+  // 도어 다이어그램
+  const diagX=20, diagY=14, diagW=CW-40, diagH=270;
+  drawDoorDiagramOnCanvas(ctx, r, diagX, diagY, diagW, diagH);
+
+  // 제원 테이블
+  const tblY = diagY+diagH+10;
+  const rows=[
+    ["거래처", customer||"-"],
+    ["현장명", site||"-"],
+    ["모델", r.label||curSheet],
+    ["색상", r.color||"-"],
+    ["유리두께", r.glass+"T"],
+    ["가로 × 세로", r.W+" × "+r.H+" mm"],
+    ["경첩방향", r.hinge],
+    ["개폐방향", r.open],
+    ["잠금장치", r.lock],
+    ["도어클로저", r.closer],
+    ["손잡이높이", r.handle+" mm"],
+  ];
+  const rH=20, tblW=CW-20;
+  ctx.font="11px '맑은 고딕',Arial";
+  rows.forEach(([lbl,val],i)=>{
+    const ry=tblY+i*rH;
+    ctx.fillStyle=i%2===0?"#f8fafc":"#fff";
+    ctx.fillRect(10,ry,tblW,rH);
+    ctx.strokeStyle="#e2e8f0";
+    ctx.lineWidth=0.5;
+    ctx.strokeRect(10,ry,tblW,rH);
+    ctx.fillStyle="#1a3a5c";
+    ctx.font="bold 10px '맑은 고딕',Arial";
+    ctx.textAlign="left";
+    ctx.fillText(lbl,16,ry+13);
+    ctx.fillStyle="#111";
+    ctx.font="11px '맑은 고딕',Arial";
+    ctx.textAlign="right";
+    // 텍스트 클리핑
+    const maxW=tblW-80;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(10+80,ry,tblW-86,rH);
+    ctx.clip();
+    ctx.fillText(val,10+tblW-6,ry+13);
+    ctx.restore();
+  });
+}
+
+function drawDoorDiagramOnCanvas(ctx, r, areaX, areaY, areaW, areaH){
+  // SVG 좌표계와 동일한 참조 시스템 사용 (viewBox 0 0 165 220)
+  const REF_W = 150, REF_H = 210;
+  const LABEL_R = 18, LABEL_B = 18; // 치수선 여유공간
+  const sc = Math.min((areaW - LABEL_R) / REF_W, (areaH - LABEL_B) / REF_H);
+  const ox = areaX + ((areaW - LABEL_R) - REF_W * sc) / 2;
+  const oy = areaY + ((areaH - LABEL_B) - REF_H * sc) / 2;
+  const sx = v => ox + v * sc;
+  const sy = v => oy + v * sc;
+  const ss = v => v * sc;
+
+  const isDouble = r.hinge.includes("양개");
+  const isRight  = r.hinge.includes("우");
+  const colorMap = {블랙:"#374151", 실버:"#9ca3af", 백색:"#f1f5f9", 도장:"#a78bfa"};
+  const doorColor = colorMap[r.color] || "#94a3b8";
+
+  // ── 프레임 배경 (SVG: rect 6,6,138,196) ──
+  ctx.fillStyle = "#e2e8f0";
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = Math.max(1, ss(1.5));
+  ctx.fillRect(sx(6), sy(6), ss(138), ss(196));
+  ctx.strokeRect(sx(6), sy(6), ss(138), ss(196));
+
+  if(isDouble){
+    const halfW = ss(59); // 118/2
+    const gap = ss(2);
+    // 좌문
+    ctx.fillStyle = doorColor; ctx.strokeStyle = "#475569"; ctx.lineWidth = Math.max(1, ss(1.5));
+    ctx.fillRect(sx(16), sy(12), halfW - gap, ss(184)); ctx.strokeRect(sx(16), sy(12), halfW - gap, ss(184));
+    // 우문
+    ctx.fillRect(sx(16) + halfW + gap, sy(12), halfW - gap, ss(184));
+    ctx.strokeRect(sx(16) + halfW + gap, sy(12), halfW - gap, ss(184));
+    // 유리 좌
+    ctx.fillStyle = "rgba(147,210,255,0.4)"; ctx.strokeStyle = "#60a5fa"; ctx.lineWidth = Math.max(0.5, ss(1));
+    ctx.setLineDash([ss(3), ss(2)]);
+    ctx.fillRect(sx(36), sy(36), halfW - ss(40), ss(136));
+    ctx.strokeRect(sx(36), sy(36), halfW - ss(40), ss(136));
+    // 유리 우
+    ctx.fillRect(sx(16) + halfW + ss(24), sy(36), halfW - ss(40), ss(136));
+    ctx.strokeRect(sx(16) + halfW + ss(24), sy(36), halfW - ss(40), ss(136));
+    ctx.setLineDash([]);
+    // 경첩: 좌문 좌, 우문 우
+    ctx.fillStyle = "#64748b";
+    [sy(36), sy(96), sy(156)].slice(0, r.hCnt >= 3 ? 3 : 2).forEach(hy=>{
+      ctx.fillRect(sx(16) - ss(2), hy, ss(8), ss(16));
+      ctx.fillRect(sx(134) - ss(6), hy, ss(8), ss(16));
+    });
+    // 중간 선
+    ctx.strokeStyle = "#475569"; ctx.lineWidth = Math.max(1, ss(1.5));
+    ctx.beginPath(); ctx.moveTo(sx(75), sy(12)); ctx.lineTo(sx(75), sy(196)); ctx.stroke();
+    // 손잡이: 좌문 우, 우문 좌
+    ctx.fillStyle = "#1e40af";
+    ctx.fillRect(sx(74) - ss(10), sy(96), ss(10), ss(24));
+    ctx.fillRect(sx(76), sy(96), ss(10), ss(24));
+  } else {
+    // 경첩 위치 (SVG와 동일)
+    const hx  = isRight ? sx(124) : sx(16);
+    const hndX = isRight ? sx(16)  : sx(124);
+    // 문짝 (SVG: rect 16,12,118,184)
+    ctx.fillStyle = doorColor; ctx.strokeStyle = "#475569"; ctx.lineWidth = Math.max(1, ss(1.5));
+    ctx.fillRect(sx(16), sy(12), ss(118), ss(184)); ctx.strokeRect(sx(16), sy(12), ss(118), ss(184));
+    // 유리 (SVG: rect 36,36,78,136)
+    ctx.fillStyle = "rgba(147,210,255,0.4)"; ctx.strokeStyle = "#60a5fa"; ctx.lineWidth = Math.max(0.5, ss(1));
+    ctx.setLineDash([ss(3), ss(2)]);
+    ctx.fillRect(sx(36), sy(36), ss(78), ss(136)); ctx.strokeRect(sx(36), sy(36), ss(78), ss(136));
+    ctx.setLineDash([]);
+    // 경첩 (SVG: y=36, y=156, y=96 for 3rd)
+    ctx.fillStyle = "#64748b";
+    const hingeYs = r.hCnt >= 3 ? [36, 96, 156] : [36, 156];
+    hingeYs.forEach(hy => ctx.fillRect(hx, sy(hy), ss(8), ss(16)));
+    // 손잡이 (SVG: rect w=10, h=24)
+    ctx.fillStyle = "#1e40af";
+    ctx.fillRect(hndX, sy(96), ss(10), ss(24));
+  }
+
+  // ── 도어클로저 (SVG: rect 36,13,78,7 orange) ──
+  const hasCloser = r.closer !== "없음" && r.closerOk && r.closerOk.indexOf("불가") < 0;
+  if(hasCloser){
+    ctx.fillStyle = "#f97316";
+    ctx.fillRect(sx(36), sy(13), ss(78), ss(7));
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${Math.max(7, Math.round(ss(5)))}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText("도어클로저", sx(75), sy(13) + ss(6));
+  }
+
+  // ── 물구멍 타공 - 가운데 ──
+  if(r.isWater){
+    ctx.fillStyle="rgba(255,255,255,0.85)";
+    ctx.fillRect(sx(45),sy(181),ss(60),ss(11));
+    ctx.fillStyle="#1d4ed8";
+    ctx.font=`bold ${Math.max(7,Math.round(ss(6)))}px '맑은 고딕',Arial`;
+    ctx.textAlign="center";
+    ctx.fillText("◉ 물구멍타공",sx(75),sy(181)+ss(8));
+  }
+
+  // ── 치수선 (SVG 방식 동일) ──
+  ctx.fillStyle = "#334155"; ctx.strokeStyle = "#334155"; ctx.lineWidth = 1;
+  // 가로 치수
+  ctx.beginPath(); ctx.moveTo(sx(6), sy(206)); ctx.lineTo(sx(144), sy(206)); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx(6),   sy(203)); ctx.lineTo(sx(6),   sy(209));
+  ctx.moveTo(sx(144), sy(203)); ctx.lineTo(sx(144), sy(209));
+  ctx.stroke();
+  ctx.font = `bold ${Math.max(9, Math.round(ss(7)))}px '맑은 고딕',Arial`;
+  ctx.textAlign = "center";
+  ctx.fillText(r.W+" mm", sx(75), sy(206) + ss(10));
+  // 세로 치수
+  ctx.beginPath(); ctx.moveTo(sx(150), sy(6)); ctx.lineTo(sx(150), sy(204)); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx(147), sy(6));   ctx.lineTo(sx(153), sy(6));
+  ctx.moveTo(sx(147), sy(204)); ctx.lineTo(sx(153), sy(204));
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(sx(150) + ss(11), sy(105));
+  ctx.rotate(Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.fillText(r.H+" mm", 0, 0);
+  ctx.restore();
+}
+
+async function copyVendorCanvas(){
+  const canvas=document.getElementById("vendorCanvas");
+  if(!canvas) return;
+  const msg=document.getElementById("vendorCopyMsg");
+  try{
+    canvas.toBlob(async blob=>{
+      const item=new ClipboardItem({"image/png":blob});
+      await navigator.clipboard.write([item]);
+      if(msg){msg.textContent="✓ 클립보드에 복사되었습니다";setTimeout(()=>{if(msg)msg.textContent=""},3000);}
+    });
+  }catch(e){
+    if(msg){msg.textContent="복사 실패 (브라우저 권한 확인)";msg.style.color="#dc2626";}
+  }
+}
+
+function downloadVendorCanvas(){
+  const canvas=document.getElementById("vendorCanvas");
+  if(!canvas) return;
+  const a=document.createElement("a");
+  a.href=canvas.toDataURL("image/png");
+  const c=document.getElementById("f_customer")?.value||"업체전송";
+  a.download="plusdoor_"+c+".png";
+  a.click();
+}
+
+function syncLabelTemplate(val){
+  const s = document.getElementById("labelTemplateSelectPreview");
+  if(s && s.value !== val) s.value = val;
+  updateLabelPreview();
+}
+
+function printLabel(){
+  const tpl = document.getElementById("labelTemplateSelectPreview")?.value || "기본양식";
+  const d = getLabelDataSd();
+  const templates = {
+    "기본양식": () => '<div class="lbl"><div class="lbl-hd">PLUSDOOR 작업지시서</div><div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">' + d.customer + '</div></div><div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">' + d.product + '</div></div><div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">' + d.size + '</div></div><div class="lbl-row"><div class="lbl-key">비고</div><div class="lbl-val">' + (d.memo||'-') + '</div></div></div>',
+    "현장형":  () => '<div class="lbl"><div class="lbl-hd">PLUSDOOR</div><div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">' + d.customer + '</div></div><div class="lbl-row"><div class="lbl-key">현장명</div><div class="lbl-val">' + d.site + '</div></div><div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">' + d.product + '</div></div><div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">' + d.size + '</div></div></div>',
+    "상세형":  () => '<div class="lbl"><div class="lbl-hd">PLUSDOOR 작업지시서</div><div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">' + d.customer + '</div></div><div class="lbl-row"><div class="lbl-key">현장명</div><div class="lbl-val">' + d.site + '</div></div><div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">' + d.product + '</div></div><div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">' + d.size + '</div></div><div class="lbl-row"><div class="lbl-key">수량</div><div class="lbl-val">' + d.qty + '</div></div><div class="lbl-row"><div class="lbl-key">납기일</div><div class="lbl-val">' + d.due + '</div></div><div class="lbl-row"><div class="lbl-key">비고</div><div class="lbl-val">' + (d.memo||'-') + '</div></div></div>',
+    "소형":    () => '<div class="lbl"><div class="lbl-hd">PLUSDOOR</div><div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">' + d.customer + '</div></div><div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">' + d.product + '</div></div><div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">' + d.size + '</div></div></div>',
+  };
+  const bodyFn = templates[tpl] || templates["기본양식"];
+  const css = [
+    "@page{size:100mm 80mm;margin:0}",
+    "*{box-sizing:border-box;margin:0;padding:0}",
+    "body{font-family:'맑은 고딕',Arial,sans-serif;background:#e4e8ed;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 30px;gap:24px;min-height:100vh}",
+    ".lbl-wrap{zoom:2.2}",
+    ".lbl{width:100mm;border:2px solid #222;display:flex;flex-direction:column;border-radius:2mm;overflow:hidden;background:#fff}",
+    ".lbl-hd{background:#1a3a5c;color:#fff;text-align:center;padding:2.5mm 2mm;font-size:9pt;font-weight:700;flex-shrink:0}",
+    ".lbl-row{display:flex;border-top:1px solid #ccc;align-items:stretch;min-height:12mm}",
+    ".lbl-key{background:#eef2f7;font-size:8pt;font-weight:700;color:#1a3a5c;padding:2mm;width:18mm;min-width:18mm;border-right:1px solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;word-break:keep-all}",
+    ".lbl-val{padding:2mm 3mm;font-size:11pt;font-weight:600;flex:1;display:flex;align-items:center;word-break:break-all;line-height:1.3}",
+    ".action-bar{display:flex;gap:12px}",
+    ".btn{padding:11px 28px;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;font-family:'맑은 고딕',Arial,sans-serif}",
+    ".btn-print{background:#1a3a5c;color:#fff}",
+    ".btn-close{background:#888;color:#fff}",
+    "@media print{body{background:#fff;padding:0;display:block;min-height:0}.lbl-wrap{zoom:1}.action-bar{display:none}}"
+  ].join("");
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>'
+    + '<div class="lbl-wrap">' + bodyFn() + '</div>'
+    + '<div class="action-bar">'
+    + '<button class="btn btn-print" onclick="window.print()">🖨️ 인쇄하기</button>'
+    + '<button class="btn btn-close" onclick="window.close()">닫기</button>'
+    + '</div></body></html>';
+  const w = window.open("","_blank","width=900,height=700");
+  if(!w){ alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요."); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+// ════════════════════════════════════════════
+// 저장
+// ════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded", () => {
+  // 팝업으로 열렸을 때 최대화 + "← 목록" 대신 "✕ 닫기" 버튼 표시
+  if(window.opener){
+    try { window.moveTo(0,0); window.resizeTo(screen.availWidth, screen.availHeight); } catch(e){}
+    const backBtn = document.querySelector(".back-btn");
+    if(backBtn){
+      backBtn.textContent = "✕ 닫기";
+      backBtn.onclick = () => window.close();
+      backBtn.style.background = "rgba(220,38,38,.15)";
+      backBtn.style.borderColor = "rgba(220,38,38,.5)";
+      backBtn.style.color = "#fca5a5";
+    }
+  }
+
+  // 모델 초기값
+  const mEl = document.getElementById("f_model");
+  if(mEl) mEl.value = curSheet;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // 날짜 자동포맷 (숫자 입력 → yyyy-mm-dd)
+  ["f_order_date","f_prod_date","f_due_date"].forEach(function(id){
+    const inp = document.getElementById(id);
+    if(!inp) return;
+    inp.addEventListener("input", function(){
+      let v = this.value.replace(/[^0-9]/g,"");
+      if(v.length>=5) v=v.slice(0,4)+"-"+v.slice(4);
+      if(v.length>=8) v=v.slice(0,7)+"-"+v.slice(7,9);
+      this.value=v.slice(0,10);
+      updatePreview();
+    });
+  });
+  $("f_order_date").value = today;
+
+  // 유리두께 옵션 초기 세팅
+  rebuildGlass();
+
+  // 기본정보 변경 → 미리보기 갱신
+  ["f_order_date","f_prod_date","f_due_date","f_customer","f_site","f_qty","f_ship","f_memo"]
+    .forEach(id => {
+      const el = $(id);
+      if (el) { el.addEventListener("input", () => updatePreview()); el.addEventListener("change", () => updatePreview()); }
+    });
+
+  updateLabelPreview();
+
+  // 고객 목록 로드
+  async function loadSdCustomers(){
+    try{
+      const r = await fetch("/api/customers");
+      const list = await r.json();
+      const dl = document.getElementById("sdCustomerList");
+      if(dl) dl.innerHTML = list.map(c=>`<option value="${esc(c.name)}">`).join("");
+    }catch(e){}
+  }
+  loadSdCustomers();
+
+  // 고객 등록
+  window.addSdCustomer = async function(){
+    const name = (document.getElementById("f_customer")?.value||"").trim();
+    if(!name){ toast("거래처명을 입력하세요.","err"); return; }
+    try{
+      const r = await fetch("/api/customers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
+      const o = await r.json();
+      if(!o.ok&&!o.existed) throw new Error(o.error||"실패");
+      toast(o.existed?"이미 등록된 거래처입니다":"거래처 등록 완료","ok");
+      await loadSdCustomers();
+    }catch(e){ toast("등록 실패: "+e.message,"err"); }
+  };
+
+  // 고객 정보 조회 (index.html 방식과 동일)
+  let _sdInfoTimer = null;
+  window.loadSdCustomerInfo = function(){
+    // f_customer 변경 시 → sdCustomerInfoName도 동기화 후 조회
+    const name = (document.getElementById("f_customer")?.value||"").trim();
+    const ni = document.getElementById("sdCustomerInfoName");
+    if(ni && name) ni.value = name;
+    clearTimeout(_sdInfoTimer);
+    _sdInfoTimer = setTimeout(()=>_doLoadSdCustomerInfo(name), 400);
+  };
+  window.loadSdCustomerInfoByName = function(){
+    const name = (document.getElementById("sdCustomerInfoName")?.value||"").trim();
+    _doLoadSdCustomerInfo(name);
+  };
+  window.resetSdCustomerInfo = function(){
+    const ni = document.getElementById("sdCustomerInfoName");
+    const el = document.getElementById("sdCustomerInfoResult");
+    if(ni) ni.value = "";
+    if(el) el.textContent = "거래처를 선택하면 제품군별 사용량과 마지막 거래일이 표시됩니다.";
+  };
+  async function _doLoadSdCustomerInfo(name){
+    name = (name || (document.getElementById("f_customer")?.value||"")).trim();
+    const el = document.getElementById("sdCustomerInfoResult");
+    if(!el) return;
+    if(!name){ el.textContent="거래처를 선택하면 제품군별 사용량과 마지막 거래일이 표시됩니다."; return; }
+    try{
+      const res = await fetch("/api/customer_info?name="+encodeURIComponent(name));
+      if(!res.ok){
+        el.textContent="등록되지 않은 거래처입니다. 등록 버튼으로 추가하세요.";
+        return;
+      }
+      const info = await res.json();
+      const rows = (info.products||[]).map(p=>
+        `<tr><td>${esc(p.product_group||"")}</td><td>${p.total_qty||0}</td><td>${p.cnt||0}</td></tr>`
+      ).join("") || `<tr><td colspan="3">제품 사용 내역 없음</td></tr>`;
+      const warning = (info.payment_note||"").trim()
+        ? `<div class="sd-cust-warning">주의사항 / 미수금 메모\n${esc(info.payment_note)}</div>`
+        : "";
+      el.className = "sd-cust-result";
+      el.innerHTML = `거래처: <b>${esc(info.customer)}</b> ${Number(info.active)===0?"(사용안함)":""}<br>
+전체 수량: <b>${info.total_qty||0}</b>개 / 전체 건수: <b>${info.total_count||0}</b>건<br>
+${info.year}년 수량: <b>${info.year_qty||0}</b>개 / ${info.year}년 건수: <b>${info.year_count||0}</b>건<br>
+마지막 거래일: <b>${esc(info.last_date||"-")}</b><br>
+담당자: <b>${esc(info.contact_name||"-")}</b> / 연락처: <b>${esc(info.contact_phone||"-")}</b><br>
+담당자 비고: <b>${esc(info.contact_memo||"-")}</b>
+${warning}
+<table class="sd-cust-table"><thead><tr><th>제품군</th><th>수량</th><th>건수</th></tr></thead><tbody>${rows}</tbody></table>
+<div class="sd-cust-memo">
+  <label>거래처 담당자</label>
+  <input id="sdContactNameInput" placeholder="예: 김대리" value="${esc(info.contact_name||"")}">
+  <label>담당자 연락처</label>
+  <input id="sdContactPhoneInput" placeholder="예: 010-0000-0000" value="${esc(info.contact_phone||"")}">
+  <label>담당자 비고</label>
+  <textarea id="sdContactMemoInput" placeholder="예: 발주 담당, 오전 연락 선호">${esc(info.contact_memo||"")}</textarea>
+  <label>거래처 일반 비고</label>
+  <textarea id="sdMemoInput" placeholder="거래처 관련 일반 메모">${esc(info.memo||"")}</textarea>
+  <label>미수금 / 주의사항</label>
+  <textarea id="sdPaymentInput" placeholder="예: 미수금 있음, 결제 확인 후 출고">${esc(info.payment_note||"")}</textarea>
+</div>
+<div class="sd-cust-actions">
+  <button class="save-btn" style="width:auto;padding:7px 16px;font-size:13px" onclick="saveSdCustomerInfo('${esc(info.customer)}')">거래처 메모저장</button>
+</div>`;
+      // f_contact 자동 채움 (비어있을 때만)
+      const contact = document.getElementById("f_contact");
+      if(contact && !contact.value.trim()){
+        const parts=[info.contact_name||"",info.contact_phone||"",info.contact_memo||""].filter(Boolean);
+        if(parts.length) contact.value = parts.join(" / ");
+      }
+    }catch(e){ el.textContent="조회 실패: "+e.message; }
+  }
+
+  window.saveSdCustomerInfo = async function(name){
+    const memo          = document.getElementById("sdMemoInput")?.value||"";
+    const payment_note  = document.getElementById("sdPaymentInput")?.value||"";
+    const contact_name  = document.getElementById("sdContactNameInput")?.value||"";
+    const contact_phone = document.getElementById("sdContactPhoneInput")?.value||"";
+    const contact_memo  = document.getElementById("sdContactMemoInput")?.value||"";
+    const res = await fetch("/api/customers/"+encodeURIComponent(name),{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name,memo,payment_note,contact_name,contact_phone,contact_memo,active:1})
+    });
+    if(!res.ok){alert("거래처 메모 저장 실패");return}
+    toast("거래처 메모가 저장되었습니다.","ok");
+    await _doLoadSdCustomerInfo(name);
+  };
+
+  // URL ?id=N 이면 기존 작업지시서 불러오기
+  const urlId = new URLSearchParams(location.search).get("id");
+  if (urlId) loadExisting(urlId);
+});
+
+// ════════════════════════════════════════════
+// 토스트
+// ════════════════════════════════════════════
+function toast(msg, type){
+  const el = document.getElementById("toast");
+  if(!el) return;
+  el.textContent = msg;
+  el.className = "toast" + (type ? " " + type : "");
+  void el.offsetWidth;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+// ════════════════════════════════════════════
+// 저장
+// ════════════════════════════════════════════
+async function saveOrder(){
+  const getV = (id) => { const el = $(id); return el ? el.value.trim() : ""; };
+  if(!getV("f_customer") && !getV("sd_width")){
+    toast("거래처 또는 사이즈를 입력하세요.", "err"); return;
+  }
+  const data = {
+    product_group:      "시스템도어",
+    model:              curSheet,
+    order_date:         getV("f_order_date"),
+    production_date:    getV("f_prod_date"),
+    due_date:           getV("f_due_date"),
+    customer:           getV("f_customer"),
+    qty:                getV("f_qty") || "1",
+    ship_type:          getV("f_ship"),
+    site_name:          getV("f_site"),
+    memo:               getV("f_memo"),
+    customer_manager:   getV("f_contact"),
+    detail:             getV("f_detail"),
+    sd_color:           getV("sd_color"),
+    sd_glass_thickness: getV("sd_glass"),
+    sd_open_direction:  getV("sd_open"),
+    sd_width:           getV("sd_width"),
+    sd_height:          getV("sd_height"),
+    sd_hinge_direction: getV("sd_hinge"),
+    sd_door_closer:     getV("sd_closer"),
+    sd_lock:            getV("sd_lock"),
+    sd_handle_height:   getV("sd_handle"),
+    sd_note:            getV("sd_note"),
+    custom_1:           JSON.stringify({ sheetType: curSheet, thresh: getV("sd_thresh"), hingeQty: getV("sd_hinge_qty"), mainDir: getV("sd_main_dir"), mainW: getV("sd_main_w") }),
+    status:             getV("f_status") || "접수",
+  };
+  const isEdit = window._editingId;
+  const method = isEdit ? "PUT" : "POST";
+  const url    = isEdit ? "/api/work_orders_web/" + window._editingId : "/api/work_orders_web";
+  try {
+    const res = await fetch(url, { method, headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+    const out = await res.json();
+    if(!res.ok || out.ok === false) throw new Error(out.error || "저장 실패");
+    if(!isEdit) window._editingId = out.id;
+
+    // 생산스케줄 동기화
+    const sdW = getV("sd_width"), sdH = getV("sd_height");
+    const detailParts = [
+      getV("sd_color"),
+      (sdW && sdH) ? sdW + "×" + sdH : "",
+      getV("sd_open_direction")
+    ].filter(Boolean);
+    const schedData = {
+      order_date:       getV("f_order_date"),
+      due_date:         getV("f_prod_date"),
+      delivery_date:    getV("f_due_date"),
+      customer:         getV("f_customer"),
+      site_name:        getV("f_site"),
+      product_group:    "시스템도어",
+      model:            curSheet,
+      detail_content:   getV("f_detail") || detailParts.join(" / "),
+      customer_contact: getV("f_contact"),
+      qty:              parseInt(getV("f_qty") || "1"),
+      delivery_type:    getV("f_ship"),
+      memo:             getV("f_memo"),
+      status:           getV("f_status") || "접수",
+      work_order_id:    String(window._editingId),
+    };
+    if (window._scheduleId) {
+      await fetch("/api/schedules/" + window._scheduleId, {
+        method: "PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(schedData)
+      });
+    } else {
+      const sr = await fetch("/api/schedules", {
+        method: "POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(schedData)
+      });
+      const so = await sr.json();
+      if (so.ok && so.id) window._scheduleId = so.id;
+    }
+
+    toast("저장되었습니다 (#" + window._editingId + ")", "ok");
+  } catch(e) {
+    toast("저장 실패: " + e.message, "err");
+  }
+}
+
+// 기존 데이터 불러오기
+async function loadExisting(id) {
+  try {
+    const res = await fetch("/api/work_orders_web/" + id);
+    if (!res.ok) { toast("해당 작업지시서를 찾을 수 없습니다", "err"); return; }
+    const row = await res.json();
+
+    // 기본정보
+    const setV = (id, v) => { const el=$(id); if(el) el.value = v||""; };
+    setV("f_order_date", row.order_date);
+    setV("f_prod_date",  row.production_date);
+    setV("f_due_date",   row.due_date);
+    setV("f_customer",   row.customer);
+    setV("f_site",       row.site_name);
+    setV("f_qty",        row.qty);
+    setV("f_ship",       row.ship_type);
+    setV("f_memo",       row.memo);
+    setV("f_contact",    row.customer_manager);
+    setV("f_detail",     row.detail);
+    if(row.status) setV("f_status", row.status);
+
+    // 시스템도어 제원
+    setV("sd_color",     row.sd_color || "블랙");
+    setV("sd_open",      row.sd_open_direction || "밖으로 당기는문");
+    setV("sd_width",     row.sd_width);
+    setV("sd_height",    row.sd_height);
+    setV("sd_hinge",     row.sd_hinge_direction || "우경첩");
+    setV("sd_closer",    row.sd_door_closer || "매립형 도어클로져 부착");
+    setV("sd_lock",      row.sd_lock || "레바키");
+    setV("sd_handle",    row.sd_handle_height || "1000");
+    setV("sd_note",      row.sd_note);
+
+    // 시트타입 복원
+    try {
+      const extra = JSON.parse(row.custom_1 || "{}");
+      if (extra.sheetType && F[extra.sheetType]) {
+        curSheet = extra.sheetType;
+        document.querySelectorAll(".sheet-tab").forEach(t => t.classList.remove("active"));
+        const tab = $("tab_" + curSheet);
+        if (tab) tab.classList.add("active");
+        $("sheetLabel").textContent = "— " + curSheet;
+        rebuildGlass();
+      }
+    } catch(e) {}
+
+    setV("sd_glass", row.sd_glass_thickness);
+
+    // 편집 중인 ID 저장 (저장 시 PUT 사용)
+    window._editingId = id;
+
+    // 연결된 생산스케줄 ID 복원
+    try {
+      const sr = await fetch("/api/schedules?work_order_id=" + id);
+      const schedules = await sr.json();
+      if (schedules.length > 0) window._scheduleId = schedules[0].id;
+    } catch(e2) {}
+
+    calc();
+    toast("작업지시서 #" + id + " 불러옴", "ok");
+  } catch(e) {
+    toast("불러오기 실패: " + e.message, "err");
+  }
+}
+</script>
+</body>
+</html>

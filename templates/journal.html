@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>일지관리 — PLUSDOOR</title>
+<style>
+:root{
+  --primary:#1a3a5c;--primary-hover:#122b45;--accent:#e85d04;
+  --blue:#2563a8;--blue-light:#e8f0fb;
+  --success:#16a34a;--danger:#dc2626;--warning:#d97706;
+  --bg:#f0f2f5;--card:#fff;--border:#d0d7de;--border-light:#e8ecf0;
+  --text:#1a1e24;--text-muted:#6b7280;--input-bg:#fafbfc;
+  --left-w:357px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--text);line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+
+/* ── 탭 바 ── */
+.tab-bar{display:flex;gap:0;padding:10px 14px 0;background:var(--bg);flex-shrink:0}
+.tab-btn{padding:8px 20px;border:1.5px solid var(--border);border-bottom:none;background:#dde2e8;
+  color:var(--text-muted);cursor:pointer;font-size:13px;font-weight:700;border-radius:7px 7px 0 0;
+  margin-right:3px;transition:all .15s}
+.tab-btn.active{background:#fff;color:var(--primary);border-color:var(--border)}
+
+/* ── 메인 레이아웃 ── */
+.main-wrap{flex:1;display:flex;overflow:hidden;border-top:1.5px solid var(--border);background:#fff}
+
+/* ── 좌측 패널 ── */
+.left-panel{width:var(--left-w);flex-shrink:0;display:flex;flex-direction:column;border-right:1.5px solid var(--border);background:#fff;overflow:hidden}
+.filter-sec{padding:10px 12px;background:#f8fafc;border-bottom:1px solid var(--border-light);display:flex;flex-direction:column;gap:7px;flex-shrink:0}
+.filter-row{display:flex;gap:6px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.2px}
+.fg input,.fg select{padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;background:var(--input-bg);color:var(--text);outline:none;width:100%}
+.fg input:focus,.fg select:focus{border-color:var(--blue)}
+
+/* 상태 칩 */
+.chip-row{display:flex;gap:4px;flex-wrap:wrap}
+.chip{padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid transparent;transition:all .15s;white-space:nowrap}
+.chip.all{background:#f1f5f9;color:var(--text);border-color:var(--border)}
+.chip.all.active,.chip.all:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.chip.영업중{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
+.chip.영업중.active,.chip.영업중:hover{background:#1d4ed8;color:#fff}
+.chip.거래중{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.chip.거래중.active,.chip.거래중:hover{background:#15803d;color:#fff}
+.chip.거래중지{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.chip.거래중지.active,.chip.거래중지:hover{background:#92400e;color:#fff}
+.chip.거래이탈{background:#fee2e2;color:#dc2626;border-color:#fecaca}
+.chip.거래이탈.active,.chip.거래이탈:hover{background:#dc2626;color:#fff}
+
+/* 거래처 목록 */
+.cust-list{flex:1;overflow-y:auto}
+.cust-item{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:background .1s}
+.cust-item:hover{background:#f0f5ff}
+.cust-item.selected{background:#e8f0fb;border-left:3px solid var(--blue)}
+.cust-item.selected .ci-name{color:var(--blue)}
+.ci-info{flex:1;min-width:0}
+.ci-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-sub{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.ci-right{flex-shrink:0;text-align:right}
+.ci-visit{font-size:11px;color:var(--text-muted)}
+.cust-empty{text-align:center;color:var(--text-muted);padding:32px 16px;font-size:12px;font-style:italic}
+.left-footer{padding:8px 12px;border-top:1px solid var(--border-light);background:#f8fafc;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.cust-count{font-size:11px;color:var(--text-muted);flex:1}
+.bulk-bar{padding:7px 12px;background:#e8f0fb;border-top:1px solid #bfdbfe;flex-shrink:0;display:none;align-items:center;gap:7px}
+.bulk-bar.show{display:flex}
+.cust-cb{width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:var(--blue)}
+.cust-item.sel-mode:hover{background:#f0f5ff;cursor:pointer}
+.cust-item.sel-checked{background:#dbeafe!important;border-left:3px solid var(--blue)}
+
+/* ── 버튼 ── */
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 13px;border:none;border-radius:5px;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-hover)}
+.btn-success{background:var(--success);color:#fff}.btn-success:hover{background:#15803d}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-ghost{background:#e5e7eb;color:var(--text)}.btn-ghost:hover{background:#d1d5db}
+.btn-outline{background:#fff;color:var(--primary);border:1.5px solid var(--primary)}.btn-outline:hover{background:var(--blue-light)}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-sm{padding:5px 11px;font-size:12px}
+
+/* ── 우측 패널 ── */
+.right-panel{flex:1;overflow-y:auto;background:#f4f6f9;display:flex;flex-direction:column}
+.right-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted)}
+.right-empty .ico{font-size:48px;margin-bottom:14px;opacity:.4}
+.right-empty p{font-size:14px}
+
+/* ── 우측 내용 ── */
+.right-content{padding:14px;display:flex;flex-direction:column;gap:12px}
+
+/* 섹션 카드 */
+.sec-card{background:#fff;border:1px solid var(--border-light);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.sec-hd{padding:9px 14px;background:#f1f5f9;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light)}
+.sec-hd-title{font-size:12px;font-weight:700;color:var(--primary)}
+.sec-hd-sub{font-size:11px;color:var(--text-muted)}
+.sec-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+
+/* 정보 그리드 */
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.info-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info-grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+.fg2{display:flex;flex-direction:column;gap:3px}
+.fg2 label{font-size:10px;font-weight:700;color:var(--text-muted)}
+.fg2 input,.fg2 select,.fg2 textarea{width:100%;padding:6px 8px;border:1.5px solid var(--border);
+  border-radius:4px;background:var(--input-bg);color:var(--text);outline:none}
+.fg2 input:focus,.fg2 select:focus,.fg2 textarea:focus{border-color:var(--blue);background:#fff}
+.fg2 textarea{resize:vertical;min-height:52px}
+
+/* 상태 뱃지 */
+.bdg{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700}
+.bdg-영업중{background:#dbeafe;color:#1d4ed8}
+.bdg-거래중{background:#dcfce7;color:#15803d}
+.bdg-거래중지{background:#fef3c7;color:#92400e}
+.bdg-거래이탈{background:#fee2e2;color:#dc2626}
+.bdg-완료{background:#dcfce7;color:#15803d}
+.bdg-접수{background:#dbeafe;color:#1d4ed8}
+.bdg-생산중{background:#fef3c7;color:#92400e}
+
+/* 방문기록 */
+.visit-timeline{display:flex;flex-direction:column;gap:8px}
+.visit-card{border:1px solid var(--border-light);border-radius:6px;padding:10px 12px;background:#fafbfc;position:relative}
+.visit-card:hover{background:#f0f5ff}
+.visit-card-hd{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.v-date{font-size:12px;font-weight:700;color:var(--primary)}
+.v-tag{background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px}
+.v-content{font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.6}
+.v-btns{position:absolute;top:7px;right:8px;display:flex;gap:4px}
+.v-del{background:#fee2e2;border:none;color:var(--danger);cursor:pointer;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;font-family:inherit}
+.v-del:hover{background:var(--danger);color:#fff}
+.v-edit{background:#e8f0fb;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;font-family:inherit}
+.v-edit:hover{background:var(--blue);color:#fff}
+.visit-card.editing{background:#f0f7ff;border-color:var(--blue)}
+.visit-empty{text-align:center;color:var(--text-muted);padding:16px;font-size:12px;font-style:italic}
+
+/* 방문기록 추가폼 */
+.add-visit-form{border:1.5px dashed var(--blue);border-radius:6px;padding:11px 12px;background:#f0f7ff;display:none;flex-direction:column;gap:8px}
+.add-visit-form.open{display:flex}
+.add-grid{display:grid;grid-template-columns:130px 130px 1fr;gap:8px}
+
+/* 생산이력 테이블 */
+.order-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.order-tbl th{background:#eef2f7;padding:6px 8px;text-align:left;font-weight:700;color:var(--primary);border-bottom:1.5px solid var(--border);white-space:nowrap}
+.order-tbl td{padding:6px 8px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.order-tbl tbody tr:hover td{background:#f0f5ff}
+.order-tbl .center{text-align:center}
+.order-tbl .empty{text-align:center;color:var(--text-muted);padding:20px;font-style:italic}
+.order-summary{display:flex;gap:18px;padding:10px 18px;background:#f8fafc;border-bottom:1px solid var(--border-light);flex-wrap:wrap;align-items:center}
+.order-kv{display:flex;flex-direction:column;align-items:center;gap:2px}
+.order-kv .k{font-size:12px;color:var(--text-muted);font-weight:700}
+.order-kv .v{font-size:16px;font-weight:700;color:var(--primary)}
+.order-sep{width:1px;height:36px;background:var(--border);flex-shrink:0}
+
+/* 토스트 */
+.pd-toast{position:fixed;bottom:20px;right:20px;background:var(--primary);color:#fff;
+  padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;
+  box-shadow:0 4px 16px rgba(0,0,0,.2);transform:translateY(60px);opacity:0;
+  transition:all .25s;z-index:99999;pointer-events:none}
+.pd-toast.show{transform:translateY(0);opacity:1}
+.pd-toast.ok{background:var(--success)}.pd-toast.err{background:var(--danger)}
+
+/* 달력 팝업 */
+.pd-cal-pop{position:fixed;z-index:99999;background:#fff;border:1px solid var(--border);
+  border-radius:8px;padding:10px;width:280px;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none}
+.pd-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.pd-cal-title{font-weight:700;font-size:13px;color:var(--primary)}
+.pd-cal-head button{padding:3px 8px;border:1px solid var(--border);background:#fff;border-radius:4px;cursor:pointer;font-size:12px}
+.pd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.pd-cal-grid .dow{text-align:center;font-size:10px;font-weight:700;color:var(--text-muted);padding:3px 0}
+.pd-cal-grid button{text-align:center;padding:5px 0;border:1px solid transparent;
+  background:transparent;border-radius:3px;cursor:pointer;font-size:11px;width:100%}
+.pd-cal-grid button:hover{background:var(--blue-light)}
+.pd-cal-grid button.today{border-color:var(--blue);font-weight:700;color:var(--blue)}
+.pd-cal-grid button.selected{background:var(--primary);color:#fff;font-weight:700}
+
+/* 업체연결 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:10px;width:380px;box-shadow:0 8px 32px rgba(0,0,0,.22);overflow:hidden}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--primary);color:#fff}
+.modal-hd span{font-size:13px;font-weight:700}
+.modal-hd button{background:none;border:none;color:#fff;cursor:pointer;font-size:16px;padding:0 3px;line-height:1}
+.modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.modal-note{font-size:11px;color:var(--text-muted);line-height:1.6}
+.modal-footer{padding:10px 20px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:6px}
+
+/* 날짜 입력 + 캘린더 버튼 묶음 */
+.date-wrap{display:flex;align-items:center;gap:3px}
+.date-wrap input{flex:1;min-width:0}
+.cal-btn{padding:5px 7px;border:1.5px solid var(--border);background:#fff;border-radius:4px;
+  cursor:pointer;font-size:12px;flex-shrink:0;line-height:1}
+.cal-btn:hover{background:var(--blue-light)}
+
+
+/* ── 방문 관리 중간 패널 ── */
+.mid-panel{width:var(--left-w);flex-shrink:0;border-right:1.5px solid var(--border);background:#fff;display:flex;flex-direction:column;overflow:hidden}
+.mid-hd{padding:9px 12px;background:var(--primary);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;letter-spacing:.2px}
+.mid-filter{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:7px 8px;background:#f8fafc;border-bottom:1px solid var(--border-light);flex-shrink:0}
+.mid-btn{padding:5px 4px;border:1.5px solid var(--border);background:#fff;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;text-align:center;transition:all .15s;color:var(--text);line-height:1.3}
+.mid-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mid-btn:hover:not(.active){background:var(--blue-light)}
+.mid-btn b{display:block;font-size:14px;margin-top:1px}
+.mid-list{flex:1;overflow-y:auto}
+.mid-item{padding:8px 11px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:background .1s}
+.mid-item:hover{background:#f0f5ff}
+.mid-item.selected{background:#e8f0fb;border-left:3px solid var(--blue)}
+.mid-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mid-sub{font-size:10px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mid-days{font-size:11px;font-weight:700;color:#dc2626;margin-top:2px}
+.mid-empty{text-align:center;color:var(--text-muted);padding:24px 10px;font-size:11px;font-style:italic}
+.mid-total{font-size:10px;color:var(--text-muted);padding:5px 11px;background:#f8fafc;border-bottom:1px solid var(--border-light);flex-shrink:0}
+
+/* 6개월 미방문 경고 */
+.cust-item.overdue{border-left:3px solid #dc2626!important}
+.overdue-badge{font-size:10px;font-weight:700;color:#dc2626;white-space:nowrap}
+
+/* 사진 첨부 */
+.photo-grid{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;min-height:54px;align-items:flex-start}
+.photo-thumb{position:relative;width:88px;height:88px;border-radius:6px;overflow:hidden;cursor:pointer;flex-shrink:0;border:1.5px solid var(--border)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-del{position:absolute;top:2px;right:2px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;padding:1px 5px;line-height:1.4;font-family:inherit}
+.photo-del:hover{background:var(--danger)}
+.photo-upload-label{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:5px;background:#e5e7eb;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;border:none;transition:background .15s}
+.photo-upload-label:hover{background:#d1d5db}
+
+@media(max-width:900px){
+  :root{--left-w:260px}
+}
+@media(max-width:640px){
+  .main-wrap{flex-direction:column;overflow:auto}
+  .left-panel{width:100%;height:auto;border-right:none;border-bottom:1.5px solid var(--border);overflow:visible}
+  .cust-list{max-height:240px}
+  .right-panel{overflow:visible}
+}
+</style>
+</head>
+<body>
+
+{{ top_menu("journal")|safe }}
+
+<!-- 탭 버튼 -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-sales" onclick="switchTab('sales')">영업일지</button>
+  <button class="tab-btn" id="tab-consult" onclick="switchTab('consult')">상담일지</button>
+</div>
+
+<!-- ════════════ 영업일지 ════════════ -->
+<div class="main-wrap" id="tc-sales">
+
+  <!-- ── 좌측: 검색 + 목록 ── -->
+  <div class="left-panel">
+
+    <div class="filter-sec">
+      <!-- 방문일 기간 조회 -->
+      <div class="fg">
+        <label>방문일 기간 조회</label>
+        <div style="display:flex;align-items:center;gap:4px">
+          <div class="date-wrap" style="flex:1">
+            <input id="fDateFrom" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+            <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('fDateFrom'))">📅</button>
+          </div>
+          <span style="color:var(--text-muted);font-size:11px">~</span>
+          <div class="date-wrap" style="flex:1">
+            <input id="fDateTo" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+            <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('fDateTo'))">📅</button>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="fg" style="flex:1">
+          <label>담당자</label>
+          <input id="fWriter" placeholder="영업담당자명">
+        </div>
+        <div class="fg" style="flex:1">
+          <label>검색</label>
+          <input id="fQ" placeholder="거래처·지역·품목·전화번호" onkeydown="if(event.key==='Enter')loadLeads()">
+        </div>
+      </div>
+      <!-- 상태 칩 -->
+      <div class="chip-row" id="chipRow">
+        <span class="chip all active" data-status="" onclick="chipClick(this)">전체 <b id="cnt-all">0</b></span>
+        <span class="chip 영업중" data-status="영업중" onclick="chipClick(this)">영업중 <b id="cnt-영업중">0</b></span>
+        <span class="chip 거래중" data-status="거래중" onclick="chipClick(this)">거래중 <b id="cnt-거래중">0</b></span>
+        <span class="chip 거래중지" data-status="거래중지" onclick="chipClick(this)">중지 <b id="cnt-거래중지">0</b></span>
+        <span class="chip 거래이탈" data-status="거래이탈" onclick="chipClick(this)">이탈 <b id="cnt-거래이탈">0</b></span>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-success btn-sm" style="flex:1" onclick="openNewLead()">+ 영업처 추가</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="enterSelectionMode()">일괄수정</button>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="loadLeads()">조회</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="resetFilter()">초기화</button>
+      </div>
+    </div>
+
+    <!-- 거래처 목록 -->
+    <div class="cust-list" id="custList">
+      <div class="cust-empty">불러오는 중...</div>
+    </div>
+
+    <!-- 일괄수정 바 -->
+    <div class="bulk-bar" id="bulkBar">
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0">
+        <input type="checkbox" class="cust-cb" id="selectAll" onchange="toggleSelectAll(this)">
+        <span style="font-size:11px;color:var(--text-muted)">전체</span>
+      </label>
+      <span id="bulkCount" style="font-size:11px;font-weight:700;color:var(--blue);flex:1">0건 선택</span>
+      <select id="bulkStatus" style="padding:3px 6px;border:1.5px solid var(--border);border-radius:4px;font-size:11px;font-family:inherit">
+        <option>영업중</option><option>거래중</option><option>거래중지</option><option>거래이탈</option>
+      </select>
+      <button class="btn btn-primary btn-xs" onclick="bulkUpdateStatus()">변경</button>
+      <button class="btn btn-ghost btn-xs" onclick="exitSelectionMode()">취소</button>
+    </div>
+
+    <!-- 하단 푸터 -->
+    <div class="left-footer">
+      <span class="cust-count" id="custCount">0건</span>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- ── 중간: 방문 관리 ── -->
+  <div class="mid-panel">
+    <div class="mid-hd">📅 방문 관리</div>
+    <div class="mid-filter">
+      <button class="mid-btn active" id="mBtn1" onclick="setOverdueFilter(1,this)">1개월 이상<b id="cnt-1m">0</b></button>
+      <button class="mid-btn" id="mBtn2" onclick="setOverdueFilter(2,this)">2개월 이상<b id="cnt-2m">0</b></button>
+      <button class="mid-btn" id="mBtn3" onclick="setOverdueFilter(3,this)">3개월 이상<b id="cnt-3m">0</b></button>
+      <button class="mid-btn" id="mBtn6" onclick="setOverdueFilter(6,this)">6개월 이상<b id="cnt-6m">0</b></button>
+    </div>
+    <div class="chip-row" id="midChipRow" style="padding:6px 8px;background:#f8fafc;border-bottom:1px solid var(--border-light);flex-shrink:0">
+      <span class="chip all active" data-s="" onclick="setMidStatus(this)">전체</span>
+      <span class="chip 영업중" data-s="영업중" onclick="setMidStatus(this)">영업중</span>
+      <span class="chip 거래중" data-s="거래중" onclick="setMidStatus(this)">거래중</span>
+      <span class="chip 거래중지" data-s="거래중지" onclick="setMidStatus(this)">중지</span>
+      <span class="chip 거래이탈" data-s="거래이탈" onclick="setMidStatus(this)">이탈</span>
+    </div>
+    <div class="mid-total" id="midTotal"></div>
+    <div class="mid-list" id="midList">
+      <div class="mid-empty">불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- ── 우측: 상세 ── -->
+  <div class="right-panel" id="rightPanel">
+    <div class="right-empty" id="rightEmpty">
+      <div class="ico">🏢</div>
+      <p>거래처를 선택하면 상세 정보가 표시됩니다</p>
+    </div>
+    <div class="right-content" id="rightContent" style="display:none">
+
+      <!-- 거래처 정보 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">영업 정보</span>
+          <span class="sec-hd-sub" id="detStatusBdg"></span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="btn btn-primary btn-sm" onclick="saveLead()">저장</button>
+            <button class="btn btn-danger btn-sm" id="delCustBtn" onclick="deleteLead()" style="display:none">삭제</button>
+          </div>
+        </div>
+        <div class="sec-body">
+          <input type="hidden" id="custId">
+          <div class="info-grid-4">
+            <div class="fg2"><label>담당자 (작성자)</label><input id="cWriter" placeholder="영업담당자"></div>
+            <div class="fg2"><label>업체명 / 담당자명 *</label><input id="cCustomer" placeholder="거래처 또는 담당자명"></div>
+            <div class="fg2"><label>최초등록일</label>
+              <div class="date-wrap">
+                <input id="cCreatedAt" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+                <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('cCreatedAt'))">📅</button>
+              </div>
+            </div>
+            <div class="fg2"><label>영업 상태</label>
+              <select id="cStatus" onchange="document.getElementById('detStatusBdg').innerHTML=statusBadge(this.value)">
+                <option>영업중</option><option>거래중</option><option>거래중지</option><option>거래이탈</option>
+              </select>
+            </div>
+          </div>
+          <div class="info-grid-4">
+            <div class="fg2"><label>지역</label><input id="cRegion" list="journalRegionList" placeholder="지역 선택" autocomplete="off"></div>
+            <div class="fg2"><label>상세주소</label><input id="cAddress" placeholder="상세주소"></div>
+            <div class="fg2"><label>연락처</label><input id="cPhone" placeholder="010-0000-0000"></div>
+            <div class="fg2"><label>관심품목</label><input id="cInterest" placeholder="엔토브, 로이도어 등"></div>
+          </div>
+          <div class="info-grid-4">
+            <div class="fg2"><label>기존 사용업체</label><input id="cSupplier" placeholder="기존 거래 업체명"></div>
+          </div>
+          <div class="fg2"><label>업체 특이사항</label><textarea id="cNotes" placeholder="메모, 특이사항"></textarea></div>
+        </div>
+      </div>
+
+      <!-- 업체 연결 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">🏢 업체 등록</span>
+          <span class="sec-hd-sub" id="slLinkSub"></span>
+        </div>
+        <div style="padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <div id="slLinkStatus" style="flex:1;font-size:12px;color:var(--text-muted)">거래가 확정되면 업체를 등록하세요</div>
+          <button class="btn btn-outline btn-sm" id="slLinkBtn" onclick="slOpenLinkModal()">업체등록</button>
+        </div>
+      </div>
+
+      <!-- 생산 주문 이력 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">📦 생산 주문 이력</span>
+          <span class="sec-hd-sub" id="orderSubTxt"></span>
+        </div>
+        <div id="orderSummaryBar" style="display:none" class="order-summary"></div>
+        <div style="overflow-x:auto">
+          <table class="order-tbl">
+            <thead>
+              <tr>
+                <th style="width:84px">수주일</th>
+                <th style="width:84px">납품예정</th>
+                <th style="width:90px">제품군</th>
+                <th style="width:80px">모델</th>
+                <th style="width:44px" class="center">수량</th>
+                <th style="width:130px">현장명</th>
+                <th style="width:62px" class="center">상태</th>
+              </tr>
+            </thead>
+            <tbody id="orderBody">
+              <tr><td colspan="7" class="empty">거래처를 선택해주세요</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 첨부 사진 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">📷 첨부 사진</span>
+          <label class="photo-upload-label" style="margin-left:auto">
+            + 사진 추가
+            <input type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this,'lead')">
+          </label>
+        </div>
+        <div class="photo-grid" id="photoGrid">
+          <span id="photoEmpty" style="color:var(--text-muted);font-size:12px;font-style:italic">사진이 없습니다.</span>
+        </div>
+      </div>
+
+      <!-- 방문 · 상담 기록 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">📋 방문 · 상담 기록</span>
+          <span class="sec-hd-sub" id="visitCountTxt"></span>
+          <button class="btn btn-success btn-xs" style="margin-left:auto" onclick="toggleAddVisit()">+ 기록 추가</button>
+        </div>
+        <div class="sec-body">
+          <!-- 추가 폼 -->
+          <div class="add-visit-form" id="visitAddForm">
+            <div class="add-grid">
+              <div class="fg2">
+                <label>방문일</label>
+                <div class="date-wrap">
+                  <input id="vDate" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+                  <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('vDate'))">📅</button>
+                </div>
+              </div>
+              <div class="fg2"><label>방문자</label><input id="vVisitor" placeholder="방문한 담당자 이름"></div>
+              <div class="fg2"><label>영업항목</label><input id="vItems" placeholder="상담, 견적, 현장방문, 전화 등"></div>
+            </div>
+            <div class="fg2"><label>상담 내용</label><textarea id="vContent" style="min-height:68px" placeholder="방문 또는 상담 내용을 입력하세요"></textarea></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-success btn-sm" onclick="addVisit()">저장</button>
+              <button class="btn btn-ghost btn-sm" onclick="toggleAddVisit()">취소</button>
+            </div>
+          </div>
+          <!-- 기록 목록 -->
+          <div class="visit-timeline" id="visitList">
+            <div class="visit-empty">방문 기록이 없습니다.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-content -->
+  </div><!-- /right-panel -->
+
+</div><!-- /tc-sales -->
+
+<!-- ════════════ 상담일지 ════════════ -->
+<div class="main-wrap" id="tc-consult" style="display:none">
+
+  <!-- ── 좌측: 검색 + 목록 ── -->
+  <div class="left-panel">
+
+    <div class="filter-sec">
+      <div class="fg">
+        <label>상담일 기간 조회</label>
+        <div style="display:flex;align-items:center;gap:4px">
+          <div class="date-wrap" style="flex:1">
+            <input id="ccDateFrom" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+            <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('ccDateFrom'))">📅</button>
+          </div>
+          <span style="color:var(--text-muted);font-size:11px">~</span>
+          <div class="date-wrap" style="flex:1">
+            <input id="ccDateTo" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+            <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('ccDateTo'))">📅</button>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="fg" style="flex:1">
+          <label>담당자</label>
+          <input id="ccWriter" placeholder="담당자명">
+        </div>
+        <div class="fg" style="flex:1">
+          <label>검색</label>
+          <input id="ccQ" placeholder="이름·지역·전화번호·품목" onkeydown="if(event.key==='Enter')ccLoadClients()">
+        </div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-success btn-sm" style="flex:1" onclick="ccOpenNew()">+ 상담자 추가</button>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="ccLoadClients()">조회</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="ccResetFilter()">초기화</button>
+      </div>
+    </div>
+
+    <div class="cust-list" id="ccClientList">
+      <div class="cust-empty">불러오는 중...</div>
+    </div>
+
+    <div class="left-footer">
+      <span class="cust-count" id="ccClientCount">0건</span>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- ── 우측: 상세 ── -->
+  <div class="right-panel" id="ccRightPanel">
+    <div class="right-empty" id="ccRightEmpty">
+      <div class="ico">💬</div>
+      <p>상담자를 선택하면 상세 정보가 표시됩니다</p>
+    </div>
+    <div class="right-content" id="ccRightContent" style="display:none">
+
+      <!-- 상담자 정보 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">상담자 정보</span>
+          <span class="sec-hd-sub" id="ccChannelBdg"></span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="btn btn-primary btn-sm" onclick="ccSaveClient()">저장</button>
+            <button class="btn btn-danger btn-sm" id="ccDelClientBtn" onclick="ccDeleteClient()" style="display:none">삭제</button>
+          </div>
+        </div>
+        <div class="sec-body">
+          <input type="hidden" id="ccId">
+          <div class="info-grid-4">
+            <div class="fg2"><label>담당자</label><input id="ccWriterField" placeholder="담당자명"></div>
+            <div class="fg2"><label>상담자명 *</label><input id="ccName" placeholder="상담자 이름"></div>
+            <div class="fg2"><label>최초 상담일</label>
+              <div class="date-wrap">
+                <input id="ccFirstDate" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+                <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('ccFirstDate'))">📅</button>
+              </div>
+            </div>
+            <div class="fg2"><label>전화번호</label><input id="ccPhone" placeholder="010-0000-0000"></div>
+          </div>
+          <div class="info-grid-4">
+            <div class="fg2"><label>상담 경로</label>
+              <select id="ccChannel">
+                <option>경로확인</option>
+                <option>업체소개</option>
+                <option>지인소개</option>
+                <option>홈페이지</option>
+                <option>블로그</option>
+                <option>유튜브</option>
+                <option>박람회</option>
+                <option>기존업체</option>
+                <option>기타</option>
+              </select>
+            </div>
+            <div class="fg2"><label>지역</label><input id="ccRegion" list="journalRegionList" placeholder="지역 선택" autocomplete="off"></div>
+            <div class="fg2"><label>상세주소</label><input id="ccAddress" placeholder="상세주소"></div>
+            <div class="fg2"><label>관심품목</label><input id="ccInterest" placeholder="엔토브, 로이도어 등"></div>
+          </div>
+          <div class="fg2"><label>상담자 특이사항</label><textarea id="ccNotes" placeholder="메모, 특이사항"></textarea></div>
+        </div>
+      </div>
+
+      <!-- 업체 연결 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">🏢 업체 연결</span>
+          <span class="sec-hd-sub" id="ccLinkSub"></span>
+        </div>
+        <div style="padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <div id="ccLinkStatus" style="flex:1;font-size:12px;color:var(--text-muted)">상담이 실제 거래로 이어진 경우 업체를 등록하세요</div>
+          <button class="btn btn-outline btn-sm" id="ccLinkBtn" onclick="ccOpenLinkModal()">업체등록</button>
+        </div>
+      </div>
+
+      <!-- 생산 주문 이력 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">📦 생산 주문 이력</span>
+          <span class="sec-hd-sub" id="ccOrderSubTxt"></span>
+        </div>
+        <div id="ccOrderSummaryBar" style="display:none" class="order-summary"></div>
+        <div style="overflow-x:auto">
+          <table class="order-tbl">
+            <thead>
+              <tr>
+                <th style="width:84px">수주일</th>
+                <th style="width:84px">납품예정</th>
+                <th style="width:90px">제품군</th>
+                <th style="width:80px">모델</th>
+                <th style="width:44px" class="center">수량</th>
+                <th style="width:130px">현장명</th>
+                <th style="width:62px" class="center">상태</th>
+              </tr>
+            </thead>
+            <tbody id="ccOrderBody">
+              <tr><td colspan="7" class="empty">상담자를 선택해주세요</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 첨부 사진 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">📷 첨부 사진</span>
+          <label class="photo-upload-label" style="margin-left:auto">
+            + 사진 추가
+            <input type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this,'consult')">
+          </label>
+        </div>
+        <div class="photo-grid" id="ccPhotoGrid">
+          <span id="ccPhotoEmpty" style="color:var(--text-muted);font-size:12px;font-style:italic">사진이 없습니다.</span>
+        </div>
+      </div>
+
+      <!-- 방문 · 상담 기록 -->
+      <div class="sec-card">
+        <div class="sec-hd">
+          <span class="sec-hd-title">📋 방문 · 상담 기록</span>
+          <span class="sec-hd-sub" id="ccVisitCountTxt"></span>
+          <button class="btn btn-success btn-xs" style="margin-left:auto" onclick="ccToggleAddVisit()">+ 기록 추가</button>
+        </div>
+        <div class="sec-body">
+          <div class="add-visit-form" id="ccVisitAddForm">
+            <div class="info-grid-4">
+              <div class="fg2">
+                <label>상담일</label>
+                <div class="date-wrap">
+                  <input id="ccVDate" placeholder="yyyy-mm-dd" onblur="this.value=norm(this.value)">
+                  <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('ccVDate'))">📅</button>
+                </div>
+              </div>
+              <div class="fg2"><label>상담항목</label><input id="ccVItems" placeholder="전화상담, 현장방문, 견적 등"></div>
+              <div class="fg2"><label>상담유형</label>
+                <select id="ccVType">
+                  <option value="">선택안함</option>
+                  <option>소비자가</option>
+                  <option>공장도가</option>
+                </select>
+              </div>
+              <div class="fg2"><label>출고구분</label>
+                <select id="ccVDelivery">
+                  <option value="">선택안함</option>
+                  <option>납품</option>
+                  <option>시공</option>
+                </select>
+              </div>
+            </div>
+            <div class="fg2"><label>상담 내용</label><textarea id="ccVContent" style="min-height:68px" placeholder="상담 내용을 입력하세요"></textarea></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-success btn-sm" onclick="ccAddVisit()">저장</button>
+              <button class="btn btn-ghost btn-sm" onclick="ccToggleAddVisit()">취소</button>
+            </div>
+          </div>
+          <div class="visit-timeline" id="ccVisitList">
+            <div class="visit-empty">상담 기록이 없습니다.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-content -->
+  </div><!-- /right-panel -->
+
+</div><!-- /tc-consult -->
+
+<!-- 영업일지 업체 등록 모달 -->
+<div class="modal-overlay" id="slLinkModal" style="display:none" onclick="if(event.target===this)slCloseLinkModal()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span>업체 등록 / 연결</span>
+      <button onclick="slCloseLinkModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg2">
+        <label>거래처명 (생산관리에 등록될 이름)</label>
+        <input id="slLinkName" placeholder="거래처명 입력">
+      </div>
+      <p class="modal-note">동일한 거래처명이 이미 있으면 자동으로 연결됩니다.<br>없으면 새 거래처로 등록됩니다.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="slDoLink()">등록</button>
+      <button class="btn btn-ghost btn-sm" onclick="slCloseLinkModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상담일지 업체 연결 모달 -->
+<div class="modal-overlay" id="ccLinkModal" style="display:none" onclick="if(event.target===this)ccCloseLinkModal()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span>업체 등록 / 연결</span>
+      <button onclick="ccCloseLinkModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg2">
+        <label>거래처명 (영업일지에 등록될 이름)</label>
+        <input id="ccLinkName" placeholder="거래처명 입력">
+      </div>
+      <p class="modal-note">동일한 거래처명이 영업일지에 이미 있으면 자동으로 연결됩니다.<br>없으면 새 거래처로 등록됩니다.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="ccDoLink()">등록</button>
+      <button class="btn btn-ghost btn-sm" onclick="ccCloseLinkModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="pd-toast" id="pdToast"></div>
+
+<script>
+// ── 공통 유틸 ──────────────────────────────────────────────────────────────
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function today(){return new Date().toISOString().slice(0,10)}
+function norm(v){v=String(v||'').trim();const d=v.replace(/\D/g,'');if(d.length===8)return d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8);if(d.length===6)return '20'+d.slice(0,2)+'-'+d.slice(2,4)+'-'+d.slice(4,6);return v}
+function toast(msg,type=''){const el=document.getElementById('pdToast');el.textContent=msg;el.className='pd-toast '+type+' show';setTimeout(()=>el.className='pd-toast '+type,3000)}
+function statusBadge(s){const m={'영업중':'bdg-영업중','거래중':'bdg-거래중','거래중지':'bdg-거래중지','거래이탈':'bdg-거래이탈'};return `<span class="bdg ${m[s]||''}">${esc(s)}</span>`}
+function schedStatusBadge(s){const m={'접수':'bdg-접수','생산중':'bdg-생산중','완료':'bdg-완료','납품':'bdg-완료'};return `<span class="bdg ${m[s]||''}">${esc(s)}</span>`}
+
+// ── 탭 전환 ──────────────────────────────────────────────────────────────
+function switchTab(id){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('tc-sales').style.display = id==='sales'?'':'none';
+  document.getElementById('tc-consult').style.display = id==='consult'?'':'none';
+  if(id==='consult') ccLoadClients();
+}
+
+// ── 영업일지 ─────────────────────────────────────────────────────────────
+let leads=[], selectedLeadId=null, selectionMode=false, selectedIds=new Set();
+
+async function loadLeads(){
+  const p=new URLSearchParams();
+  const q=document.getElementById('fQ').value.trim();
+  const w=document.getElementById('fWriter').value.trim();
+  const df=norm(document.getElementById('fDateFrom').value);
+  const dt=norm(document.getElementById('fDateTo').value);
+  const s=(document.querySelector('#chipRow .chip.active')||{}).dataset?.status||'';
+  if(q) p.append('q',q);
+  if(w) p.append('writer',w);
+  if(df) p.append('date_from',df);
+  if(dt) p.append('date_to',dt);
+  if(s) p.append('status',s);
+  const res=await fetch('/api/sales/leads?'+p);
+  if(!res.ok){toast('불러오기 실패','err');return}
+  leads=await res.json();
+  renderLeadList();
+  updateLeadCounts();
+  renderOverdueList();
+}
+
+// ── 방문 관리 패널 ───────────────────────────────────────────────────────
+let _overdueMonths=1, _overdueStatus='';
+
+function setOverdueFilter(months,btn){
+  _overdueMonths=months;
+  document.querySelectorAll('.mid-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOverdueList();
+}
+
+function setMidStatus(el){
+  _overdueStatus=el.dataset.s;
+  document.querySelectorAll('#midChipRow .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderOverdueList();
+}
+
+function getOverdueLeads(months, status){
+  const cutoff=new Date();
+  cutoff.setMonth(cutoff.getMonth()-months);
+  const statuses=status?[status]:['영업중','거래중','거래중지','거래이탈'];
+  return leads.filter(l=>{
+    if(!statuses.includes(l.sales_status)) return false;
+    if(!l.last_visit) return true;
+    return new Date(l.last_visit)<cutoff;
+  });
+}
+
+function renderOverdueList(){
+  [1,2,3,6].forEach(m=>{
+    const el=document.getElementById('cnt-'+m+'m');
+    if(el) el.textContent=getOverdueLeads(m,_overdueStatus).length;
+  });
+  const list=getOverdueLeads(_overdueMonths,_overdueStatus);
+  const el=document.getElementById('midList');
+  const tot=document.getElementById('midTotal');
+  if(!list.length){
+    el.innerHTML='<div class="mid-empty">해당 업체가 없습니다.</div>';
+    tot.textContent='';
+    return;
+  }
+  tot.textContent=list.length+'개 업체';
+  el.innerHTML=list.map(l=>{
+    const days=l.last_visit?Math.floor((new Date()-new Date(l.last_visit))/86400000):null;
+    const sel=l.id===selectedLeadId?' selected':'';
+    return `<div class="mid-item${sel}" onclick="selectLead(${l.id})">
+      <div style="display:flex;align-items:center;gap:5px">
+        <div class="mid-name" style="flex:1">${esc(l.name)}</div>
+        ${statusBadge(l.sales_status||'')}
+      </div>
+      <div class="mid-sub">${[l.region,l.writer].filter(Boolean).map(esc).join(' · ')}</div>
+      <div class="mid-days">${days!==null?days+'일 전 방문':'방문 기록 없음'}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateLeadCounts(){
+  const cnt={'영업중':0,'거래중':0,'거래중지':0,'거래이탈':0};
+  leads.forEach(l=>{if(cnt[l.sales_status]!==undefined)cnt[l.sales_status]++});
+  document.getElementById('cnt-all').textContent=leads.length;
+  Object.keys(cnt).forEach(k=>{const el=document.getElementById('cnt-'+k);if(el)el.textContent=cnt[k]});
+  document.getElementById('custCount').textContent=leads.length+'건';
+}
+
+function isOverdue(l){
+  if(l.sales_status!=='영업중') return false;
+  const sixAgo=new Date(); sixAgo.setMonth(sixAgo.getMonth()-6);
+  if(!l.last_visit) return true;
+  return new Date(l.last_visit)<sixAgo;
+}
+
+function renderLeadList(){
+  const el=document.getElementById('custList');
+  if(!leads.length){el.innerHTML='<div class="cust-empty">영업처가 없습니다</div>';return}
+  el.innerHTML=leads.map(l=>{
+    const isChecked=selectedIds.has(l.id);
+    const overdue=isOverdue(l);
+    const cls='cust-item'+(overdue?' overdue':'')+(selectionMode?' sel-mode':'')+(selectionMode&&isChecked?' sel-checked':(!selectionMode&&l.id===selectedLeadId?' selected':''));
+    const click=selectionMode?`toggleSelect(${l.id})`:`selectLead(${l.id})`;
+    return `
+    <div class="${cls}" onclick="${click}">
+      ${selectionMode?`<input type="checkbox" class="cust-cb" ${isChecked?'checked':''} onclick="event.stopPropagation();toggleSelect(${l.id})">`:''}
+      <div class="ci-info">
+        <div class="ci-name">${esc(l.name)}</div>
+        <div class="ci-sub">${[l.region,l.writer].filter(Boolean).map(esc).join(' · ')}${l.interest_items?` | ${esc(l.interest_items)}`:''}${l.customer_name?` · 🏢 ${esc(l.customer_name)}`:''}</div>
+      </div>
+      <div class="ci-right">
+        ${statusBadge(l.sales_status||'')}
+        ${overdue?`<div class="overdue-badge">⚠ 방문필요</div>`:''}
+        <div class="ci-visit" style="margin-top:2px;${overdue?'color:#dc2626':''}">${l.visit_count||0}회 방문</div>
+        <div class="ci-visit" style="${overdue?'color:#dc2626;font-weight:700':''}">${l.last_visit||'방문없음'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 상태 칩 ──────────────────────────────────────────────────────────────
+function chipClick(el){
+  document.querySelectorAll('#chipRow .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  loadLeads();
+}
+
+function resetFilter(){
+  document.getElementById('fQ').value='';
+  document.getElementById('fWriter').value='';
+  document.getElementById('fDateFrom').value='';
+  document.getElementById('fDateTo').value='';
+  document.querySelectorAll('#chipRow .chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('#chipRow .chip.all').classList.add('active');
+  loadLeads();
+}
+
+// ── 일괄 선택/수정 ────────────────────────────────────────────────────────
+function enterSelectionMode(){
+  selectionMode=true; selectedIds=new Set();
+  document.getElementById('bulkBar').classList.add('show');
+  document.getElementById('selectAll').checked=false;
+  document.getElementById('bulkCount').textContent='0건 선택';
+  renderLeadList();
+}
+
+function exitSelectionMode(){
+  selectionMode=false; selectedIds=new Set();
+  document.getElementById('bulkBar').classList.remove('show');
+  renderLeadList();
+}
+
+function toggleSelect(id){
+  if(selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  document.getElementById('bulkCount').textContent=selectedIds.size+'건 선택';
+  document.getElementById('selectAll').checked=leads.length>0&&selectedIds.size===leads.length;
+  renderLeadList();
+}
+
+function toggleSelectAll(cb){
+  if(cb.checked) leads.forEach(l=>selectedIds.add(l.id));
+  else selectedIds.clear();
+  document.getElementById('bulkCount').textContent=selectedIds.size+'건 선택';
+  renderLeadList();
+}
+
+async function bulkUpdateStatus(){
+  if(!selectedIds.size){toast('선택된 항목이 없습니다','err');return}
+  const status=document.getElementById('bulkStatus').value;
+  if(!confirm(`선택한 ${selectedIds.size}개 항목의 상태를 [${status}]으로 변경합니다.`)) return;
+  const res=await fetch('/api/sales/leads/bulk_status',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ids:[...selectedIds],status})
+  });
+  if(!res.ok){toast('변경 실패','err');return}
+  toast('변경되었습니다','ok');
+  exitSelectionMode();
+  await loadLeads();
+}
+
+// ── 리드 선택 ──────────────────────────────────────────────────────────
+async function selectLead(id){
+  _activePhotoType='lead';
+  selectedLeadId=id;
+  renderLeadList();
+  renderOverdueList();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  document.getElementById('custId').value=l.id;
+  document.getElementById('cWriter').value=l.writer||'';
+  document.getElementById('cCustomer').value=l.name||'';
+  document.getElementById('cCreatedAt').value=(l.created_at||'').slice(0,10);
+  document.getElementById('cStatus').value=l.sales_status||'영업중';
+  document.getElementById('cRegion').value=l.region||'';
+  document.getElementById('cAddress').value=l.address||'';
+  document.getElementById('cPhone').value=l.phone||'';
+  document.getElementById('cInterest').value=l.interest_items||'';
+  document.getElementById('cSupplier').value=l.existing_supplier||'';
+  document.getElementById('cNotes').value=l.notes||'';
+  document.getElementById('detStatusBdg').innerHTML=statusBadge(l.sales_status||'');
+  document.getElementById('delCustBtn').style.display='inline-flex';
+  slUpdateLinkStatus(l.linked_customer_id, l.customer_name);
+  closeAddVisit();
+  showRight();
+  await Promise.all([loadLeadVisits(id), loadLeadOrders(id), loadPhotos(id,'lead')]);
+}
+
+function showRight(){
+  document.getElementById('rightEmpty').style.display='none';
+  document.getElementById('rightContent').style.display='flex';
+}
+
+// ── 신규 영업처 ──────────────────────────────────────────────────────────
+function openNewLead(){
+  _activePhotoType='lead';
+  selectedLeadId=null;
+  renderLeadList();
+  document.getElementById('custId').value='';
+  document.getElementById('cWriter').value='';
+  document.getElementById('cCustomer').value='';
+  document.getElementById('cCreatedAt').value='';
+  document.getElementById('cStatus').value='영업중';
+  document.getElementById('cRegion').value='';
+  document.getElementById('cAddress').value='';
+  document.getElementById('cPhone').value='';
+  document.getElementById('cInterest').value='';
+  document.getElementById('cSupplier').value='';
+  document.getElementById('cNotes').value='';
+  document.getElementById('detStatusBdg').innerHTML=statusBadge('영업중');
+  document.getElementById('delCustBtn').style.display='none';
+  document.getElementById('visitList').innerHTML='<div class="visit-empty">저장 후 방문기록을 추가할 수 있습니다.</div>';
+  document.getElementById('visitCountTxt').textContent='';
+  document.getElementById('orderBody').innerHTML='<tr><td colspan="7" class="empty">생산 주문 이력이 없습니다.</td></tr>';
+  document.getElementById('orderSubTxt').textContent='';
+  document.getElementById('orderSummaryBar').style.display='none';
+  slUpdateLinkStatus(null,null);
+  renderPhotoGrid([],'lead');
+  closeAddVisit();
+  showRight();
+  document.getElementById('rightPanel').scrollTop=0;
+}
+
+// ── 저장 / 삭제 ──────────────────────────────────────────────────────────
+async function saveLead(){
+  const id=document.getElementById('custId').value;
+  const name=document.getElementById('cCustomer').value.trim();
+  if(!name){toast('업체명을 입력해주세요','err');return}
+  const body={
+    writer:document.getElementById('cWriter').value.trim(),
+    name,
+    created_at:norm(document.getElementById('cCreatedAt').value),
+    status:document.getElementById('cStatus').value,
+    region:document.getElementById('cRegion').value.trim(),
+    address:document.getElementById('cAddress').value.trim(),
+    phone:document.getElementById('cPhone').value.trim(),
+    interest_items:document.getElementById('cInterest').value.trim(),
+    existing_supplier:document.getElementById('cSupplier').value.trim(),
+    notes:document.getElementById('cNotes').value.trim()
+  };
+  const url=id?'/api/sales/leads/'+id:'/api/sales/leads';
+  const res=await fetch(url,{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){toast('저장 실패','err');return}
+  if(!id){
+    const data=await res.json();
+    document.getElementById('custId').value=data.id;
+    document.getElementById('delCustBtn').style.display='inline-flex';
+    selectedLeadId=data.id;
+  }
+  document.getElementById('detStatusBdg').innerHTML=statusBadge(body.status);
+  toast('저장되었습니다','ok');
+  await loadLeads();
+  if(selectedLeadId) renderLeadList();
+}
+
+async function deleteLead(){
+  const id=document.getElementById('custId').value;
+  if(!id) return;
+  const nm=document.getElementById('cCustomer').value;
+  if(!confirm(`[${nm}] 영업처와 모든 방문기록을 삭제합니다. 계속하시겠습니까?`)) return;
+  const res=await fetch('/api/sales/leads/'+id,{method:'DELETE'});
+  if(!res.ok){toast('삭제 실패','err');return}
+  toast('삭제되었습니다','ok');
+  selectedLeadId=null;
+  document.getElementById('rightEmpty').style.display='flex';
+  document.getElementById('rightContent').style.display='none';
+  await loadLeads();
+}
+
+// ── 업체 연결 ─────────────────────────────────────────────────────────────
+function slUpdateLinkStatus(linkedId, linkedName){
+  const statusEl=document.getElementById('slLinkStatus');
+  const btnEl=document.getElementById('slLinkBtn');
+  const subEl=document.getElementById('slLinkSub');
+  if(linkedId&&linkedName){
+    statusEl.innerHTML=`<span style="color:var(--success);font-weight:700">✓ 거래처 등록됨:</span> <strong>${esc(linkedName)}</strong>`;
+    btnEl.textContent='연결해제';
+    btnEl.onclick=slUnlink;
+    btnEl.className='btn btn-ghost btn-sm';
+    subEl.textContent='거래처 등록됨';
+  } else {
+    statusEl.textContent='거래가 확정되면 업체를 등록하세요';
+    btnEl.textContent='업체등록';
+    btnEl.onclick=slOpenLinkModal;
+    btnEl.className='btn btn-outline btn-sm';
+    subEl.textContent='';
+  }
+}
+
+function slOpenLinkModal(){
+  document.getElementById('slLinkName').value=document.getElementById('cCustomer').value.trim();
+  document.getElementById('slLinkModal').style.display='flex';
+}
+function slCloseLinkModal(){document.getElementById('slLinkModal').style.display='none'}
+
+async function slDoLink(){
+  const lid=document.getElementById('custId').value;
+  if(!lid){toast('먼저 영업처를 저장해주세요','err');return}
+  const name=document.getElementById('slLinkName').value.trim();
+  if(!name){toast('거래처명을 입력해주세요','err');return}
+  const res=await fetch('/api/sales/leads/'+lid+'/link',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({customer_name:name})
+  });
+  if(!res.ok){toast('등록 실패','err');return}
+  const data=await res.json();
+  slCloseLinkModal();
+  toast('업체 등록 완료','ok');
+  slUpdateLinkStatus(data.customer_id, data.customer_name);
+  loadLeadOrders(parseInt(lid));
+  loadLeads();
+}
+
+async function slUnlink(){
+  const lid=document.getElementById('custId').value;
+  if(!lid) return;
+  if(!confirm('업체 연결을 해제하시겠습니까?')) return;
+  const res=await fetch('/api/sales/leads/'+lid+'/unlink',{method:'POST'});
+  if(!res.ok){toast('해제 실패','err');return}
+  toast('연결 해제됨','ok');
+  slUpdateLinkStatus(null,null);
+  loadLeadOrders(parseInt(lid));
+  loadLeads();
+}
+
+// ── 생산이력 로드 ────────────────────────────────────────────────────────
+async function loadLeadOrders(lid){
+  document.getElementById('orderBody').innerHTML='<tr><td colspan="7" class="empty">불러오는 중...</td></tr>';
+  const res=await fetch('/api/sales/leads/'+lid+'/orders');
+  if(!res.ok) return;
+  const orders=await res.json();
+  const bar=document.getElementById('orderSummaryBar');
+  if(!orders.length){
+    document.getElementById('orderBody').innerHTML='<tr><td colspan="7" class="empty">생산 주문 이력이 없습니다.</td></tr>';
+    document.getElementById('orderSubTxt').textContent='';
+    bar.style.display='none';
+    return;
+  }
+  const totalQty=orders.reduce((s,o)=>s+(o.qty||1),0);
+  const completed=orders.filter(o=>['완료','납품'].includes(o.status)).length;
+  const lastDate=orders.map(o=>o.order_date||'').filter(Boolean).sort().pop()||'—';
+  const prodQty={};
+  orders.forEach(o=>{const k=o.product_group||'기타';prodQty[k]=(prodQty[k]||0)+(o.qty||1)});
+  const prodHtml=Object.entries(prodQty).sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`<div class="order-kv"><span class="k">${esc(k)}</span><span class="v">${v}개</span></div>`)
+    .join('');
+  bar.innerHTML=`
+    <div class="order-kv"><span class="k">총 주문</span><span class="v">${totalQty}개</span></div>
+    <div class="order-kv"><span class="k">완료</span><span class="v">${completed}건</span></div>
+    <div class="order-kv"><span class="k">최근주문일</span><span class="v" style="font-size:14px">${esc(lastDate)}</span></div>
+    <div class="order-sep"></div>
+    ${prodHtml}`;
+  bar.style.display='flex';
+  document.getElementById('orderSubTxt').textContent=orders.length+'건';
+  document.getElementById('orderBody').innerHTML=orders.map(o=>`
+    <tr>
+      <td>${esc(o.order_date||'')}</td>
+      <td>${esc(o.due_date||o.delivery_date||'')}</td>
+      <td><strong>${esc(o.product_group||'')}</strong></td>
+      <td>${esc(o.model||'')}</td>
+      <td class="center">${o.qty||1}</td>
+      <td style="color:var(--text-muted)">${esc(o.site_name||'')}</td>
+      <td class="center">${schedStatusBadge(o.status||'')}</td>
+    </tr>`).join('');
+}
+
+// ── 방문기록 ────────────────────────────────────────────────────────────
+let leadCurrentVisits=[];
+
+async function loadLeadVisits(lid){
+  const res=await fetch('/api/sales/leads/'+lid+'/visits');
+  if(!res.ok) return;
+  const visits=await res.json();
+  leadCurrentVisits=visits;
+  document.getElementById('visitCountTxt').textContent=visits.length?visits.length+'건':'';
+  const el=document.getElementById('visitList');
+  if(!visits.length){el.innerHTML='<div class="visit-empty">방문 기록이 없습니다.</div>';return}
+  el.innerHTML=visits.map(v=>leadVisitCard(v,lid)).join('');
+}
+
+function leadVisitCard(v,lid){
+  return `
+    <div class="visit-card" id="vs-${v.id}">
+      <div class="v-btns">
+        <button class="v-edit" onclick="editLeadVisit(${v.id},${lid})">수정</button>
+        <button class="v-del" onclick="deleteLeadVisit(${v.id},${lid})">삭제</button>
+      </div>
+      <div class="visit-card-hd">
+        <span class="v-date">${esc(v.visit_date||'날짜없음')}</span>
+        ${v.visitor?`<span class="v-tag" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc">${esc(v.visitor)}</span>`:''}
+        ${v.sales_items?`<span class="v-tag">${esc(v.sales_items)}</span>`:''}
+      </div>
+      <div class="v-content">${esc(v.content||'')}</div>
+    </div>`;
+}
+
+function editLeadVisit(vid,lid){
+  const v=leadCurrentVisits.find(x=>x.id===vid);
+  if(!v) return;
+  const card=document.getElementById('vs-'+vid);
+  card.classList.add('editing');
+  card.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="info-grid">
+        <div class="fg2"><label>방문일</label>
+          <div class="date-wrap">
+            <input id="vse-date-${vid}" value="${esc(v.visit_date||'')}" onblur="this.value=norm(this.value)">
+            <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('vse-date-${vid}'))">📅</button>
+          </div>
+        </div>
+        <div class="fg2"><label>방문자</label><input id="vse-visitor-${vid}" value="${esc(v.visitor||'')}" placeholder="방문한 담당자 이름"></div>
+        <div class="fg2"><label>영업항목</label><input id="vse-items-${vid}" value="${esc(v.sales_items||'')}"></div>
+      </div>
+      <div class="fg2"><label>상담 내용</label><textarea id="vse-content-${vid}" style="min-height:68px">${esc(v.content||'')}</textarea></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-success btn-sm" onclick="saveEditLeadVisit(${vid},${lid})">저장</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadLeadVisits(${lid})">취소</button>
+      </div>
+    </div>`;
+}
+
+async function saveEditLeadVisit(vid,lid){
+  const body={
+    visit_date:norm(document.getElementById('vse-date-'+vid).value),
+    visitor:document.getElementById('vse-visitor-'+vid).value.trim(),
+    sales_items:document.getElementById('vse-items-'+vid).value.trim(),
+    content:document.getElementById('vse-content-'+vid).value.trim()
+  };
+  const res=await fetch('/api/sales/visits/'+vid,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){toast('수정 실패','err');return}
+  toast('수정되었습니다','ok');
+  await loadLeadVisits(lid);
+}
+
+function toggleAddVisit(){
+  const f=document.getElementById('visitAddForm');
+  if(f.classList.contains('open')){closeAddVisit();return}
+  document.getElementById('vDate').value=today();
+  document.getElementById('vVisitor').value='';
+  document.getElementById('vItems').value='';
+  document.getElementById('vContent').value='';
+  f.classList.add('open');
+}
+function closeAddVisit(){document.getElementById('visitAddForm').classList.remove('open')}
+
+async function addVisit(){
+  let lid=document.getElementById('custId').value;
+  if(!lid){
+    await saveLead();
+    lid=document.getElementById('custId').value;
+    if(!lid) return;
+  }
+  const body={
+    visit_date:norm(document.getElementById('vDate').value),
+    visitor:document.getElementById('vVisitor').value.trim(),
+    sales_items:document.getElementById('vItems').value.trim(),
+    content:document.getElementById('vContent').value.trim()
+  };
+  if(!body.content&&!body.visit_date){toast('방문일 또는 내용을 입력해주세요','err');return}
+  const res=await fetch('/api/sales/leads/'+lid+'/visits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){toast('저장 실패','err');return}
+  toast('방문기록 저장','ok');
+  closeAddVisit();
+  await loadLeadVisits(parseInt(lid));
+  loadLeads();
+}
+
+async function deleteLeadVisit(vid,lid){
+  if(!confirm('이 방문기록을 삭제하시겠습니까?')) return;
+  const res=await fetch('/api/sales/visits/'+vid,{method:'DELETE'});
+  if(!res.ok){toast('삭제 실패','err');return}
+  toast('삭제되었습니다','ok');
+  await loadLeadVisits(lid);
+  loadLeads();
+}
+
+// ── 사진 첨부 ─────────────────────────────────────────────────────────────
+let _activePhotoType=null; // 현재 우측 패널 타입 ('lead' or 'consult')
+
+document.addEventListener('paste', async function(e){
+  if(!_activePhotoType) return;
+  const items=Array.from((e.clipboardData||e.originalEvent?.clipboardData)?.items||[]);
+  const imgs=items.filter(it=>it.type.startsWith('image/'));
+  if(!imgs.length) return;
+  e.preventDefault();
+  const idKey=_activePhotoType==='lead'?'custId':'ccId';
+  let id=document.getElementById(idKey).value;
+  if(!id){
+    if(_activePhotoType==='lead') await saveLead(); else await ccSaveClient();
+    id=document.getElementById(idKey).value;
+    if(!id) return;
+  }
+  const fd=new FormData();
+  fd.append('entity_type',_activePhotoType);
+  fd.append('entity_id',id);
+  for(const it of imgs){
+    const blob=it.getAsFile();
+    if(!blob) continue;
+    const ext=it.type.split('/')[1]||'png';
+    fd.append('photos',blob,`paste_${Date.now()}.${ext}`);
+  }
+  const res=await fetch('/api/journal/photos',{method:'POST',body:fd});
+  if(!res.ok){toast('붙여넣기 실패','err');return}
+  toast('사진 붙여넣기 완료','ok');
+  await loadPhotos(id,_activePhotoType);
+});
+
+function renderPhotoGrid(photos, type){
+  const gridId = type==='lead'?'photoGrid':'ccPhotoGrid';
+  const emptyId = type==='lead'?'photoEmpty':'ccPhotoEmpty';
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  const empEl = document.getElementById(emptyId);
+  const thumbs = photos.filter(p=>p.id);
+  if(!thumbs.length){
+    grid.innerHTML=`<span id="${emptyId}" style="color:var(--text-muted);font-size:12px;font-style:italic">사진이 없습니다. (Ctrl+V 붙여넣기 가능)</span>`;
+    return;
+  }
+  grid.innerHTML=thumbs.map(p=>`
+    <div class="photo-thumb" onclick="window.open('/static/uploads/journal/${esc(p.filename)}','_blank')">
+      <img src="/static/uploads/journal/${esc(p.filename)}" alt="${esc(p.original_name)}" loading="lazy">
+      <button class="photo-del" onclick="event.stopPropagation();deletePhoto(${p.id},'${type}')">✕</button>
+    </div>`).join('');
+}
+
+async function loadPhotos(entityId, type){
+  const res=await fetch(`/api/journal/photos?entity_type=${type}&entity_id=${entityId}`);
+  if(!res.ok) return;
+  renderPhotoGrid(await res.json(), type);
+}
+
+async function uploadPhotos(input, type){
+  const id=document.getElementById(type==='lead'?'custId':'ccId').value;
+  if(!id){
+    if(type==='lead') await saveLead(); else await ccSaveClient();
+    const newId=document.getElementById(type==='lead'?'custId':'ccId').value;
+    if(!newId){input.value='';return}
+    return uploadPhotosWithId(input, type, newId);
+  }
+  return uploadPhotosWithId(input, type, id);
+}
+
+async function uploadPhotosWithId(input, type, id){
+  const fd=new FormData();
+  fd.append('entity_type', type);
+  fd.append('entity_id', id);
+  for(const f of input.files) fd.append('photos', f);
+  input.value='';
+  const res=await fetch('/api/journal/photos',{method:'POST',body:fd});
+  if(!res.ok){toast('업로드 실패','err');return}
+  toast('사진 저장됨','ok');
+  await loadPhotos(id, type);
+}
+
+async function deletePhoto(pid, type){
+  if(!confirm('이 사진을 삭제하시겠습니까?')) return;
+  const res=await fetch('/api/journal/photos/'+pid,{method:'DELETE'});
+  if(!res.ok){toast('삭제 실패','err');return}
+  const id=document.getElementById(type==='lead'?'custId':'ccId').value;
+  await loadPhotos(id, type);
+}
+
+// ── 달력 ─────────────────────────────────────────────────────────────────
+(function(){
+  let ai=null,cy=0,cm=0;
+  function parse(v){v=norm(v);const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date()}
+  function ensure(){let p=document.getElementById('pdCal');if(p)return p;p=document.createElement('div');p.id='pdCal';p.className='pd-cal-pop';p.innerHTML=`<div class="pd-cal-head"><button onclick="pdCalMove(-1)">◀</button><div class="pd-cal-title" id="pdCalTitle"></div><button onclick="pdCalMove(1)">▶</button><button onclick="pdCalClose()">✕</button></div><div class="pd-cal-grid" id="pdCalGrid"></div>`;document.body.appendChild(p);return p}
+  window.pdCalOpen=function(inp){ai=inp;const d=parse(inp.value);cy=d.getFullYear();cm=d.getMonth();const p=ensure();pdCalRender();const r=inp.getBoundingClientRect();p.style.left=Math.min(r.left,window.innerWidth-290)+'px';p.style.top=Math.min(r.bottom+4,window.innerHeight-310)+'px';p.style.display='block'};
+  window.pdCalMove=function(d){cm+=d;if(cm<0){cm=11;cy--}if(cm>11){cm=0;cy++}pdCalRender()};
+  window.pdCalClose=function(){const p=document.getElementById('pdCal');if(p)p.style.display='none'};
+  window.pdCalPick=function(y,m,d){if(ai){ai.value=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;ai.dispatchEvent(new Event('input',{bubbles:true}))}pdCalClose()};
+  window.pdCalRender=function(){const t=document.getElementById('pdCalTitle'),g=document.getElementById('pdCalGrid');if(!t||!g)return;t.textContent=`${cy}-${String(cm+1).padStart(2,'0')}`;const dows=['일','월','화','수','목','금','토'];let h=dows.map(d=>`<div class="dow">${d}</div>`).join('');const f=new Date(cy,cm,1),l=new Date(cy,cm+1,0);const sel=ai?norm(ai.value):'';const now=new Date(),td=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;for(let i=0;i<f.getDay();i++)h+='<div></div>';for(let day=1;day<=l.getDate();day++){const v=`${cy}-${String(cm+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const c=[v===td?'today':'',v===sel?'selected':''].filter(Boolean).join(' ');h+=`<button type="button" class="${c}" onclick="pdCalPick(${cy},${cm},${day})">${day}</button>`}g.innerHTML=h};
+  document.addEventListener('click',e=>{const p=document.getElementById('pdCal');if(p&&p.style.display!=='none'&&!p.contains(e.target)&&(!ai||e.target!==ai)&&!e.target.classList.contains('cal-btn'))pdCalClose()});
+})();
+
+// ── 상담일지 ─────────────────────────────────────────────────────────────
+let ccClients=[], ccSelectedId=null;
+
+async function ccLoadClients(){
+  const p=new URLSearchParams();
+  const q=document.getElementById('ccQ').value.trim();
+  const w=document.getElementById('ccWriter').value.trim();
+  const df=norm(document.getElementById('ccDateFrom').value);
+  const dt=norm(document.getElementById('ccDateTo').value);
+  if(q) p.append('q',q);
+  if(w) p.append('writer',w);
+  if(df) p.append('date_from',df);
+  if(dt) p.append('date_to',dt);
+  const res=await fetch('/api/consult/clients?'+p);
+  if(!res.ok){toast('불러오기 실패','err');return}
+  ccClients=await res.json();
+  ccRenderList();
+  document.getElementById('ccClientCount').textContent=ccClients.length+'건';
+}
+
+function ccRenderList(){
+  const el=document.getElementById('ccClientList');
+  if(!ccClients.length){el.innerHTML='<div class="cust-empty">상담자가 없습니다</div>';return}
+  el.innerHTML=ccClients.map(c=>`
+    <div class="cust-item${c.id===ccSelectedId?' selected':''}" onclick="ccSelectClient(${c.id})">
+      <div class="ci-info">
+        <div class="ci-name">${esc(c.name)}</div>
+        <div class="ci-sub">${[c.region,c.writer].filter(Boolean).map(esc).join(' · ')}${c.channel&&c.channel!=='경로확인'?' | '+esc(c.channel):''}</div>
+      </div>
+      <div class="ci-right">
+        ${c.linked_customer_name?`<div class="ci-visit" style="color:var(--success);font-weight:700">🏢 ${esc(c.linked_customer_name)}</div>`:''}
+        <div class="ci-visit">${c.visit_count||0}회 상담</div>
+        <div class="ci-visit">${c.last_visit||c.first_consult_date||'-'}</div>
+      </div>
+    </div>`).join('');
+}
+
+function ccResetFilter(){
+  document.getElementById('ccQ').value='';
+  document.getElementById('ccWriter').value='';
+  document.getElementById('ccDateFrom').value='';
+  document.getElementById('ccDateTo').value='';
+  ccLoadClients();
+}
+
+async function ccSelectClient(id){
+  _activePhotoType='consult';
+  ccSelectedId=id;
+  ccRenderList();
+  const c=ccClients.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('ccId').value=c.id;
+  document.getElementById('ccWriterField').value=c.writer||'';
+  document.getElementById('ccName').value=c.name||'';
+  document.getElementById('ccPhone').value=c.phone||'';
+  document.getElementById('ccFirstDate').value=(c.first_consult_date||'').slice(0,10);
+  document.getElementById('ccChannel').value=c.channel||'경로확인';
+  document.getElementById('ccRegion').value=c.region||'';
+  document.getElementById('ccAddress').value=c.address||'';
+  document.getElementById('ccInterest').value=c.interest_items||'';
+  document.getElementById('ccNotes').value=c.notes||'';
+  document.getElementById('ccDelClientBtn').style.display='inline-flex';
+  ccUpdateLinkStatus(c.linked_customer_id, c.linked_customer_name);
+  ccCloseAddVisit();
+  ccShowRight();
+  await Promise.all([ccLoadVisits(id), ccLoadOrders(id), loadPhotos(id,'consult')]);
+}
+
+function ccUpdateLinkStatus(linkedId, linkedName){
+  const statusEl=document.getElementById('ccLinkStatus');
+  const btnEl=document.getElementById('ccLinkBtn');
+  const subEl=document.getElementById('ccLinkSub');
+  if(linkedId&&linkedName){
+    statusEl.innerHTML=`<span style="color:var(--success);font-weight:700">✓ 영업일지 연결됨:</span> <strong>${esc(linkedName)}</strong>`;
+    btnEl.textContent='연결해제';
+    btnEl.onclick=ccUnlink;
+    btnEl.className='btn btn-ghost btn-sm';
+    subEl.textContent='영업일지와 연결됨';
+  } else {
+    statusEl.textContent='상담이 실제 거래로 이어진 경우 업체를 등록하세요';
+    btnEl.textContent='업체등록';
+    btnEl.onclick=ccOpenLinkModal;
+    btnEl.className='btn btn-outline btn-sm';
+    subEl.textContent='';
+  }
+}
+
+function ccShowRight(){
+  document.getElementById('ccRightEmpty').style.display='none';
+  document.getElementById('ccRightContent').style.display='flex';
+}
+
+function ccOpenNew(){
+  _activePhotoType='consult';
+  ccSelectedId=null;
+  ccRenderList();
+  document.getElementById('ccId').value='';
+  document.getElementById('ccWriterField').value='';
+  document.getElementById('ccName').value='';
+  document.getElementById('ccPhone').value='';
+  document.getElementById('ccFirstDate').value='';
+  document.getElementById('ccChannel').value='경로확인';
+  document.getElementById('ccRegion').value='';
+  document.getElementById('ccAddress').value='';
+  document.getElementById('ccInterest').value='';
+  document.getElementById('ccNotes').value='';
+  document.getElementById('ccDelClientBtn').style.display='none';
+  document.getElementById('ccVisitList').innerHTML='<div class="visit-empty">저장 후 상담기록을 추가할 수 있습니다.</div>';
+  document.getElementById('ccVisitCountTxt').textContent='';
+  document.getElementById('ccOrderBody').innerHTML='<tr><td colspan="7" class="empty">생산 주문 이력이 없습니다.</td></tr>';
+  document.getElementById('ccOrderSubTxt').textContent='';
+  document.getElementById('ccOrderSummaryBar').style.display='none';
+  ccUpdateLinkStatus(null,null);
+  renderPhotoGrid([],'consult');
+  ccCloseAddVisit();
+  ccShowRight();
+  document.getElementById('ccRightPanel').scrollTop=0;
+}
+
+async function ccSaveClient(){
+  const id=document.getElementById('ccId').value;
+  const name=document.getElementById('ccName').value.trim();
+  if(!name){toast('상담자명을 입력해주세요','err');return}
+  const body={
+    writer:document.getElementById('ccWriterField').value.trim(),
+    name,
+    phone:document.getElementById('ccPhone').value.trim(),
+    first_consult_date:norm(document.getElementById('ccFirstDate').value),
+    channel:document.getElementById('ccChannel').value,
+    region:document.getElementById('ccRegion').value.trim(),
+    address:document.getElementById('ccAddress').value.trim(),
+    interest_items:document.getElementById('ccInterest').value.trim(),
+    notes:document.getElementById('ccNotes').value.trim()
+  };
+  const url=id?'/api/consult/clients/'+id:'/api/consult/clients';
+  const res=await fetch(url,{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){toast('저장 실패','err');return}
+  if(!id){
+    const data=await res.json();
+    document.getElementById('ccId').value=data.id;
+    document.getElementById('ccDelClientBtn').style.display='inline-flex';
+    ccSelectedId=data.id;
+  }
+  toast('저장되었습니다','ok');
+  await ccLoadClients();
+  if(ccSelectedId) ccRenderList();
+}
+
+async function ccDeleteClient(){
+  const id=document.getElementById('ccId').value;
+  if(!id) return;
+  const nm=document.getElementById('ccName').value;
+  if(!confirm(`[${nm}] 상담자와 모든 상담기록을 삭제합니다. 계속하시겠습니까?`)) return;
+  const res=await fetch('/api/consult/clients/'+id,{method:'DELETE'});
+  if(!res.ok){toast('삭제 실패','err');return}
+  toast('삭제되었습니다','ok');
+  ccSelectedId=null;
+  document.getElementById('ccRightEmpty').style.display='flex';
+  document.getElementById('ccRightContent').style.display='none';
+  await ccLoadClients();
+}
+
+async function ccLoadOrders(cid){
+  document.getElementById('ccOrderBody').innerHTML='<tr><td colspan="7" class="empty">불러오는 중...</td></tr>';
+  const res=await fetch('/api/consult/clients/'+cid+'/orders');
+  if(!res.ok) return;
+  const orders=await res.json();
+  const bar=document.getElementById('ccOrderSummaryBar');
+  if(!orders.length){
+    document.getElementById('ccOrderBody').innerHTML='<tr><td colspan="7" class="empty">생산 주문 이력이 없습니다.</td></tr>';
+    document.getElementById('ccOrderSubTxt').textContent='';
+    bar.style.display='none';
+    return;
+  }
+  const totalQty=orders.reduce((s,o)=>s+(o.qty||1),0);
+  const completed=orders.filter(o=>['완료','납품'].includes(o.status)).length;
+  const lastDate=orders.map(o=>o.order_date||'').filter(Boolean).sort().pop()||'—';
+  const prodQty={};
+  orders.forEach(o=>{const k=o.product_group||'기타';prodQty[k]=(prodQty[k]||0)+(o.qty||1)});
+  const prodHtml=Object.entries(prodQty).sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`<div class="order-kv"><span class="k">${esc(k)}</span><span class="v">${v}개</span></div>`)
+    .join('');
+  bar.innerHTML=`
+    <div class="order-kv"><span class="k">총 주문</span><span class="v">${totalQty}개</span></div>
+    <div class="order-kv"><span class="k">완료</span><span class="v">${completed}건</span></div>
+    <div class="order-kv"><span class="k">최근주문일</span><span class="v" style="font-size:14px">${esc(lastDate)}</span></div>
+    <div class="order-sep"></div>
+    ${prodHtml}`;
+  bar.style.display='flex';
+  document.getElementById('ccOrderSubTxt').textContent=orders.length+'건';
+  document.getElementById('ccOrderBody').innerHTML=orders.map(o=>`
+    <tr>
+      <td>${esc(o.order_date||'')}</td>
+      <td>${esc(o.due_date||o.delivery_date||'')}</td>
+      <td><strong>${esc(o.product_group||'')}</strong></td>
+      <td>${esc(o.model||'')}</td>
+      <td class="center">${o.qty||1}</td>
+      <td style="color:var(--text-muted)">${esc(o.site_name||'')}</td>
+      <td class="center">${schedStatusBadge(o.status||'')}</td>
+    </tr>`).join('');
+}
+
+let ccCurrentVisits=[];
+
+async function ccLoadVisits(cid){
+  const res=await fetch('/api/consult/clients/'+cid+'/visits');
+  if(!res.ok) return;
+  const visits=await res.json();
+  ccCurrentVisits=visits;
+  document.getElementById('ccVisitCountTxt').textContent=visits.length?visits.length+'건':'';
+  const el=document.getElementById('ccVisitList');
+  if(!visits.length){el.innerHTML='<div class="visit-empty">상담 기록이 없습니다.</div>';return}
+  el.innerHTML=visits.map(v=>ccVisitCard(v,cid)).join('');
+}
+
+function ccVisitCard(v,cid){
+  return `
+    <div class="visit-card" id="vcc-${v.id}">
+      <div class="v-btns">
+        <button class="v-edit" onclick="ccEditVisit(${v.id},${cid})">수정</button>
+        <button class="v-del" onclick="ccDeleteVisit(${v.id},${cid})">삭제</button>
+      </div>
+      <div class="visit-card-hd">
+        <span class="v-date">${esc(v.visit_date||'날짜없음')}</span>
+        ${v.sales_items?`<span class="v-tag">${esc(v.sales_items)}</span>`:''}
+        ${v.consult_type?`<span class="v-tag" style="background:#fef3c7;color:#92400e">${esc(v.consult_type)}</span>`:''}
+        ${v.delivery_type?`<span class="v-tag" style="background:#dcfce7;color:#15803d">${esc(v.delivery_type)}</span>`:''}
+      </div>
+      <div class="v-content">${esc(v.content||'')}</div>
+    </div>`;
+}
+
+function ccEditVisit(vid,cid){
+  const v=ccCurrentVisits.find(x=>x.id===vid);
+  if(!v) return;
+  const card=document.getElementById('vcc-'+vid);
+  card.classList.add('editing');
+  card.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="info-grid-4">
+        <div class="fg2"><label>상담일</label>
+          <div class="date-wrap">
+            <input id="vce-date-${vid}" value="${esc(v.visit_date||'')}" onblur="this.value=norm(this.value)">
+            <button type="button" class="cal-btn" onclick="pdCalOpen(document.getElementById('vce-date-${vid}'))">📅</button>
+          </div>
+        </div>
+        <div class="fg2"><label>상담항목</label><input id="vce-items-${vid}" value="${esc(v.sales_items||'')}"></div>
+        <div class="fg2"><label>상담유형</label>
+          <select id="vce-type-${vid}">
+            <option value=""${!v.consult_type?' selected':''}>선택안함</option>
+            <option${v.consult_type==='소비자가'?' selected':''}>소비자가</option>
+            <option${v.consult_type==='공장도가'?' selected':''}>공장도가</option>
+          </select>
+        </div>
+        <div class="fg2"><label>출고구분</label>
+          <select id="vce-delivery-${vid}">
+            <option value=""${!v.delivery_type?' selected':''}>선택안함</option>
+            <option${v.delivery_type==='납품'?' selected':''}>납품</option>
+            <option${v.delivery_type==='시공'?' selected':''}>시공</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg2"><label>상담 내용</label><textarea id="vce-content-${vid}" style="min-height:68px">${esc(v.content||'')}</textarea></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-success btn-sm" onclick="ccSaveEditVisit(${vid},${cid})">저장</button>
+        <button class="btn btn-ghost btn-sm" onclick="ccLoadVisits(${cid})">취소</button>
+      </div>
+    </div>`;
+}
+
+async function ccSaveEditVisit(vid,cid){
+  const body={
+    visit_date:norm(document.getElementById('vce-date-'+vid).value),
+    sales_items:document.getElementById('vce-items-'+vid).value.trim(),
+    content:document.getElementById('vce-content-'+vid).value.trim(),
+    consult_type:document.getElementById('vce-type-'+vid).value,
+    delivery_type:document.getElementById('vce-delivery-'+vid).value
+  };
+  const res=await fetch('/api/consult/visits/'+vid,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){toast('수정 실패','err');return}
+  toast('수정되었습니다','ok');
+  await ccLoadVisits(cid);
+}
+
+function ccToggleAddVisit(){
+  const f=document.getElementById('ccVisitAddForm');
+  if(f.classList.contains('open')){ccCloseAddVisit();return}
+  document.getElementById('ccVDate').value=today();
+  document.getElementById('ccVItems').value='';
+  document.getElementById('ccVType').value='';
+  document.getElementById('ccVDelivery').value='';
+  document.getElementById('ccVContent').value='';
+  f.classList.add('open');
+}
+function ccCloseAddVisit(){document.getElementById('ccVisitAddForm').classList.remove('open')}
+
+async function ccAddVisit(){
+  let cid=document.getElementById('ccId').value;
+  if(!cid){
+    await ccSaveClient();
+    cid=document.getElementById('ccId').value;
+    if(!cid) return;
+  }
+  const body={
+    visit_date:norm(document.getElementById('ccVDate').value),
+    sales_items:document.getElementById('ccVItems').value.trim(),
+    content:document.getElementById('ccVContent').value.trim(),
+    consult_type:document.getElementById('ccVType').value,
+    delivery_type:document.getElementById('ccVDelivery').value
+  };
+  if(!body.content&&!body.visit_date){toast('상담일 또는 내용을 입력해주세요','err');return}
+  const res=await fetch('/api/consult/clients/'+cid+'/visits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){toast('저장 실패','err');return}
+  toast('상담기록 저장','ok');
+  ccCloseAddVisit();
+  await ccLoadVisits(parseInt(cid));
+  ccLoadClients();
+}
+
+async function ccDeleteVisit(vid,cid){
+  if(!confirm('이 상담기록을 삭제하시겠습니까?')) return;
+  const res=await fetch('/api/consult/visits/'+vid,{method:'DELETE'});
+  if(!res.ok){toast('삭제 실패','err');return}
+  toast('삭제되었습니다','ok');
+  await ccLoadVisits(cid);
+  ccLoadClients();
+}
+
+function ccOpenLinkModal(){
+  document.getElementById('ccLinkName').value=document.getElementById('ccName').value.trim();
+  document.getElementById('ccLinkModal').style.display='flex';
+}
+function ccCloseLinkModal(){document.getElementById('ccLinkModal').style.display='none'}
+
+async function ccDoLink(){
+  const cid=document.getElementById('ccId').value;
+  if(!cid){toast('먼저 상담자를 저장해주세요','err');return}
+  const name=document.getElementById('ccLinkName').value.trim();
+  if(!name){toast('거래처명을 입력해주세요','err');return}
+  const res=await fetch('/api/consult/clients/'+cid+'/link',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name})
+  });
+  if(!res.ok){toast('연결 실패','err');return}
+  const data=await res.json();
+  ccCloseLinkModal();
+  toast('업체 등록 완료','ok');
+  ccUpdateLinkStatus(data.customer_id, data.customer_name);
+  ccLoadOrders(parseInt(cid));
+  ccLoadClients();
+}
+
+async function ccUnlink(){
+  const cid=document.getElementById('ccId').value;
+  if(!cid) return;
+  if(!confirm('업체 연결을 해제하시겠습니까?')) return;
+  const res=await fetch('/api/consult/clients/'+cid+'/unlink',{method:'POST'});
+  if(!res.ok){toast('해제 실패','err');return}
+  toast('연결 해제됨','ok');
+  ccUpdateLinkStatus(null,null);
+  ccLoadOrders(parseInt(cid));
+  ccLoadClients();
+}
+
+// ── 초기화 ───────────────────────────────────────────────────────────────
+document.querySelectorAll('input:not(#cWriter):not(#cCustomer):not(#ccWriterField):not(#ccName)').forEach(el=>el.autocomplete='off');
+
+async function loadJournalRegions(){
+  try{
+    const res=await fetch('/api/journal/regions');
+    if(!res.ok) return;
+    const regions=await res.json();
+    const dl=document.getElementById('journalRegionList');
+    if(!dl) return;
+    dl.innerHTML=regions.map(r=>`<option value="${r}">`).join('');
+  }catch(e){}
+}
+
+loadJournalRegions();
+loadLeads();
+</script>
+<datalist id="journalRegionList"></datalist>
+</body>
+</html>

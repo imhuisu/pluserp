@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>서식관리 - PLUSDOOR</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;background:#f0f2f5;padding:14px}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+button{border:1px solid #ccc;background:#fff;padding:7px 14px;cursor:pointer;border-radius:5px}
+button.primary{background:#1a3a5c;color:#fff;font-weight:700;border-color:#1a3a5c}
+button:disabled{opacity:.5;cursor:default}
+
+/* 상단 메뉴 */
+.top-menu,.top-menu button{border-radius:0}
+.top-menu{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.top-menu button{border:1px solid #333;background:#fff;padding:7px 12px;cursor:pointer;font-family:inherit;font-size:13px}
+.top-menu button.active{background:#0078d7;color:#fff;font-weight:800}
+
+.page-title{font-size:17px;font-weight:800;margin:0 0 12px;color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:7px}
+
+/* 카드 */
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.08);margin-bottom:14px}
+.card-hd{background:#1a3a5c;color:#fff;font-weight:700;font-size:14px;padding:10px 16px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-hd.clickable{cursor:pointer}
+.card-hd.clickable:hover{background:#1e4570}
+.card-body{padding:14px}
+
+/* 폼 행 (이메일 설정) */
+.form-row{display:grid;grid-template-columns:72px 1fr;align-items:start;margin-bottom:9px;gap:4px}
+.form-row label{font-weight:700;font-size:12px;color:#555;padding-top:7px}
+.form-row input,.form-row textarea{width:100%;padding:7px 9px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:#fff}
+.form-row input:focus,.form-row textarea:focus{outline:none;border-color:#1a3a5c;box-shadow:0 0 0 2px rgba(26,58,92,.1)}
+
+/* 이메일 섹션 그리드 */
+.email-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
+@media(max-width:800px){.email-grid{grid-template-columns:1fr}}
+
+/* 파일 첨부 */
+.file-area{border:2px dashed #ccc;border-radius:6px;padding:12px;text-align:center;background:#fafafa;cursor:pointer;position:relative;transition:border-color .15s}
+.file-area:hover{border-color:#1a3a5c}
+.file-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-list{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.file-chip{background:#e8f0fe;border:1px solid #1a73e8;color:#174ea6;border-radius:14px;padding:3px 10px;font-size:12px;display:flex;align-items:center;gap:4px}
+.file-chip button{background:none;border:none;font-size:16px;color:#174ea6;cursor:pointer;line-height:1;padding:0}
+
+/* 발송 이력 테이블 */
+.log-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.log-tbl th{background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 10px;text-align:center;white-space:nowrap;font-weight:700;color:#444}
+.log-tbl td{border:1px solid #eee;padding:8px 10px;vertical-align:middle;word-break:break-word}
+.log-tbl tr:nth-child(even) td{background:#fafafa}
+.log-tbl tr:hover td{background:#f0f4ff}
+.badge-ok{background:#16a34a;color:#fff;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700}
+.badge-err{background:#d83b01;color:#fff;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700}
+.log-search{display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid #eee;align-items:center}
+.log-search input{flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+.log-search input:focus{outline:none;border-color:#1a3a5c}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:4px;cursor:pointer}
+.btn-del{border:1px solid #f0b0b0;background:#fff5f5;color:#c0392b}
+.btn-del:hover{background:#c0392b;color:#fff}
+.btn-view{border:1px solid #b0c8f0;background:#f0f5ff;color:#1a3a5c}
+.btn-view:hover{background:#1a3a5c;color:#fff}
+
+/* 서식 선택 버튼 */
+.forms-header{display:flex;align-items:center;gap:14px;margin:18px 0 12px;flex-wrap:wrap}
+.forms-header h3{font-size:16px;font-weight:800;color:#1a3a5c;white-space:nowrap}
+.form-btns{display:flex;gap:8px;flex-wrap:wrap}
+.fsb{padding:9px 20px;border:2px solid #ddd;background:#fff;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;color:#666;transition:all .15s}
+.fsb:hover{border-color:#1a3a5c;color:#1a3a5c}
+.fsb.active{border-color:#1a3a5c;background:#1a3a5c;color:#fff}
+
+/* ── 납품확인서 레이아웃 ── */
+.delivery-grid{display:grid;grid-template-columns:450px 1fr;gap:16px;align-items:start}
+@media(max-width:1000px){.delivery-grid{grid-template-columns:1fr}}
+
+/* 입력 폼 */
+.inp-form-row{display:grid;grid-template-columns:72px 1fr;align-items:start;margin-bottom:8px;gap:4px}
+.inp-form-row label{font-weight:700;font-size:12px;color:#555;padding-top:9px}
+.inp-form-row input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:#fff;min-height:36px}
+.inp-form-row input:focus{outline:none;border-color:#1a3a5c;box-shadow:0 0 0 2px rgba(26,58,92,.1)}
+
+/* 품목 입력 테이블 */
+.item-tbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
+.item-tbl th{background:#f5f5f5;border:1px solid #e5e5e5;padding:7px 8px;text-align:center;font-weight:700;color:#555}
+.item-tbl td{border:1px solid #eee;padding:3px}
+.item-tbl input{border:none;width:100%;padding:7px 8px;font-size:13px;background:transparent;color:#333;min-height:34px;line-height:1.2}
+.item-tbl input:focus{background:#f8f9ff;outline:1px solid #1a3a5c}
+.item-tbl .xb button{border:none;background:none;color:#bbb;font-size:18px;cursor:pointer;padding:2px 5px;line-height:1;width:100%}
+.item-tbl .xb button:hover{color:#d83b01}
+.item-tbl input[type=number]{text-align:center;-moz-appearance:textfield}
+.item-tbl input[type=number]::-webkit-outer-spin-button,
+.item-tbl input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+.doc-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:10px;border-top:1px solid #eee;margin-top:10px}
+.msg-ok{color:#16a34a;font-weight:700;font-size:13px}
+.msg-err{color:#d83b01;font-weight:700;font-size:13px}
+
+/* 미리보기 컨테이너 */
+.preview-outer{overflow:hidden;padding-bottom:0}
+.preview-label{font-size:11px;color:#999;margin-bottom:6px;text-align:right}
+#docPreview{
+  transform:scale(0.6);
+  transform-origin:top left;
+  margin-right:calc(-210mm * 0.4);
+  margin-bottom:calc(-297mm * 0.4);
+}
+
+/* ──────────────── A4 문서 ──────────────── */
+.doc-page{
+  width:210mm;
+  min-height:297mm;
+  background:#fff;
+  box-shadow:0 3px 28px rgba(0,0,0,.12);
+  padding:22mm 20mm 18mm;
+  font-family:"맑은 고딕",Arial,sans-serif;
+  color:#1a1a1a;
+  position:relative;
+}
+
+.doc-title{
+  text-align:center;
+  font-size:23pt;
+  font-weight:900;
+  letter-spacing:14px;
+  color:#111;
+  border-bottom:2.5px solid #333;
+  padding-bottom:12px;
+  margin-bottom:18px;
+}
+
+/* 필드 섹션 */
+.doc-fields{
+  border:1px solid #d0d0d0;
+  border-radius:3px;
+  overflow:hidden;
+  margin-bottom:18px;
+}
+.doc-field-row{
+  display:grid;
+  grid-template-columns:88px 1fr;
+  min-height:46px;
+  align-items:stretch;
+}
+.doc-field-row:not(:last-child){ border-bottom:1px solid #e5e5e5; }
+.doc-fl{
+  background:#f7f7f7;
+  font-weight:700;
+  font-size:10.5pt;
+  color:#555;
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;
+  padding:4px 6px;
+  border-right:1px solid #e0e0e0;
+  white-space:nowrap;
+  letter-spacing:1px;
+}
+.doc-fv{
+  padding:5px 12px;
+  font-size:11pt;
+  color:#111;
+  display:flex;align-items:center;
+  min-height:46px;
+}
+
+/* 납품내역 */
+.doc-section-hd{
+  text-align:center;
+  font-weight:700;
+  font-size:11pt;
+  letter-spacing:6px;
+  color:#333;
+  padding:7px 0;
+  background:#f7f7f7;
+  border:1px solid #d0d0d0;
+  border-bottom:none;
+  border-radius:3px 3px 0 0;
+}
+.items-tbl{
+  width:100%;
+  border-collapse:collapse;
+  border:1px solid #d0d0d0;
+  border-top:none;
+  border-radius:0 0 3px 3px;
+  overflow:hidden;
+}
+.items-tbl thead th{
+  padding:7px 8px;
+  background:#fff;
+  font-weight:700;
+  font-size:10pt;
+  text-align:center;
+  color:#444;
+  border-bottom:1.5px solid #ccc;
+  letter-spacing:1px;
+}
+.items-tbl thead th:not(:last-child){border-right:1px solid #ddd}
+.items-tbl tbody tr:not(:last-child) td{border-bottom:1px solid #ebebeb}
+.items-tbl tbody td{
+  padding:7px 10px;
+  font-size:11pt;
+  vertical-align:middle;
+}
+.items-tbl tbody td:nth-child(2){text-align:center}
+.items-tbl tbody td:last-child{text-align:center}
+.items-tbl .empty-hint td{
+  text-align:center;color:#ccc;font-size:10pt;padding:14px;border:none
+}
+
+/* 확인 텍스트 */
+.doc-confirm{
+  text-align:center;
+  font-size:11pt;
+  color:#333;
+  padding:6px 0;
+  line-height:1.9;
+  margin-top:40px;
+  margin-bottom:22px;
+  letter-spacing:0.5px;
+}
+
+/* 공급자 */
+.doc-supplier{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.supplier-tbl{border-collapse:collapse;font-size:10.5pt;line-height:2}
+.supplier-tbl td{border:none;padding:0;vertical-align:middle}
+.s-label{
+  display:block;
+  width:82px;
+  text-align:justify;
+  text-align-last:justify;
+  color:#444;
+  font-weight:600;
+}
+
+/* 모달 */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:9999;padding:14px}
+.modal-bg.open{display:flex}
+.modal-box{background:#fff;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.2);width:min(420px,96vw);padding:22px 20px}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:16px;color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:8px}
+.modal-row{display:grid;grid-template-columns:64px 1fr;align-items:center;margin-bottom:10px;gap:6px}
+.modal-row label{font-weight:700;font-size:12px;color:#555}
+.modal-row input{width:100%;padding:7px 9px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+.modal-row input:focus,.modal-row textarea:focus{outline:none;border-color:#1a3a5c}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center}
+
+/* 인쇄 */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4 portrait;margin:0}
+  html,body{margin:0;padding:0;width:210mm;height:297mm}
+  body *{visibility:hidden}
+  #docPreview,#docPreview *{visibility:visible}
+  .preview-outer{overflow:visible !important}
+  #docPreview{
+    transform:none !important;
+    margin:0 !important;
+    position:absolute;left:0;top:0;
+    width:210mm;height:297mm;
+    box-shadow:none;
+    padding:14mm 12mm;
+    box-sizing:border-box;
+  }
+}
+
+.actions-row{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:10px}
+.toggle-arrow{font-size:12px;opacity:.8;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:2px 9px;border-radius:3px;cursor:pointer}
+</style>
+</head>
+<body>
+{{ top_menu("mail") | safe }}
+
+<div class="no-print">
+  <div class="page-title">서식관리</div>
+
+  <!-- ── 이메일 설정 + 발송 ── -->
+  <div class="email-grid">
+    <!-- SMTP 설정 -->
+    <div class="card">
+      <div class="card-hd clickable" onclick="toggleSmtp()">
+        ⚙️ SMTP 설정
+        <button class="toggle-arrow" id="smtpArrow" onclick="event.stopPropagation();toggleSmtp()">열기</button>
+      </div>
+      <div id="smtpBody" style="display:none">
+        <div class="card-body">
+          <p style="font-size:12px;color:#888;margin-bottom:10px">네이버 메일 → 환경설정 → POP3/IMAP 설정에서 SMTP 사용을 허용해주세요.</p>
+          <div class="form-row"><label>SMTP 서버</label><input id="cfg_host" value="smtp.naver.com"></div>
+          <div class="form-row"><label>포트</label><input id="cfg_port" type="number" value="465"></div>
+          <div class="form-row"><label>이메일</label><input id="cfg_user" type="email" placeholder="네이버 이메일 주소"></div>
+          <div class="form-row"><label>비밀번호</label><input id="cfg_pw" type="password" placeholder="이메일 비밀번호"></div>
+          <div class="form-row"><label>발신자명</label><input id="cfg_name" placeholder="예: PLUSDOOR"></div>
+          <div class="actions-row">
+            <span id="cfgMsg" style="flex:1;font-size:13px"></span>
+            <button class="primary" onclick="saveSettings()">저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이메일 발송 -->
+    <div class="card">
+      <div class="card-hd clickable" onclick="toggleSend()">
+        ✉️ 이메일 발송
+        <button class="toggle-arrow" id="sendArrow" onclick="event.stopPropagation();toggleSend()">열기</button>
+      </div>
+      <div id="sendBody" style="display:none">
+        <div class="card-body">
+          <div class="form-row"><label>받는 사람 <span style="color:#d83b01">*</span></label><input id="gs_to" type="email" placeholder="수신 이메일 주소"></div>
+          <div class="form-row"><label>참조 (CC)</label><input id="gs_cc" type="email" placeholder="참조 이메일 (선택)"></div>
+          <div class="form-row"><label>제목 <span style="color:#d83b01">*</span></label><input id="gs_subject" placeholder="이메일 제목"></div>
+          <div class="form-row" style="align-items:start">
+            <label style="padding-top:7px">내용</label>
+            <textarea id="gs_body" rows="4" style="width:100%;padding:7px 9px;border:1px solid #ddd;border-radius:4px;font-size:13px;resize:vertical" placeholder="이메일 본문"></textarea>
+          </div>
+          <div class="form-row" style="align-items:start">
+            <label style="padding-top:0">파일 첨부</label>
+            <div>
+              <div class="file-area">
+                <div style="color:#aaa;font-size:12px;pointer-events:none">📎 클릭하거나 파일을 드래그하여 첨부</div>
+                <input type="file" id="gs_files" multiple onchange="addFiles(this.files)">
+              </div>
+              <div class="file-list" id="fileList"></div>
+            </div>
+          </div>
+          <div class="actions-row">
+            <span id="gs_msg" style="flex:1;font-size:13px"></span>
+            <button class="primary" id="gs_sendBtn" onclick="sendGeneral()">📤 발송</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 발송 이력 -->
+  <div class="card">
+    <div class="card-hd clickable" onclick="toggleLog()">
+      📋 발송 이력
+      <button class="toggle-arrow" id="logArrow" onclick="event.stopPropagation();toggleLog()">열기</button>
+    </div>
+    <div id="logBody-wrap" style="display:none">
+      <div class="log-search">
+        <input id="logSearch" placeholder="받는이 / 제목 / 보낸이 / 파일명 검색…" oninput="searchLog()" onkeydown="if(event.key==='Enter')searchLog()">
+        <button class="btn-sm" onclick="searchLog()">검색</button>
+        <button class="btn-sm" onclick="document.getElementById('logSearch').value='';loadLog()">초기화</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="log-tbl">
+          <thead>
+            <tr><th>발송일시</th><th>보낸이</th><th>받는이</th><th>제목</th><th>첨부/PDF</th><th>결과</th><th>관리</th></tr>
+          </thead>
+          <tbody id="logBody">
+            <tr><td colspan="7" style="text-align:center;color:#bbb;padding:20px">불러오는 중…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 납품확인서 조회 -->
+  <div class="card">
+    <div class="card-hd" onclick="toggleDeliveryLog()" style="cursor:pointer">
+      📂 납품확인서 조회
+      <button class="toggle-arrow" id="dlLogToggleBtn" onclick="event.stopPropagation();toggleDeliveryLog()">열기</button>
+    </div>
+    <div id="dlLogBody" style="display:none">
+      <div class="card-body">
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input id="dlSearch" type="text" placeholder="현장명, 날짜(예: 20250601) 등으로 검색…"
+            style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;outline:none"
+            onkeydown="if(event.key==='Enter')loadDeliveryFiles()">
+          <button onclick="loadDeliveryFiles()" style="padding:7px 16px;border:1px solid #1a3a5c;color:#1a3a5c;border-radius:4px;background:#fff;cursor:pointer;font-size:13px">검색</button>
+        </div>
+        <div id="dlFileList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 서식 선택 -->
+  <div class="forms-header">
+    <h3>서식 작성</h3>
+    <div class="form-btns">
+      <button class="fsb active" id="btnDelivery" onclick="showForm('delivery')">📄 납품확인서</button>
+      <button class="fsb" id="btnCertificate" onclick="showForm('certificate')">📋 성적서</button>
+      <button class="fsb" id="btnDrawing" onclick="showForm('drawing')">📐 도면</button>
+    </div>
+  </div>
+</div><!-- /no-print -->
+
+<!-- ── 납품확인서 ── -->
+<div id="form-delivery">
+  <div class="delivery-grid">
+    <!-- 입력 폼 -->
+    <div class="no-print">
+      <div class="card">
+        <div class="card-hd">✏️ 납품확인서 작성</div>
+        <div class="card-body">
+          <div class="inp-form-row"><label>현장주소</label><input id="f_address" oninput="upd()" placeholder="예: 경기도 양평군 양평읍 …"></div>
+          <div class="inp-form-row"><label>현장명</label><input id="f_site" oninput="upd()" placeholder="예: OO빌라 201호"></div>
+          <div class="inp-form-row"><label>건축주</label><input id="f_client" oninput="upd()" placeholder="예: 홍길동님"></div>
+          <div class="inp-form-row"><label>납품일자</label><input id="f_date" type="date" oninput="upd()"></div>
+
+          <div style="font-weight:700;font-size:12px;color:#1a3a5c;margin:14px 0 6px">납품 내역</div>
+          <table class="item-tbl">
+            <thead><tr>
+              <th style="width:50%">품명</th>
+              <th style="width:33%">규격 (mm)</th>
+              <th style="width:11%">수량</th>
+              <th style="width:6%"></th>
+            </tr></thead>
+            <tbody id="itemsInput"></tbody>
+          </table>
+          <button onclick="addRow()" style="font-size:12px;padding:5px 14px;color:#555">＋ 행 추가</button>
+
+          <div class="doc-actions">
+            <button onclick="window.print()" style="background:#444;color:#fff;border-color:#444;font-weight:700">🖨️ 인쇄</button>
+            <button id="dlBtn" onclick="downloadPDF()" style="background:#16a34a;color:#fff;border-color:#16a34a;font-weight:700">📥 PDF 다운로드</button>
+            <button class="primary" onclick="openModal()">✉️ PDF 이메일 발송</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A4 미리보기 -->
+    <div>
+      <div class="no-print preview-label">A4 미리보기</div>
+      <div class="preview-outer">
+        <div id="docPreview" class="doc-page">
+
+          <div class="doc-title">납  품  확  인  서</div>
+
+          <div class="doc-fields">
+            <div class="doc-field-row">
+              <div class="doc-fl">현 장 주 소</div>
+              <div class="doc-fv" id="pv_address"></div>
+            </div>
+            <div class="doc-field-row">
+              <div class="doc-fl">현 &nbsp; 장 &nbsp; 명</div>
+              <div class="doc-fv" id="pv_site"></div>
+            </div>
+            <div class="doc-field-row">
+              <div class="doc-fl">건 &nbsp; 축 &nbsp; 주</div>
+              <div class="doc-fv" id="pv_client"></div>
+            </div>
+            <div class="doc-field-row">
+              <div class="doc-fl">납 품 일 자</div>
+              <div class="doc-fv" id="pv_date"></div>
+            </div>
+          </div>
+
+          <div class="doc-section-hd">납 &nbsp; 품 &nbsp; 내 &nbsp; 역</div>
+          <table class="items-tbl">
+            <thead>
+              <tr>
+                <th style="width:57%">품 &nbsp; 명</th>
+                <th style="width:28%">규 격 (mm)</th>
+                <th style="width:15%">수 량</th>
+              </tr>
+            </thead>
+            <tbody id="pv_items">
+              <tr class="empty-hint"><td colspan="3">품목을 추가해주세요</td></tr>
+            </tbody>
+          </table>
+
+          <div class="doc-confirm">
+            상기 물품을 아무 이상 없이 당 현장에 납품하였음을 확인하는 바입니다.
+          </div>
+
+          <div class="doc-supplier">
+            <table class="supplier-tbl">
+              <tr>
+                <td><span class="s-label">사업자번호</span></td>
+                <td style="width:18px;text-align:center;color:#777">:</td>
+                <td>457-81-00767</td>
+              </tr>
+              <tr>
+                <td><span class="s-label">상&emsp;호</span></td>
+                <td style="text-align:center;color:#777">:</td>
+                <td>(주)청주금속플러스도어</td>
+              </tr>
+              <tr>
+                <td><span class="s-label">대&ensp;표&ensp;자</span></td>
+                <td style="text-align:center;color:#777">:</td>
+                <td>윤 영 석</td>
+              </tr>
+              <tr>
+                <td><span class="s-label">주&emsp;소</span></td>
+                <td style="text-align:center;color:#777">:</td>
+                <td>충북 청주시 서원구 남이면 가좌신송로 17</td>
+              </tr>
+            </table>
+            <div>
+              <img id="pvStampImg" src="/static/img/stamp.jpg" style="max-width:80px;max-height:80px;object-fit:contain;display:none">
+            </div>
+          </div>
+
+        </div><!-- /doc-page -->
+      </div>
+    </div>
+  </div>
+</div><!-- /form-delivery -->
+
+<!-- ── 성적서 ── -->
+<div id="form-certificate" style="display:none">
+  <div class="card">
+    <div class="card-hd">📋 성적서 / 인증서</div>
+    <div class="card-body">
+      <div id="certDocGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px">
+        <div style="color:#bbb;text-align:center;padding:40px;grid-column:1/-1">불러오는 중…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 도면 (준비중) ── -->
+<div id="form-drawing" style="display:none">
+  <div class="card">
+    <div class="card-hd">📐 도면</div>
+    <div class="card-body" style="text-align:center;padding:40px;color:#aaa;font-size:14px">
+      도면 서식 준비 중입니다.
+    </div>
+  </div>
+</div>
+
+<!-- 발송 이력 상세보기 모달 -->
+<div class="modal-bg" id="logDetailModal" onclick="if(event.target===this)closeLogDetail()">
+  <div class="modal-box" style="width:min(560px,96vw)">
+    <div class="modal-title">📋 발송 이력 상세</div>
+    <div id="logDetailBody" style="font-size:13px;line-height:1.8">
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeLogDetail()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 납품확인서 이메일 발송 모달 -->
+<div class="modal-bg" id="sendModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-title">✉️ 납품확인서 이메일 발송</div>
+    <p style="font-size:12px;color:#888;margin-bottom:14px">PDF 파일로 자동 변환되어 첨부 발송됩니다.</p>
+    <div class="modal-row"><label>받는 사람 <span style="color:#d83b01">*</span></label><input id="m_to" type="email" placeholder="수신 이메일"></div>
+    <div class="modal-row"><label>참조 (CC)</label><input id="m_cc" type="email" placeholder="선택"></div>
+    <div class="modal-row"><label>제목</label><input id="m_subject"></div>
+    <div class="modal-row" style="align-items:start">
+      <label style="padding-top:7px">본문</label>
+      <textarea id="m_body" rows="3" style="width:100%;padding:6px 9px;border:1px solid #ddd;border-radius:4px;font-size:13px;resize:vertical" placeholder="(비워두면 기본 문구 사용)"></textarea>
+    </div>
+    <div class="modal-row" style="align-items:start">
+      <label style="padding-top:6px">추가 서류</label>
+      <div>
+        <button type="button" onclick="openCertPicker()" style="font-size:12px;padding:5px 14px;border:1px solid #1a3a5c;color:#1a3a5c;background:#fff;border-radius:4px;cursor:pointer">📎 서류 선택...</button>
+        <div id="selectedCertChips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+    </div>
+    <div class="modal-row" style="align-items:start">
+      <label style="padding-top:0">로컬 파일</label>
+      <div>
+        <div class="file-area" style="padding:8px 12px">
+          <div style="color:#aaa;font-size:12px;pointer-events:none">📂 PC에서 파일 선택...</div>
+          <input type="file" id="m_local_files" multiple onchange="addLocalFiles(this.files)">
+        </div>
+        <div id="localFileChips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <span id="m_msg" style="flex:1;font-size:13px;padding-top:4px"></span>
+      <button onclick="closeModal()">취소</button>
+      <button class="primary" id="m_send" onclick="sendPDF()">📤 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- 서류 선택 팝업 -->
+<div id="certPickerOverlay" style="display:none;position:fixed;inset:0;z-index:10100;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.25);width:min(600px,96vw);max-height:85vh;display:flex;flex-direction:column;padding:22px">
+    <div style="font-size:16px;font-weight:800;color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:8px;margin-bottom:12px">📎 서류 선택</div>
+    <input id="certSearch" type="text" placeholder="파일명 검색..." oninput="renderCertGrid(this.value)"
+      style="padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;margin-bottom:12px;outline:none">
+    <div id="certPickerGrid" style="overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:2px">
+      <div style="color:#bbb;text-align:center;padding:40px 0;grid-column:1/-1">불러오는 중…</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid #eee">
+      <span id="certSelCount" style="font-size:13px;color:#1a3a5c;font-weight:700"></span>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeCertPicker(false)">취소</button>
+        <button class="primary" onclick="closeCertPicker(true)">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var itemRows = [];
+var attachedFiles = [];
+var localFiles = [];
+
+// ── 도장 이미지 ──
+(function(){
+  var img = document.getElementById('pvStampImg');
+  img.onload = function(){ img.style.display = 'block'; };
+  img.onerror = function(){ img.style.display = 'none'; };
+})();
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── 초기화 ──
+(function(){
+  var today = new Date();
+  document.getElementById('f_date').value =
+    today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  addRow();
+  upd();
+  loadSettings();
+  loadLog();
+
+  // 서류 선택 팝업 — 배경 스크롤 차단 (그리드 내부만 허용)
+  document.getElementById('certPickerOverlay').addEventListener('wheel', function(e){
+    var grid = document.getElementById('certPickerGrid');
+    if(!grid.contains(e.target)){ e.preventDefault(); }
+  }, { passive: false });
+})();
+
+// ── 서식 전환 ──
+function showForm(name){
+  ['delivery','certificate','drawing'].forEach(function(f){
+    document.getElementById('form-'+f).style.display = f===name?'block':'none';
+    var btn = document.getElementById('btn'+f.charAt(0).toUpperCase()+f.slice(1));
+    if(btn) btn.classList.toggle('active', f===name);
+  });
+  if(name==='certificate') loadCertDocs();
+}
+
+// ── 성적서 탭 파일 목록 ──
+var certDocsLoaded = false;
+async function loadCertDocs(){
+  if(certDocsLoaded) return;
+  var grid = document.getElementById('certDocGrid');
+  try{
+    var r = await fetch('/api/mail/cert_files');
+    var files = await r.json();
+    certAllFiles = files;
+    if(!files.length){
+      grid.innerHTML='<div style="color:#bbb;text-align:center;padding:40px;grid-column:1/-1">파일 없음</div>';
+      certDocsLoaded=true; return;
+    }
+    grid.innerHTML = files.map(function(f){
+      var ext = f.name.split('.').pop().toLowerCase();
+      var icon = ext==='pdf'?'📄':['jpg','jpeg','png','gif','bmp'].includes(ext)?'🖼️':'📎';
+      var kb = f.size>1048576?(f.size/1048576).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+      return '<div style="border:1px solid #e0e0e0;border-radius:8px;padding:14px 10px;text-align:center;background:#fff;display:flex;flex-direction:column;align-items:center">'
+        +'<div style="font-size:30px;margin-bottom:8px">'+icon+'</div>'
+        +'<div style="font-size:12px;color:#333;word-break:break-all;line-height:1.4;flex:1;margin-bottom:8px" title="'+esc(f.name)+'">'+esc(f.name)+'</div>'
+        +'<div style="font-size:11px;color:#aaa;margin-bottom:10px">'+kb+'</div>'
+        +'<a href="/api/mail/cert_download/'+encodeURIComponent(f.name)+'" download="'+esc(f.name)+'"'
+        +' style="display:inline-block;background:#1a3a5c;color:#fff;border-radius:4px;padding:5px 14px;font-size:12px;text-decoration:none;font-weight:700">📥 다운로드</a>'
+        +'</div>';
+    }).join('');
+    certDocsLoaded=true;
+  }catch(e){
+    grid.innerHTML='<div style="color:#d83b01;text-align:center;padding:40px;grid-column:1/-1">로드 실패</div>';
+  }
+}
+
+// ── 이메일 설정 토글 ──
+function toggleSmtp(){
+  var body = document.getElementById('smtpBody');
+  var arrow = document.getElementById('smtpArrow');
+  var open = body.style.display==='none';
+  body.style.display = open?'block':'none';
+  arrow.textContent = open?'닫기':'열기';
+}
+function toggleSend(){
+  var body = document.getElementById('sendBody');
+  var arrow = document.getElementById('sendArrow');
+  var open = body.style.display==='none';
+  body.style.display = open?'block':'none';
+  arrow.textContent = open?'닫기':'열기';
+}
+function toggleLog(){
+  var body = document.getElementById('logBody-wrap');
+  var arrow = document.getElementById('logArrow');
+  var open = body.style.display==='none';
+  body.style.display = open?'block':'none';
+  arrow.textContent = open?'닫기':'열기';
+  if(open) loadLog();
+}
+
+// ── SMTP 설정 ──
+async function loadSettings(){
+  try{
+    var r=await fetch('/api/mail/settings'); var d=await r.json();
+    if(d.smtp_host) document.getElementById('cfg_host').value=d.smtp_host;
+    if(d.smtp_port) document.getElementById('cfg_port').value=d.smtp_port;
+    if(d.smtp_user) document.getElementById('cfg_user').value=d.smtp_user;
+    if(d.smtp_password) document.getElementById('cfg_pw').value=d.smtp_password;
+    if(d.from_name) document.getElementById('cfg_name').value=d.from_name;
+  }catch(e){}
+}
+async function saveSettings(){
+  var msg=document.getElementById('cfgMsg');
+  var data={smtp_host:document.getElementById('cfg_host').value.trim(),
+    smtp_port:parseInt(document.getElementById('cfg_port').value)||465,
+    smtp_user:document.getElementById('cfg_user').value.trim(),
+    smtp_password:document.getElementById('cfg_pw').value,
+    from_name:document.getElementById('cfg_name').value.trim()};
+  try{
+    var r=await fetch('/api/mail/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var d=await r.json();
+    if(d.ok){ msg.className='msg-ok'; msg.textContent='✅ 저장되었습니다.'; }
+    else{ msg.className='msg-err'; msg.textContent='❌ '+(d.error||'저장 실패'); }
+  }catch(e){ msg.className='msg-err'; msg.textContent='❌ 오류가 발생했습니다.'; }
+}
+
+// ── 파일 첨부 (일반 발송) ──
+function addFiles(files){
+  for(var i=0;i<files.length;i++) attachedFiles.push(files[i]);
+  renderFiles(); document.getElementById('gs_files').value='';
+}
+function removeFile(i){ attachedFiles.splice(i,1); renderFiles(); }
+function renderFiles(){
+  document.getElementById('fileList').innerHTML = attachedFiles.map(function(f,i){
+    var kb = f.size>1024*1024?(f.size/1024/1024).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+    return '<div class="file-chip">'+esc(f.name)+' <span style="color:#888;font-size:11px">('+kb+')</span>'
+      +'<button onclick="removeFile('+i+')" title="제거">×</button></div>';
+  }).join('');
+}
+(function(){
+  var area = document.querySelector('.file-area');
+  if(!area) return;
+  area.addEventListener('dragover',function(e){e.preventDefault();area.style.borderColor='#1a3a5c';});
+  area.addEventListener('dragleave',function(){area.style.borderColor='';});
+  area.addEventListener('drop',function(e){e.preventDefault();area.style.borderColor='';addFiles(e.dataTransfer.files);});
+})();
+
+// ── 일반 이메일 발송 ──
+async function sendGeneral(){
+  var msg=document.getElementById('gs_msg'), btn=document.getElementById('gs_sendBtn');
+  var to=document.getElementById('gs_to').value.trim();
+  var subject=document.getElementById('gs_subject').value.trim();
+  if(!to){alert('받는 사람 이메일을 입력해주세요.');return;}
+  if(!subject){alert('제목을 입력해주세요.');return;}
+  btn.disabled=true; btn.textContent='발송 중…'; msg.textContent='';
+  var fd=new FormData();
+  fd.append('to_email',to); fd.append('cc_email',document.getElementById('gs_cc').value.trim());
+  fd.append('subject',subject); fd.append('body',document.getElementById('gs_body').value);
+  fd.append('body_type','plain');
+  attachedFiles.forEach(function(f){fd.append('attachments',f);});
+  try{
+    var r=await fetch('/api/mail/send',{method:'POST',body:fd});
+    var d=await r.json();
+    if(d.ok){
+      msg.className='msg-ok'; msg.textContent='✅ 발송완료!';
+      document.getElementById('gs_to').value=''; document.getElementById('gs_cc').value='';
+      document.getElementById('gs_subject').value=''; document.getElementById('gs_body').value='';
+      attachedFiles=[]; renderFiles(); loadLog();
+    } else { msg.className='msg-err'; msg.textContent='❌ '+(d.error||'발송 실패'); }
+  }catch(e){ msg.className='msg-err'; msg.textContent='❌ 오류가 발생했습니다.'; }
+  btn.disabled=false; btn.textContent='📤 발송';
+}
+
+// ── 발송 이력 ──
+var logCache = [];
+
+function searchLog(){
+  var q = document.getElementById('logSearch').value.trim();
+  loadLog(q);
+}
+
+async function loadLog(q){
+  q = q || '';
+  try{
+    var url = '/api/mail/log' + (q ? '?q='+encodeURIComponent(q) : '');
+    var r = await fetch(url);
+    logCache = await r.json();
+    renderLog();
+  }catch(e){}
+}
+
+function renderLog(){
+  var tbody = document.getElementById('logBody');
+  if(!logCache.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#bbb;padding:20px">발송 이력이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = logCache.map(function(row){
+    var badge = row.status==='성공'
+      ? '<span class="badge-ok">성공</span>'
+      : '<span class="badge-err">실패</span>';
+    var attach = row.pdf_path
+      ? '<a href="/api/mail/pdf/'+encodeURIComponent(row.attachments)+'" target="_blank" style="color:#1a3a5c;text-decoration:none">📄 '+esc(row.attachments)+'</a>'
+      : esc(row.attachments||'-');
+    return '<tr>'
+      +'<td style="white-space:nowrap">'+esc((row.sent_at||'').slice(0,16))+'</td>'
+      +'<td>'+esc(row.sent_by)+'</td>'
+      +'<td>'+esc(row.to_email)+(row.cc_email?'<br><span style="font-size:11px;color:#888">CC: '+esc(row.cc_email)+'</span>':'')+'</td>'
+      +'<td>'+esc(row.subject)+'</td>'
+      +'<td>'+attach+'</td>'
+      +'<td>'+badge+'</td>'
+      +'<td style="white-space:nowrap;text-align:center">'
+        +'<button class="btn-sm btn-view" onclick="showLogDetail('+row.id+')" title="상세보기">상세</button> '
+        +'<button class="btn-sm btn-del" onclick="deleteLog('+row.id+')" title="삭제">삭제</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function showLogDetail(id){
+  var row = logCache.find(function(r){ return r.id === id; });
+  if(!row) return;
+  var pdfLink = row.pdf_path
+    ? '<a href="/api/mail/pdf/'+encodeURIComponent(row.attachments)+'" target="_blank" style="color:#1a3a5c;font-weight:700">📄 PDF 열기/다운로드</a>'
+    : '-';
+  document.getElementById('logDetailBody').innerHTML =
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+    + detailRow('발송일시', esc((row.sent_at||'').slice(0,16)))
+    + detailRow('보낸이', esc(row.sent_by))
+    + detailRow('받는이', esc(row.to_email))
+    + detailRow('참조(CC)', esc(row.cc_email||'-'))
+    + detailRow('제목', esc(row.subject))
+    + detailRow('본문', '<pre style="white-space:pre-wrap;font-family:inherit;margin:0">'+esc(row.body||'')+'</pre>')
+    + detailRow('첨부/PDF', pdfLink)
+    + detailRow('결과', row.status==='성공'?'<span class="badge-ok">성공</span>':'<span class="badge-err">실패</span>'+(row.error_msg?' <span style="color:#d83b01;font-size:12px">'+esc(row.error_msg)+'</span>':''))
+    + '</table>';
+  document.getElementById('logDetailModal').classList.add('open');
+}
+
+function detailRow(label, value){
+  return '<tr>'
+    +'<td style="padding:6px 10px;font-weight:700;color:#555;width:80px;border-bottom:1px solid #f0f0f0;vertical-align:top">'+label+'</td>'
+    +'<td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">'+value+'</td>'
+    +'</tr>';
+}
+
+function closeLogDetail(){
+  document.getElementById('logDetailModal').classList.remove('open');
+}
+
+async function deleteLog(id){
+  var row = logCache.find(function(r){ return r.id===id; });
+  var msg = row ? '발송일시: '+(row.sent_at||'').slice(0,16)+'\n제목: '+row.subject : '';
+  if(!confirm('이 이력을 삭제하시겠습니까?\n'+msg+'\n\n(연결된 PDF 파일도 함께 삭제됩니다)')) return;
+  try{
+    var r = await fetch('/api/mail/log/'+id, {method:'DELETE'});
+    var d = await r.json();
+    if(d.ok){
+      logCache = logCache.filter(function(r){ return r.id!==id; });
+      renderLog();
+    } else {
+      alert('삭제 실패');
+    }
+  }catch(e){ alert('오류가 발생했습니다.'); }
+}
+
+// ── 품목 행 ──
+function addRow(){
+  itemRows.push({id: Date.now()+Math.random(), name:'', spec:'', qty:''});
+  renderInput(); upd();
+}
+function removeRow(id){
+  itemRows = itemRows.filter(function(r){ return r.id !== id; });
+  renderInput(); upd();
+}
+function renderInput(){
+  document.getElementById('itemsInput').innerHTML = itemRows.map(function(row, i){
+    return '<tr>'
+      +'<td><input value="'+esc(row.name)+'" oninput="itemRows['+i+'].name=this.value;upd()" placeholder="품명"></td>'
+      +'<td><input value="'+esc(row.spec)+'" oninput="itemRows['+i+'].spec=this.value;upd()" placeholder="1000*2100"></td>'
+      +'<td><input type="number" value="'+esc(row.qty)+'" oninput="itemRows['+i+'].qty=this.value;upd()" placeholder="1"></td>'
+      +'<td class="xb"><button onclick="removeRow('+row.id+')">×</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ── 미리보기 업데이트 ──
+function upd(){
+  var addr   = document.getElementById('f_address').value;
+  var site   = document.getElementById('f_site').value;
+  var client = document.getElementById('f_client').value;
+  var dv     = document.getElementById('f_date').value;
+  var ds     = dv ? dv.replace(/-/g,'. ')+'.' : '';
+
+  document.getElementById('pv_address').textContent = addr   || ' ';
+  document.getElementById('pv_site').textContent    = site   || ' ';
+  document.getElementById('pv_client').textContent  = client || ' ';
+  document.getElementById('pv_date').textContent    = ds     || ' ';
+
+  var actual = itemRows.filter(function(r){ return r.name||r.spec||r.qty; });
+  var tbody  = document.getElementById('pv_items');
+  if(!actual.length){
+    tbody.innerHTML = '<tr style="height:28px"><td></td><td></td><td></td></tr>';
+  } else {
+    tbody.innerHTML = actual.map(function(row){
+      return '<tr style="height:28px">'
+        +'<td>'+esc(row.name)+'</td>'
+        +'<td style="text-align:center">'+esc(row.spec)+'</td>'
+        +'<td style="text-align:center">'+(row.qty!==''&&row.qty!==undefined?esc(String(row.qty)):'')+'</td>'
+        +'</tr>';
+    }).join('');
+  }
+}
+
+// ── PDF 다운로드 ──
+async function downloadPDF(){
+  var btn = document.getElementById('dlBtn');
+  btn.disabled = true; btn.textContent = '생성 중…';
+  var payload = {
+    address:       document.getElementById('f_address').value,
+    site_name:     document.getElementById('f_site').value,
+    client:        document.getElementById('f_client').value,
+    delivery_date: (document.getElementById('f_date').value||'').replace(/-/g,'. ')+(document.getElementById('f_date').value?'.':''),
+    items:         itemRows.map(function(r){ return {name:r.name,spec:r.spec,qty:r.qty}; }),
+  };
+  try{
+    var r = await fetch('/api/mail/download_pdf', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    if(!r.ok){ var d=await r.json(); alert('오류: '+(d.error||'PDF 생성 실패')); return; }
+    var blob = await r.blob();
+    var site = document.getElementById('f_site').value || document.getElementById('f_address').value || '납품확인서';
+    var fname = '납품확인서_' + site + '.pdf';
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){ alert('오류가 발생했습니다.'); }
+  btn.disabled = false; btn.textContent = '📥 PDF 다운로드';
+}
+
+// ── 로컬 파일 첨부 (납품확인서 모달) ──
+function addLocalFiles(files){
+  for(var i=0;i<files.length;i++) localFiles.push(files[i]);
+  renderLocalChips();
+  document.getElementById('m_local_files').value='';
+}
+function removeLocalFile(i){ localFiles.splice(i,1); renderLocalChips(); }
+function renderLocalChips(){
+  var chips = document.getElementById('localFileChips');
+  if(!localFiles.length){ chips.innerHTML=''; return; }
+  chips.innerHTML = localFiles.map(function(f,i){
+    var kb = f.size>1048576?(f.size/1048576).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:#e8f0fe;border:1px solid #1a73e8;color:#174ea6;border-radius:14px;padding:3px 10px;font-size:12px">'
+      +esc(f.name)+' <span style="color:#888;font-size:11px">('+kb+')</span>'
+      +'<button onclick="removeLocalFile('+i+')" style="background:none;border:none;color:#174ea6;cursor:pointer;font-size:15px;line-height:1;padding:0">×</button>'
+      +'</span>';
+  }).join('');
+}
+
+// ── 발송 모달 ──
+function openModal(){
+  var site = document.getElementById('f_site').value || document.getElementById('f_address').value;
+  var dv   = document.getElementById('f_date').value;
+  document.getElementById('m_subject').value = '납품확인서'+(site?' - '+site:'')+(dv?' ('+dv+')':'');
+  document.getElementById('m_to').value = '';
+  document.getElementById('m_cc').value = '';
+  document.getElementById('m_body').value = '';
+  document.getElementById('m_msg').textContent = '';
+  certSelected = new Set();
+  renderSelectedChips();
+  localFiles = [];
+  renderLocalChips();
+  document.getElementById('sendModal').classList.add('open');
+}
+
+// ── 서류 선택 팝업 ──
+var certAllFiles = [];
+var certSelected = new Set();
+var certTempSelected = new Set();
+
+async function openCertPicker(){
+  if(!certAllFiles.length){
+    try{
+      var r = await fetch('/api/mail/cert_files');
+      certAllFiles = await r.json();
+    }catch(e){ alert('파일 목록을 불러오지 못했습니다.'); return; }
+  }
+  certTempSelected = new Set(certSelected);
+  document.getElementById('certSearch').value = '';
+  renderCertGrid('');
+  var ov = document.getElementById('certPickerOverlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('certSearch').focus();
+}
+
+function renderCertGrid(q){
+  var grid = document.getElementById('certPickerGrid');
+  var files = certAllFiles.filter(function(f){
+    return !q || f.name.toLowerCase().includes(q.toLowerCase());
+  });
+  if(!files.length){
+    grid.innerHTML = '<div style="color:#bbb;text-align:center;padding:40px 0;grid-column:1/-1">파일 없음</div>';
+    updateCertCount(); return;
+  }
+  grid.innerHTML = files.map(function(f){
+    var sel = certTempSelected.has(f.name);
+    var ext = f.name.split('.').pop().toLowerCase();
+    var icon = ext==='pdf'?'📄':['jpg','jpeg','png','gif','bmp'].includes(ext)?'🖼️':'📎';
+    var kb = f.size>1048576?(f.size/1048576).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+    var nm = f.name.length>24 ? f.name.slice(0,22)+'…' : f.name;
+    return '<div onclick="toggleCert(\''+f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" title="'+esc(f.name)+'"'
+      +' style="border:2px solid '+(sel?'#1a3a5c':'#e0e0e0')+';background:'+(sel?'#e8f0fe':'#fff')
+      +';border-radius:8px;padding:12px 8px;cursor:pointer;text-align:center;transition:border-color .12s,background .12s;user-select:none">'
+      +'<div style="font-size:26px;margin-bottom:6px">'+icon+'</div>'
+      +'<div style="font-size:11px;font-weight:'+(sel?'700':'400')+';color:'+(sel?'#1a3a5c':'#333')+';word-break:break-all;line-height:1.4">'+esc(nm)+'</div>'
+      +'<div style="font-size:11px;color:#aaa;margin-top:4px">'+kb+'</div>'
+      +(sel?'<div style="font-size:11px;color:#1a3a5c;font-weight:700;margin-top:4px">✓</div>':'')
+      +'</div>';
+  }).join('');
+  updateCertCount();
+}
+
+function toggleCert(name){
+  if(certTempSelected.has(name)) certTempSelected.delete(name);
+  else certTempSelected.add(name);
+  renderCertGrid(document.getElementById('certSearch').value);
+}
+
+function updateCertCount(){
+  var el = document.getElementById('certSelCount');
+  el.textContent = certTempSelected.size ? certTempSelected.size+'개 선택됨' : '';
+}
+
+function closeCertPicker(confirmed){
+  if(confirmed) certSelected = new Set(certTempSelected);
+  document.getElementById('certPickerOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  renderSelectedChips();
+}
+
+function renderSelectedChips(){
+  var chips = document.getElementById('selectedCertChips');
+  var arr = Array.from(certSelected);
+  if(!arr.length){ chips.innerHTML=''; return; }
+  chips.innerHTML = arr.map(function(name){
+    var nm = name.length>28 ? name.slice(0,26)+'…' : name;
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:#e8f0fe;border:1px solid #1a73e8;color:#174ea6;border-radius:14px;padding:3px 10px;font-size:12px" title="'+esc(name)+'">'
+      +esc(nm)
+      +'<button onclick="removeCert(\''+name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')\" style="background:none;border:none;color:#174ea6;cursor:pointer;font-size:15px;line-height:1;padding:0">×</button>'
+      +'</span>';
+  }).join('');
+}
+
+function removeCert(name){ certSelected.delete(name); renderSelectedChips(); }
+function closeModal(){
+  document.getElementById('sendModal').classList.remove('open');
+  localFiles = [];
+  renderLocalChips();
+}
+
+// ── 납품확인서 조회 ──
+function toggleDeliveryLog(){
+  var body = document.getElementById('dlLogBody');
+  var btn  = document.getElementById('dlLogToggleBtn');
+  var open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '닫기' : '열기';
+  if(open) loadDeliveryFiles();
+}
+
+async function loadDeliveryFiles(){
+  var q = (document.getElementById('dlSearch').value || '').trim();
+  var list = document.getElementById('dlFileList');
+  list.innerHTML = '<div style="color:#bbb;text-align:center;padding:24px">불러오는 중…</div>';
+  try{
+    var r = await fetch('/api/mail/delivery_files?q='+encodeURIComponent(q));
+    var files = await r.json();
+    if(!files.length){
+      list.innerHTML = '<div style="color:#bbb;text-align:center;padding:24px">저장된 납품확인서가 없습니다.</div>';
+      return;
+    }
+    list.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      +'<thead><tr style="background:#f5f5f5">'
+      +'<th style="border:1px solid #e0e0e0;padding:8px 10px;text-align:left">파일명</th>'
+      +'<th style="border:1px solid #e0e0e0;padding:8px 10px;text-align:center;white-space:nowrap;width:90px">용량</th>'
+      +'<th style="border:1px solid #e0e0e0;padding:8px 10px;text-align:center;white-space:nowrap;width:150px">작업</th>'
+      +'</tr></thead><tbody>'
+      + files.map(function(f){
+          var kb = f.size>1048576?(f.size/1048576).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+          var dt = new Date(f.mtime*1000).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+          return '<tr>'
+            +'<td style="border:1px solid #eee;padding:8px 10px">📄 '+esc(f.name)
+            +'<div style="font-size:11px;color:#aaa;margin-top:2px">'+dt+'</div></td>'
+            +'<td style="border:1px solid #eee;padding:8px 10px;text-align:center;color:#888">'+kb+'</td>'
+            +'<td style="border:1px solid #eee;padding:8px 10px;text-align:center;white-space:nowrap">'
+            +'<a href="/api/mail/pdf/'+encodeURIComponent(f.name)+'" target="_blank"'
+            +' style="display:inline-block;background:#1a3a5c;color:#fff;border-radius:4px;padding:4px 12px;font-size:12px;text-decoration:none;margin-right:4px">보기</a>'
+            +'<a href="/api/mail/pdf/'+encodeURIComponent(f.name)+'?dl=1" '
+            +' style="display:inline-block;background:#16a34a;color:#fff;border-radius:4px;padding:4px 12px;font-size:12px;text-decoration:none">다운로드</a>'
+            +'</td></tr>';
+        }).join('')
+      +'</tbody></table>';
+  }catch(e){
+    list.innerHTML = '<div style="color:#d83b01;text-align:center;padding:24px">오류가 발생했습니다.</div>';
+  }
+}
+
+async function sendPDF(){
+  var to = document.getElementById('m_to').value.trim();
+  if(!to){ alert('받는 사람 이메일을 입력해주세요.'); return; }
+  var msg = document.getElementById('m_msg');
+  var btn = document.getElementById('m_send');
+  btn.disabled=true; btn.textContent='발송 중…'; msg.textContent='';
+
+  var dv = document.getElementById('f_date').value;
+  var fd = new FormData();
+  fd.append('address',       document.getElementById('f_address').value);
+  fd.append('site_name',     document.getElementById('f_site').value);
+  fd.append('client',        document.getElementById('f_client').value);
+  fd.append('delivery_date', dv ? dv.replace(/-/g,'. ')+'.' : '');
+  fd.append('items',         JSON.stringify(itemRows.map(function(r){ return {name:r.name,spec:r.spec,qty:r.qty}; })));
+  fd.append('to_email',      to);
+  fd.append('cc_email',      document.getElementById('m_cc').value.trim());
+  fd.append('subject',       document.getElementById('m_subject').value.trim()||'납품확인서');
+  fd.append('body',          document.getElementById('m_body').value.trim());
+  Array.from(certSelected).forEach(function(f){ fd.append('extra_files', f); });
+  localFiles.forEach(function(f){ fd.append('local_files', f); });
+
+  try{
+    var r = await fetch('/api/mail/send_delivery', {method:'POST', body:fd});
+    var d = await r.json();
+    if(d.ok){
+      msg.className='msg-ok'; msg.textContent='✅ 발송완료! ('+d.pdf+')';
+      setTimeout(closeModal, 2000);
+    } else {
+      msg.className='msg-err'; msg.textContent='❌ '+(d.error||'발송 실패');
+    }
+  }catch(e){
+    msg.className='msg-err'; msg.textContent='❌ 오류가 발생했습니다.';
+  }
+  btn.disabled=false; btn.textContent='📤 발송';
+}
+</script>
+</body>
+</html>

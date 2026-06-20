@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이메일 발송 - PLUSDOOR</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;background:#f0f2f5;padding:14px}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+button{border:1px solid #ccc;background:#fff;padding:7px 14px;cursor:pointer;border-radius:5px}
+button.primary{background:#1a3a5c;color:#fff;font-weight:700;border-color:#1a3a5c}
+button:disabled{opacity:.5;cursor:default}
+.top-menu,.top-menu button{border-radius:0}
+.top-menu{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.top-menu button{border:1px solid #333;background:#fff;padding:7px 12px;font-family:inherit;font-size:13px;cursor:pointer}
+.top-menu button.active{background:#0078d7;color:#fff;font-weight:800}
+.page-title{font-size:17px;font-weight:800;margin:0 0 14px;color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:7px}
+
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.08);margin-bottom:16px}
+.card-hd{background:#1a3a5c;color:#fff;font-weight:700;font-size:14px;padding:10px 16px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}
+.card-body{padding:16px}
+.toggle-btn{font-size:12px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:3px 10px;cursor:pointer;border-radius:3px}
+
+.form-row{display:grid;grid-template-columns:72px 1fr;align-items:start;margin-bottom:10px;gap:4px}
+.form-row label{font-weight:700;font-size:12px;color:#555;padding-top:7px}
+.form-row input,.form-row textarea,.form-row select{width:100%;padding:7px 9px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+.form-row input:focus,.form-row textarea:focus{outline:none;border-color:#1a3a5c}
+
+.file-area{border:2px dashed #ccc;border-radius:6px;padding:14px;text-align:center;background:#fafafa;cursor:pointer;position:relative;transition:border-color .15s}
+.file-area:hover{border-color:#1a3a5c}
+.file-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-list{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.file-chip{background:#e8f0fe;border:1px solid #1a73e8;color:#174ea6;border-radius:14px;padding:3px 10px;font-size:12px;display:flex;align-items:center;gap:4px}
+.file-chip button{background:none;border:none;font-size:16px;color:#174ea6;cursor:pointer;line-height:1}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-items:center}
+.msg-ok{color:#16a34a;font-weight:700;font-size:13px}
+.msg-err{color:#d83b01;font-weight:700;font-size:13px}
+
+.log-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.log-tbl th{background:#f5f5f5;border:1px solid #e0e0e0;padding:8px 10px;text-align:center;white-space:nowrap;font-weight:700;color:#444}
+.log-tbl td{border:1px solid #eee;padding:8px 10px;vertical-align:top;word-break:break-word}
+.log-tbl tr:nth-child(even) td{background:#fafafa}
+.badge-ok{background:#16a34a;color:#fff;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700}
+.badge-err{background:#d83b01;color:#fff;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700}
+
+@media(max-width:700px){
+  .log-tbl thead{display:none}
+  .log-tbl tr{display:block;border:1px solid #ddd;margin-bottom:8px;border-radius:6px;overflow:hidden}
+  .log-tbl td{display:block;border:0;border-bottom:1px solid #f0f0f0}
+  .log-tbl td::before{content:attr(data-label);font-weight:700;display:inline-block;width:60px;color:#666}
+}
+</style>
+</head>
+<body>
+{{ top_menu("mail_send") | safe }}
+
+<div class="page-title">이메일 발송</div>
+
+<!-- SMTP 설정 (접기/펼치기) -->
+<div class="card">
+  <div class="card-hd" onclick="toggleSettings()">
+    ⚙️ SMTP 이메일 설정
+    <button class="toggle-btn" id="settingsToggleBtn" onclick="event.stopPropagation();toggleSettings()">열기</button>
+  </div>
+  <div id="settingsBody" style="display:none">
+    <div class="card-body">
+      <p style="font-size:12px;color:#888;margin-bottom:12px">네이버 메일 → 환경설정 → POP3/IMAP 설정에서 SMTP 사용을 허용해주세요.</p>
+      <div style="max-width:480px">
+        <div class="form-row"><label>SMTP 서버</label><input id="cfg_host" value="smtp.naver.com"></div>
+        <div class="form-row"><label>포트</label><input id="cfg_port" type="number" value="465"></div>
+        <div class="form-row"><label>이메일</label><input id="cfg_user" type="email" placeholder="네이버 이메일 주소"></div>
+        <div class="form-row"><label>비밀번호</label><input id="cfg_pw" type="password" placeholder="이메일 비밀번호"></div>
+        <div class="form-row"><label>발신자명</label><input id="cfg_name" placeholder="예: PLUSDOOR"></div>
+        <div class="actions">
+          <span id="cfgMsg" style="flex:1;padding-top:4px"></span>
+          <button class="primary" onclick="saveSettings()">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 이메일 작성 -->
+<div class="card">
+  <div class="card-hd" style="cursor:default">✉️ 이메일 보내기</div>
+  <div class="card-body">
+    <div class="form-row"><label>받는 사람 <span style="color:#d83b01">*</span></label><input id="toEmail" type="email" placeholder="수신 이메일 주소"></div>
+    <div class="form-row"><label>참조 (CC)</label><input id="ccEmail" type="email" placeholder="참조 이메일 (선택)"></div>
+    <div class="form-row"><label>제목 <span style="color:#d83b01">*</span></label><input id="mailSubject" placeholder="이메일 제목"></div>
+    <div class="form-row"><label>내용</label><textarea id="mailBody" rows="5" placeholder="이메일 본문"></textarea></div>
+    <div class="form-row">
+      <label style="padding-top:0">파일 첨부</label>
+      <div>
+        <div class="file-area">
+          <div style="color:#aaa;font-size:13px;pointer-events:none">📎 클릭하거나 파일을 드래그하여 첨부</div>
+          <input type="file" id="mailFiles" multiple onchange="addFiles(this.files)">
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <span id="sendMsg" style="flex:1;padding-top:4px"></span>
+      <button class="primary" id="sendBtn" onclick="sendMail()">📤 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- 발송 이력 -->
+<div class="card">
+  <div class="card-hd" style="cursor:default">📋 발송 이력</div>
+  <div style="overflow-x:auto">
+    <table class="log-tbl">
+      <thead>
+        <tr><th>발송일시</th><th>보낸이</th><th>받는이</th><th>제목</th><th>첨부/PDF</th><th>결과</th></tr>
+      </thead>
+      <tbody id="logBody">
+        <tr><td colspan="6" style="text-align:center;color:#bbb;padding:20px">불러오는 중…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+var attachedFiles = [];
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── SMTP 설정 ──
+function toggleSettings(){
+  var body = document.getElementById('settingsBody');
+  var btn  = document.getElementById('settingsToggleBtn');
+  var open = body.style.display==='none';
+  body.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '닫기' : '열기';
+}
+async function loadSettings(){
+  try{
+    var r=await fetch('/api/mail/settings'); var d=await r.json();
+    if(d.smtp_host) document.getElementById('cfg_host').value=d.smtp_host;
+    if(d.smtp_port) document.getElementById('cfg_port').value=d.smtp_port;
+    if(d.smtp_user) document.getElementById('cfg_user').value=d.smtp_user;
+    if(d.smtp_password) document.getElementById('cfg_pw').value=d.smtp_password;
+    if(d.from_name) document.getElementById('cfg_name').value=d.from_name;
+  }catch(e){}
+}
+async function saveSettings(){
+  var msg=document.getElementById('cfgMsg');
+  var data={smtp_host:document.getElementById('cfg_host').value.trim(),
+    smtp_port:parseInt(document.getElementById('cfg_port').value)||465,
+    smtp_user:document.getElementById('cfg_user').value.trim(),
+    smtp_password:document.getElementById('cfg_pw').value,
+    from_name:document.getElementById('cfg_name').value.trim()};
+  try{
+    var r=await fetch('/api/mail/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var d=await r.json();
+    if(d.ok){ msg.className='msg-ok'; msg.textContent='✅ 저장되었습니다.'; }
+    else{ msg.className='msg-err'; msg.textContent='❌ '+(d.error||'저장 실패'); }
+  }catch(e){ msg.className='msg-err'; msg.textContent='❌ 오류가 발생했습니다.'; }
+}
+
+// ── 파일 첨부 ──
+function addFiles(files){
+  for(var i=0;i<files.length;i++) attachedFiles.push(files[i]);
+  renderFiles(); document.getElementById('mailFiles').value='';
+}
+function removeFile(i){ attachedFiles.splice(i,1); renderFiles(); }
+function renderFiles(){
+  document.getElementById('fileList').innerHTML = attachedFiles.map(function(f,i){
+    var kb = f.size>1024*1024?(f.size/1024/1024).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+    return '<div class="file-chip">'+esc(f.name)+' <span style="color:#888;font-size:11px">('+kb+')</span>'
+      +'<button onclick="removeFile('+i+')" title="제거">×</button></div>';
+  }).join('');
+}
+(function(){
+  var area=document.querySelector('.file-area');
+  if(!area) return;
+  area.addEventListener('dragover',function(e){e.preventDefault();area.style.borderColor='#1a3a5c';});
+  area.addEventListener('dragleave',function(){area.style.borderColor='';});
+  area.addEventListener('drop',function(e){e.preventDefault();area.style.borderColor='';addFiles(e.dataTransfer.files);});
+})();
+
+// ── 이메일 발송 ──
+async function sendMail(){
+  var msg=document.getElementById('sendMsg'), btn=document.getElementById('sendBtn');
+  var to=document.getElementById('toEmail').value.trim();
+  var subject=document.getElementById('mailSubject').value.trim();
+  if(!to){alert('받는 사람 이메일을 입력해주세요.');return;}
+  if(!subject){alert('제목을 입력해주세요.');return;}
+  btn.disabled=true; btn.textContent='발송 중…'; msg.textContent='';
+  var fd=new FormData();
+  fd.append('to_email',to); fd.append('cc_email',document.getElementById('ccEmail').value.trim());
+  fd.append('subject',subject); fd.append('body',document.getElementById('mailBody').value);
+  fd.append('body_type','plain');
+  attachedFiles.forEach(function(f){fd.append('attachments',f);});
+  try{
+    var r=await fetch('/api/mail/send',{method:'POST',body:fd});
+    var d=await r.json();
+    if(d.ok){
+      msg.className='msg-ok'; msg.textContent='✅ 발송완료!';
+      document.getElementById('toEmail').value=''; document.getElementById('ccEmail').value='';
+      document.getElementById('mailSubject').value=''; document.getElementById('mailBody').value='';
+      attachedFiles=[]; renderFiles(); loadLog();
+    } else { msg.className='msg-err'; msg.textContent='❌ '+(d.error||'발송 실패'); }
+  }catch(e){ msg.className='msg-err'; msg.textContent='❌ 오류가 발생했습니다.'; }
+  btn.disabled=false; btn.textContent='📤 발송';
+}
+
+// ── 발송 이력 ──
+async function loadLog(){
+  try{
+    var r=await fetch('/api/mail/log'); var rows=await r.json();
+    var tbody=document.getElementById('logBody');
+    if(!rows.length){
+      tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#bbb;padding:20px">발송 이력이 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML=rows.map(function(row){
+      var badge=row.status==='성공'?'<span class="badge-ok">성공</span>':'<span class="badge-err">실패</span>'+(row.error_msg?'<div style="font-size:11px;color:#d83b01;margin-top:2px">'+esc(row.error_msg)+'</div>':'');
+      var attach = row.pdf_path ? '📄 '+esc(row.attachments) : esc(row.attachments||'-');
+      return '<tr>'
+        +'<td data-label="일시" style="white-space:nowrap">'+esc((row.sent_at||'').slice(0,16))+'</td>'
+        +'<td data-label="보낸이">'+esc(row.sent_by)+'</td>'
+        +'<td data-label="받는이">'+esc(row.to_email)+(row.cc_email?'<br><span style="font-size:11px;color:#888">CC: '+esc(row.cc_email)+'</span>':'')+'</td>'
+        +'<td data-label="제목">'+esc(row.subject)+'</td>'
+        +'<td data-label="첨부">'+attach+'</td>'
+        +'<td data-label="결과">'+badge+'</td>'
+        +'</tr>';
+    }).join('');
+  }catch(e){}
+}
+
+loadSettings();
+loadLog();
+</script>
+</body>
+</html>

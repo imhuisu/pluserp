@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<title>작업지시서 관리 — PLUSDOOR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --primary:#1a3a5c;--primary-hover:#122b45;--accent:#e85d04;
+  --blue:#2563a8;--blue-light:#e8f0fb;
+  --success:#16a34a;--danger:#dc2626;--warning:#d97706;
+  --bg:#f0f2f5;--card:#fff;--border:#d0d7de;--border-light:#e8ecf0;
+  --text:#1a1e24;--text-muted:#6b7280;--input-bg:#fafbfc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+
+/* ── 필터 영역 ── */
+.page-wrap{padding:14px}
+.card{background:var(--card);border:1px solid var(--border-light);border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:14px}
+.card-hd{background:var(--primary);color:#fff;padding:9px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-hd .sub{font-weight:400;font-size:11px;opacity:.7;margin-left:auto}
+.card-body{padding:12px}
+
+/* ── 제품군 버튼 ── */
+.product-new-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.product-new-btns button{padding:6px 13px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-weight:600;cursor:pointer;font-size:12px;transition:background .15s}
+.product-new-btns button:hover{background:var(--primary-hover)}
+.product-new-btns button.accent{background:var(--accent)}.product-new-btns button.accent:hover{background:#c44d02}
+
+.product-filter-btns{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.product-filter-btns button{padding:5px 11px;border:1px solid var(--border);background:#fff;color:var(--text-muted);border-radius:4px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600}
+.product-filter-btns button:hover{border-color:var(--primary);color:var(--primary)}
+.product-filter-btns button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.product-filter-btns button .cnt{font-size:10px;opacity:.75;margin-left:2px}
+
+/* ── 필터바 ── */
+.filter-bar{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px}
+.filter-bar .fg{display:flex;flex-direction:column;gap:3px}
+.filter-bar .fg label{font-size:10px;font-weight:700;color:var(--text-muted)}
+.filter-bar .fg input,.filter-bar .fg select{padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;background:var(--input-bg);outline:none;height:32px}
+.filter-bar .fg input:focus,.filter-bar .fg select:focus{border-color:var(--blue)}
+.filter-bar .fg.wide{flex:1;min-width:180px}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:7px 13px;border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-hover)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-ghost{background:#e5e7eb;color:var(--text)}.btn-ghost:hover{background:#d1d5db}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{background:#c44d02}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* ── 목록 테이블 ── */
+.tbl-wrap{overflow-x:auto;border-radius:0 0 8px 8px}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.tbl th{background:#eef2f7;padding:8px 10px;text-align:left;font-weight:700;color:var(--primary);border-bottom:2px solid var(--border);white-space:nowrap}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--border-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.tbl tbody tr:hover td{background:#f0f5ff;cursor:pointer}
+.tbl .center{text-align:center}
+.tbl .empty{text-align:center;color:var(--text-muted);padding:28px;font-style:italic}
+.status-bdg{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700}
+.del-btn{padding:3px 8px;background:#e85d04;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.del-btn:hover{background:#c24d00}
+.status-작성중{background:#f3f4f6;color:#6b7280}
+.status-확정{background:#dbeafe;color:#1d4ed8}
+.status-출력완료{background:#dcfce7;color:#15803d}
+.status-보류{background:#fef3c7;color:#92400e}
+
+/* ── 모달 ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:5000;display:none}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(1400px,98vw);max-height:96vh;overflow-y:auto;background:var(--card);
+  border-radius:10px;z-index:5001;display:none;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-hd{background:var(--primary);color:#fff;padding:12px 20px;border-radius:10px 10px 0 0;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.modal-hd h3{font-size:15px;font-weight:700;margin:0}
+.modal-hd .product-tag{background:var(--accent);padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;margin-left:8px}
+.modal-body{padding:16px 20px}
+.modal-foot{padding:12px 20px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border-light)}
+
+/* ── 폼 ── */
+.sec-hd{background:#eef2f7;color:var(--primary);padding:7px 12px;font-size:12px;font-weight:700;margin:14px 0 8px;border-left:3px solid var(--primary)}
+.form-grid{display:grid;gap:10px}
+.form-grid.c4{grid-template-columns:repeat(4,1fr)}
+.form-grid.c3{grid-template-columns:repeat(3,1fr)}
+.form-grid.c2{grid-template-columns:1fr 1fr}
+.span2{grid-column:span 2}.span3{grid-column:span 3}.span4{grid-column:span 4}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;font-weight:700;color:var(--text-muted)}
+.fg label .ref{font-weight:400;color:#bbb;font-size:10px;margin-left:2px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:5px;background:var(--input-bg);outline:none;transition:border-color .15s;font-size:14px}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,168,.1);background:#fff}
+.fg textarea{resize:vertical;min-height:80px}
+
+/* ── 제품군별 입력 영역 ── */
+.product-area{border:2px dashed var(--border);border-radius:6px;padding:12px;background:#fafbfc;min-height:120px;margin-top:4px}
+.placeholder-txt{font-size:13px;color:var(--text-muted);line-height:1.8}
+
+/* ── 시스템도어 ── */
+.sd-sheet-tabs{display:flex;gap:5px;margin-bottom:10px}
+.sd-sheet-tab{padding:5px 16px;border:1px solid var(--border);background:#f5f7fa;color:var(--text-muted);cursor:pointer;border-radius:4px;font-weight:700;font-size:13px;font-family:inherit;transition:all .15s}
+.sd-sheet-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.systemdoor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.systemdoor-grid .wide3{grid-column:span 3}
+.sd-out-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.sd-out-table th{background:#eef2f7;padding:6px 8px;text-align:left;font-weight:700;color:var(--primary);border:1px solid var(--border)}
+.sd-out-table td{padding:6px 8px;border:1px solid var(--border-light)}
+.sd-out-table tr:nth-child(even) td{background:#f8fafc}
+.ov{font-weight:700;color:var(--blue);font-size:13px}
+.ov.empty{color:#ccc;font-weight:400;font-style:italic;font-size:11px}
+.sd-warn{display:none;margin-top:6px;padding:6px 10px;border-radius:4px;font-size:12px;font-weight:700}
+.sd-warn.water{background:#dbeafe;border:1px solid #3b82f6;color:#1e40af}
+.sd-warn.danger{background:#fee2e2;border:1px solid #f87171;color:#991b1b}
+.sd-warn.caution{background:#fef3c7;border:1px solid #fbbf24;color:#92400e}
+
+/* ── 미리보기 ── */
+.preview-wrap{border:1px solid var(--border-light);border-radius:6px;overflow:hidden;margin-top:4px}
+.preview-title{text-align:center;font-size:16px;font-weight:700;padding:10px;background:var(--primary);color:#fff}
+.preview-sec{background:#334155;color:#fff;padding:3px 10px;font-size:11px;font-weight:700;margin-top:0}
+.preview-grid{display:grid;grid-template-columns:90px 1fr 90px 1fr;border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.preview-grid div{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 8px;font-size:12px}
+.preview-grid .lbl{background:#eef2f7;font-weight:700;font-size:11px;color:var(--primary);text-align:center}
+.preview-calc{display:grid;grid-template-columns:100px 1fr 1fr 1fr;border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.preview-calc div{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 8px;font-size:12px}
+.preview-calc .head{background:#dde6ff;font-weight:700;text-align:center;font-size:11px;color:var(--primary)}
+.preview-calc .plbl{background:#eef3ff;font-weight:700;text-align:center;font-size:11px;color:var(--primary)}
+.preview-calc .val{font-weight:700;color:var(--blue)}
+.preview-check{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.preview-check div{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 8px;font-size:12px}
+.preview-note{border:1px solid var(--border-light);padding:6px 10px;font-size:12px;min-height:28px;color:#999;font-style:italic}
+.preview-note.has{color:var(--accent);font-style:normal;font-weight:600}
+.preview-waterhole{display:none;padding:5px 10px;background:#dbeafe;border:1px solid #3b82f6;font-size:11px;font-weight:700;color:#1e40af}
+
+/* ── 달력 팝업 ── */
+.plusdoor-calendar-pop{position:fixed;z-index:100000;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;width:280px;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none}
+.plusdoor-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px}
+.plusdoor-calendar-head button{padding:3px 8px!important;border:1px solid var(--border)!important;background:#fff!important;border-radius:4px;cursor:pointer;font-size:12px}
+.plusdoor-calendar-title{font-weight:700;text-align:center;flex:1;font-size:13px;color:var(--primary)}
+.plusdoor-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.plusdoor-calendar-grid div,.plusdoor-calendar-grid button{text-align:center;padding:5px 0!important;font-size:11px!important}
+.plusdoor-calendar-grid .dow{font-weight:700;color:var(--text-muted);background:transparent;border:none}
+.plusdoor-calendar-grid button{border:1px solid transparent!important;background:transparent!important;cursor:pointer;border-radius:3px;width:100%}
+.plusdoor-calendar-grid button:hover{background:var(--blue-light)!important}
+.plusdoor-calendar-grid button.today{border-color:var(--blue)!important;font-weight:700;color:var(--blue)}
+.plusdoor-calendar-grid button.selected{background:var(--primary)!important;color:#fff!important;font-weight:700}
+.date-wrap{display:grid!important;grid-template-columns:minmax(96px,1fr) 30px!important;gap:4px!important;align-items:center!important;width:100%!important}
+.cal-btn{width:30px!important;min-width:30px!important;padding:5px 0!important;text-align:center!important;border:1px solid var(--border)!important;background:#fff!important;border-radius:4px!important;cursor:pointer}
+
+/* ── 반응형 ── */
+@media(max-width:1000px){
+  .form-grid.c4{grid-template-columns:1fr 1fr}
+  .span4{grid-column:span 2}
+}
+@media(max-width:700px){
+  .form-grid.c4,.form-grid.c3,.form-grid.c2{grid-template-columns:1fr}
+  .span4,.span3,.span2{grid-column:span 1}
+  .systemdoor-grid{grid-template-columns:1fr}
+  .systemdoor-grid .wide3{grid-column:span 1}
+  .preview-grid,.preview-calc{grid-template-columns:70px 1fr}
+  .preview-calc .head:nth-child(3),.preview-calc .head:nth-child(4){display:none}
+}
+@media print{
+  .page-wrap,.modal-foot{display:none!important}
+  .modal{position:static;transform:none;width:100%;max-height:none;border-radius:0;box-shadow:none;display:block!important}
+  .modal-backdrop{display:none!important}
+  .modal-hd{border-radius:0}
+}
+
+/* ── 라벨 미리보기 ── */
+.preview-row{display:flex;gap:14px;align-items:flex-start}
+.preview-row .preview-main{flex:1;min-width:0}
+.label-preview-outer{width:240px;flex-shrink:0}
+.label-tpl-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.label-tpl-row label{font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap}
+.label-tpl-row select{flex:1;padding:5px 7px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--input-bg);outline:none;cursor:pointer}
+.label-tpl-row select:focus{border-color:var(--blue)}
+.lp-box{border:2px solid #1a3a5c;border-radius:4px;overflow:hidden;background:#fff;font-family:"맑은 고딕",Arial,sans-serif;min-height:40px}
+.lp-hd{background:#1a3a5c;color:#fff;text-align:center;padding:6px 4px;font-size:11px;font-weight:700;letter-spacing:.5px}
+.lp-row{display:flex;border-top:1px solid #d0d7de;min-height:32px}
+.lp-key{background:#eef2f7;font-size:10px;font-weight:700;color:#1a3a5c;padding:4px 6px;width:58px;min-width:58px;border-right:1px solid #d0d7de;display:flex;align-items:center;justify-content:center;text-align:center;word-break:keep-all;line-height:1.3}
+.lp-val{padding:4px 8px;font-size:12px;font-weight:600;flex:1;display:flex;align-items:center;word-break:break-all;line-height:1.3}
+.lp-val.big{font-size:14px;font-weight:700}
+.lp-val.dim{color:#bbb;font-style:italic;font-size:11px;font-weight:400}
+@media(max-width:800px){.preview-row{flex-direction:column}.label-preview-outer{width:100%}}
+</style>
+<style id="pd-bar-force">
+.pd-bar{display:flex!important;position:sticky!important;top:0!important;z-index:99999!important;
+  background:#1a3a5c!important;height:48px!important;align-items:center!important;gap:4px!important;
+  padding:0 14px!important;box-shadow:0 2px 8px rgba(0,0,0,.22)!important;
+  font-family:"맑은 고딕",Arial,sans-serif!important;flex-wrap:nowrap!important;}
+.pd-bar .logo{font-size:14px!important;font-weight:700!important;color:#fff!important;
+  white-space:nowrap!important;margin-right:6px!important;letter-spacing:-.3px!important;display:inline-block!important;}
+.pd-bar .sep{width:1px!important;height:22px!important;background:rgba(255,255,255,.2)!important;margin:0 2px!important;flex-shrink:0!important;}
+.pd-bar .nb{padding:5px 11px!important;border:1px solid rgba(255,255,255,.25)!important;
+  background:transparent!important;color:rgba(255,255,255,.75)!important;cursor:pointer!important;
+  border-radius:4px!important;font-size:12px!important;font-weight:600!important;white-space:nowrap!important;
+  transition:all .15s!important;font-family:"맑은 고딕",Arial,sans-serif!important;}
+.pd-bar .nb:hover{background:rgba(255,255,255,.18)!important;color:#fff!important;}
+.pd-bar .nb.on{background:#fff!important;color:#1a3a5c!important;font-weight:700!important;border-color:#fff!important;}
+.pd-bar .nr{position:relative!important;padding:5px 11px!important;border:1px solid rgba(255,255,255,.25)!important;
+  background:transparent!important;color:rgba(255,255,255,.8)!important;cursor:pointer!important;
+  border-radius:4px!important;font-size:12px!important;font-family:"맑은 고딕",Arial,sans-serif!important;}
+.pd-bar .nr:hover{background:rgba(255,255,255,.18)!important;}
+.pd-bar .nr .bx{position:absolute!important;top:-5px!important;right:-5px!important;background:#e85d04!important;
+  color:#fff!important;border-radius:10px!important;padding:1px 5px!important;font-size:10px!important;
+  font-weight:700!important;min-width:18px!important;text-align:center!important;pointer-events:none!important;}
+.pd-bar .ml{margin-left:auto!important;display:flex!important;align-items:center!important;gap:8px!important;}
+.pd-bar .un{font-size:12px!important;color:rgba(255,255,255,.65)!important;white-space:nowrap!important;}
+.pd-bar .lo{padding:4px 10px!important;border:1px solid rgba(255,255,255,.2)!important;background:transparent!important;
+  color:rgba(255,255,255,.55)!important;cursor:pointer!important;border-radius:4px!important;font-size:11px!important;
+  font-family:"맑은 고딕",Arial,sans-serif!important;}
+.pd-bar .lo:hover{color:#fff!important;}
+</style>
+</head>
+<body>
+{{ top_menu("work_order")|safe }}
+
+<div class="page-wrap">
+<div class="card">
+  <div class="card-hd">
+    📋 작업지시서 관리
+    <span class="sub" id="listCountBadge"></span>
+  </div>
+  <div class="card-body">
+
+    <div class="product-new-btns" id="productNewButtons"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-top:6px;border-top:1px solid var(--border-light)">
+      <span style="font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap">자동화</span>
+      <button type="button" onclick="openRegenModal()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:12px;letter-spacing:.3px">리젠도어</button>
+    </div>
+    <div class="product-filter-btns" id="productFilterButtons"></div>
+
+    <div class="filter-bar">
+      <div class="fg"><label>시작 작성일</label><input id="dateFrom" class="date-input" placeholder="yyyy-mm-dd"></div>
+      <div class="fg"><label>종료 작성일</label><input id="dateTo" class="date-input" placeholder="yyyy-mm-dd"></div>
+      <div class="fg"><label>상태</label>
+        <select id="statusFilter">
+          <option value="">전체</option>
+          <option>작성중</option><option>확정</option><option>출력완료</option><option>보류</option>
+        </select>
+      </div>
+      <div class="fg wide"><label>검색</label><input id="q" placeholder="거래처 / 지역 / 모델 / 상세내용 / 비고" onkeydown="if(event.key==='Enter')loadRows()"></div>
+      <button class="btn btn-primary" onclick="loadRows()">조회</button>
+      <button class="btn btn-ghost" onclick="resetFilters()">초기화</button>
+    </div>
+
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:54px">번호</th>
+          <th style="width:88px">작성일</th>
+          <th style="width:88px">생산일</th>
+          <th style="width:88px">납기일</th>
+          <th style="width:140px">거래처</th>
+          <th style="width:96px">제품군</th>
+          <th style="width:52px" class="center">수량</th>
+          <th style="width:96px">모델</th>
+          <th>상세내용</th>
+          <th style="width:120px">지역</th>
+          <th style="width:76px" class="center">상태</th>
+          <th style="width:54px" class="center">삭제</th>
+        </tr>
+      </thead>
+      <tbody id="workOrderBody">
+        <tr><td colspan="12" class="empty">저장된 작업지시서가 없습니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeEditor()"></div>
+<div class="modal" id="editorModal">
+  <div class="modal-hd">
+    <h3>작업지시서 작성 <span class="product-tag" id="modalProductTitle"></span></h3>
+    <button style="background:transparent;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:0 4px" onclick="closeEditor()">✕</button>
+  </div>
+  <div class="modal-body">
+
+  <div class="sec-hd">📋 기본정보</div>
+  <div class="form-grid c4">
+    <div class="fg"><label>주문일</label><input id="order_date" class="date-input" placeholder="yyyy-mm-dd"></div>
+    <div class="fg"><label>생산일</label><input id="production_date" class="date-input" placeholder="yyyy-mm-dd"></div>
+    <div class="fg"><label>납기일</label><input id="due_date" class="date-input" placeholder="yyyy-mm-dd"></div>
+    <div class="fg"><label>거래처</label><input id="customer" oninput="onCustomerChange()"></div>
+
+    <div class="fg"><label>제품군</label><select id="product_group"></select></div>
+    <div class="fg"><label>수량</label><input id="qty" type="number" min="1" value="1"></div>
+    <div class="fg"><label>모델</label><input id="model"></div>
+    <div class="fg"><label>출고구분</label><select id="ship_type"><option>납품</option><option>시공</option><option>방문</option><option>택배</option><option>기타</option></select></div>
+
+    <div class="fg span2"><label>지역</label><input id="site_name"></div>
+    <div class="fg span2"><label>거래처 담당자</label><input id="customer_manager" placeholder="거래처 정보에서 자동연결 예정"></div>
+
+    <div class="fg span4"><label>상세내용</label><textarea id="detail" placeholder="생산스케줄의 상세내용"></textarea></div>
+    <div class="fg span4"><label>비고</label><textarea id="memo"></textarea></div>
+  </div>
+
+  <div class="sec-hd">🔧 제품군별 입력내용</div>
+  <div class="product-area" id="productSpecificArea">
+    <div id="genericProductArea">
+      <div class="placeholder">
+        제품군별 입력 항목을 설계할 공간입니다.<br>
+        예: 시스템도어는 색상, 유리, 방향, 손잡이, 프레임, 부속, 제작특이사항 등으로 별도 구성 예정.
+      </div>
+      <div class="form-grid c4" style="margin-top:10px">
+        <div class="fg span2"><label>임시 항목 1</label><input id="custom_1" placeholder="제품군별 항목 설계 예정"></div>
+        <div class="fg span2"><label>임시 항목 2</label><input id="custom_2" placeholder="제품군별 항목 설계 예정"></div>
+        <div class="fg span4"><label>제품군별 제작특이사항</label><textarea id="custom_note" placeholder="제품군별 특이사항 입력 공간"></textarea></div>
+      </div>
+    </div>
+
+    <div id="systemdoorArea" style="display:none">
+      <div class="placeholder">
+        시스템도어 전용 입력값을 작성하면 <b>work_order_templates\\시스템도어.xlsm</b> 파일에 값을 넣고 출력값을 계산해서 표시합니다. 파일명은 정확히 <b>시스템도어.xlsm</b>이어야 합니다.
+      </div>
+      <div class="systemdoor-grid" style="margin-top:10px">
+        <div class="fg"><label>색상 A11</label>
+          <select id="sd_color">
+            <option value="">선택</option>
+            <option>블랙</option><option>백색</option><option>실버</option><option>도장</option>
+          </select>
+        </div>
+        <div class="fg"><label>유리두께 C11</label><input id="sd_glass_thickness" placeholder="예: 24T"></div>
+        <div class="fg"><label>개폐방향 E11</label>
+          <select id="sd_open_direction">
+            <option value="">선택</option>
+            <option>당기는문</option><option>미는문</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>가로 B15</label><input id="sd_width" inputmode="numeric" placeholder="가로"></div>
+        <div class="fg"><label>세로 E15</label><input id="sd_height" inputmode="numeric" placeholder="세로"></div>
+        <div class="fg"><label>경첩방향 B17</label>
+          <select id="sd_hinge_direction">
+            <option value="">선택</option>
+            <option>좌경첩</option><option>우경첩</option><option>양개대칭</option><option>양개비대칭</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>도어류자 B19</label>
+          <select id="sd_door_closer">
+            <option value="">선택</option>
+            <option>매립형 도어클로저 없음</option>
+            <option>매립형 도어클로저 있음</option>
+          </select>
+        </div>
+        <div class="fg"><label>잠금장치 F19</label>
+          <select id="sd_lock">
+            <option value="">선택</option>
+            <option>레바키</option><option>전자키(MSD400)</option><option>타공만</option>
+          </select>
+        </div>
+        <div class="fg"><label>손잡이 높이 F21</label><input id="sd_handle_height" inputmode="numeric" placeholder="손잡이 높이"></div>
+
+        <div class="field wide3"><label>시스템도어 특이사항</label><textarea id="sd_note" placeholder="시스템도어 전용 제작 특이사항"></textarea></div>
+      </div>
+
+      <div style="margin-top:10px;display:flex;gap:6px;align-items:center">
+        <button type="button" class="btn-primary" onclick="calculateSystemdoor()">시스템도어 계산/조회</button>
+        <span class="systemdoor-note" id="systemdoorCalcMsg">입력 후 계산/조회를 누르면 출력값이 표시됩니다.</span>
+      </div>
+
+      <div class="systemdoor-output">
+        <div class="systemdoor-output-title">시스템도어 출력값</div>
+        <div class="systemdoor-output-grid" id="systemdoorOutputGrid">
+          <div class="label">문짝사이즈 가로 B24</div><div id="out_door_w"></div>
+          <div class="label">문짝사이즈 세로 D24</div><div id="out_door_h"></div>
+          <div class="label">문짝가스켓 F24</div><div id="out_door_gasket"></div>
+          <div class="label">오사이사이즈 가로 B27</div><div id="out_osai_w"></div>
+          <div class="label">오사이사이즈 세로 D27</div><div id="out_osai_h"></div>
+          <div class="label">오사이종류 F27</div><div id="out_osai_type"></div>
+          <div class="label">유리사이즈 가로 B30</div><div id="out_glass_w"></div>
+          <div class="label">유리사이즈 세로 D30</div><div id="out_glass_h"></div>
+          <div class="label">오사이가스켓</div><div id="out_osai_gasket">셀 주소 확인 필요</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-hd">👁 미리보기</div>
+  <div class="preview-row">
+  <div class="preview-main">
+  <div class="preview-wrap">
+    <div class="preview-title">작업지시서 <span id="preSheetBadge" style="font-size:11px;font-weight:400;opacity:.8"></span></div>
+    <div class="preview-sec">기본정보</div>
+    <div class="preview-grid" id="previewGrid"></div>
+    <div id="previewSdSection" style="display:none">
+      <div class="preview-sec">입력 제원</div>
+      <div class="preview-grid" id="previewSdInput"></div>
+      <div class="preview-sec">계산 치수</div>
+      <div class="preview-calc">
+        <div class="head">항목</div><div class="head">가로</div><div class="head">세로</div><div class="head">가스켓</div>
+        <div class="plbl">문짝</div><div class="val" id="pre_door_w">-</div><div class="val" id="pre_door_h">-</div><div class="val" id="pre_door_gasket">-</div>
+        <div class="plbl">오사이</div><div class="val" id="pre_osai_w">-</div><div class="val" id="pre_osai_h">-</div><div class="val" id="pre_osai_type">-</div>
+        <div class="plbl">오사이 가스켓</div><div class="val" id="pre_osai_gasket" style="grid-column:span 3">-</div>
+        <div class="plbl">유리</div><div class="val" id="pre_glass_w">-</div><div class="val" id="pre_glass_h">-</div><div class="val" id="pre_glass_t">-</div>
+        <div class="plbl">경첩수량</div><div class="val" id="pre_hinge_cnt" style="grid-column:span 3">-</div>
+      </div>
+      <div class="preview-sec">작업 확인</div>
+      <div class="preview-check">
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">사이즈 </span><span style="font-weight:600" id="chk_size">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">색상 </span><span style="font-weight:600" id="chk_color">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">경첩방향 </span><span style="font-weight:600" id="chk_hinge">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">경첩수량 </span><span style="font-weight:600" id="chk_hinge_cnt">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">문열림/닫힘 </span><span style="font-weight:600">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">유리두께/오사이 </span><span style="font-weight:600" id="chk_glass">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">도어클로저 </span><span style="font-weight:600" id="chk_closer">□</span></div>
+        <div><span style="font-size:10px;color:var(--text-muted);font-weight:700">손잡이 높이 </span><span style="font-weight:600" id="chk_handle">□</span></div>
+      </div>
+      <div class="preview-sec">특이사항</div>
+      <div class="preview-note" id="previewSdNote">-</div>
+      <div class="preview-waterhole" id="previewWaterhole">※ 물구멍 타공 필요</div>
+    </div>
+  </div>
+  <div style="text-align:right;margin-top:8px">
+    <button class="btn btn-ghost" onclick="printWorkOrder()">🖨️ 작업지시서 인쇄</button>
+  </div>
+  </div><!-- /preview-main -->
+
+  <div class="label-preview-outer">
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px">🏷️ 라벨 미리보기</div>
+    <div class="label-tpl-row">
+      <label>양식</label>
+      <select id="labelTemplateSelectPreview" onchange="syncLabelTemplate(this.value)">
+        <option value="기본양식">기본양식</option>
+        <option value="현장형">현장형</option>
+        <option value="상세형">상세형</option>
+        <option value="소형">소형</option>
+      </select>
+    </div>
+    <div class="lp-box" id="labelPreviewBox"></div>
+    <div style="margin-top:8px">
+      <button class="btn btn-ghost" style="width:100%" onclick="printLabel()">🏷️ 라벨 인쇄</button>
+    </div>
+  </div>
+  </div><!-- /preview-row -->
+
+  </div><!-- /modal-body -->
+  <div class="modal-foot">
+    <button class="btn btn-primary" onclick="saveWorkOrder()">💾 저장</button>
+    <button class="btn btn-ghost" onclick="closeEditor()">닫기</button>
+  </div>
+</div><!-- /page-wrap -->
+
+<script>
+const PRODUCTS=["작업요청서","엔토브","로이도어","리젠도어","나인도어","클래식도어","대문","폴딩도어","시스템도어","T/T창","중문","방충망"];
+let currentProduct="전체";
+let rows=[];
+let editingId=null;
+
+function today(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
+function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v??"";}
+
+function initProducts(){
+  product_group.innerHTML=PRODUCTS.map(p=>`<option>${p}</option>`).join("");
+  productNewButtons.innerHTML=PRODUCTS.map(p=>{
+    const click = p==="시스템도어" ? "openSdPopup(null)"
+                : p==="나인도어"   ? "location.href='/ninedoor'"
+                : `openEditor('${p}')`;
+    return `<button type="button" onclick="${click}">${p} 작성</button>`;
+  }).join("");
+  productFilterButtons.innerHTML=["전체",...PRODUCTS].map(p=>`<button type="button" data-product="${p}" onclick="setProductFilter('${p}')">${p}<span class="cnt" id="cnt_${p}"></span></button>`).join("");
+  setProductFilter("전체", false);
+}
+
+function setProductFilter(p, doLoad=true){
+  currentProduct=p;
+  document.querySelectorAll("#productFilterButtons button").forEach(b=>b.classList.toggle("active",b.dataset.product===p));
+  if(doLoad)renderRows();
+}
+
+function openEditor(product,row=null){
+  editingId=row?row.id:null;
+  modalProductTitle.textContent=product?`# ${product}`:"";
+  document.getElementById("modalBackdrop").style.display="block";
+  document.getElementById("editorModal").style.display="block";
+
+  if(row){
+    ["order_date","production_date","due_date","customer","product_group","qty","model","ship_type","site_name","customer_manager","detail","memo","custom_1","custom_2","custom_note","sd_color","sd_glass_thickness","sd_open_direction","sd_width","sd_height","sd_hinge_direction","sd_door_closer","sd_lock","sd_handle_height","sd_note"].forEach(k=>setVal(k,row[k]||""));
+  }else{
+    ["order_date","production_date","due_date","customer","model","site_name","customer_manager","detail","memo","custom_1","custom_2","custom_note","sd_color","sd_glass_thickness","sd_open_direction","sd_width","sd_height","sd_hinge_direction","sd_door_closer","sd_lock","sd_handle_height","sd_note"].forEach(k=>setVal(k,""));
+    setVal("order_date",today());
+    setVal("qty","1");
+    setVal("product_group",product||PRODUCTS[0]);
+    setVal("ship_type","납품");
+  }
+  updateProductArea();
+  updatePreview();
+  updateLabelPreview();
+  plusdoorEnhanceDateInputsV29();
+}
+
+function closeEditor(){
+  document.getElementById("modalBackdrop").style.display="none";
+  document.getElementById("editorModal").style.display="none";
+}
+
+function updateProductArea(){
+  const p=val("product_group");
+  modalProductTitle.textContent=`# ${p}`;
+  const generic=document.getElementById("genericProductArea");
+  const sd=document.getElementById("systemdoorArea");
+  if(p==="시스템도어"){
+    if(generic)generic.style.display="none";
+    if(sd)sd.style.display="block";
+  }else{
+    if(generic)generic.style.display="block";
+    if(sd)sd.style.display="none";
+    const desc = `${p} 전용 입력항목을 추후 별도로 설계할 공간입니다.`;
+    const ph=document.querySelector("#genericProductArea .placeholder");
+    if(ph)ph.innerHTML=desc;
+  }
+}
+
+function getFormData(){
+  const data={};
+  ["order_date","production_date","due_date","customer","product_group","qty","model","ship_type","site_name","customer_manager","detail","memo","custom_1","custom_2","custom_note","sd_color","sd_glass_thickness","sd_open_direction","sd_width","sd_height","sd_hinge_direction","sd_door_closer","sd_lock","sd_handle_height","sd_note"].forEach(k=>data[k]=val(k));
+  data.status=data.status||"작성중";
+  return data;
+}
+
+function onCustomerChange(){
+  if(document.getElementById('customer').value.trim()==='당사시공'){
+    document.getElementById('ship_type').value='시공';
+  }
+}
+
+async function saveWorkOrder(){
+  const data=getFormData();
+  if(!data.product_group){alert("제품군을 선택하세요.");return;}
+  if(!data.customer){if(!confirm("거래처가 비어 있습니다. 저장할까요?"))return;}
+  const method=editingId?"PUT":"POST";
+  const url=editingId?`/api/work_orders_web/${editingId}`:"/api/work_orders_web";
+  try{
+    const res=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+    const out=await res.json();
+    if(!res.ok || out.ok===false)throw new Error(out.error||"저장 실패");
+    alert("저장되었습니다.");
+    closeEditor();
+    loadRows();
+  }catch(e){
+    alert("저장 실패: "+e.message);
+  }
+}
+
+function openSdPopup(id, e){
+  if(e) e.stopPropagation();
+  const url = id ? "/systemdoor?id="+id : "/systemdoor";
+  const w = screen.availWidth, h = screen.availHeight;
+  window.open(url,"sd_editor","width="+w+",height="+h+",left=0,top=0,scrollbars=yes,resizable=yes");
+}
+
+async function deleteOrder(id, e){
+  if(e) e.stopPropagation();
+  if(!confirm("작업지시서 #"+id+"를 삭제하시겠습니까?\n(이 작업은 되돌릴 수 없습니다)")) return;
+  try{
+    const res = await fetch("/api/work_orders_web/"+id, {method:"DELETE"});
+    const out = await res.json();
+    if(!out.ok) throw new Error(out.error||"삭제 실패");
+    await loadRows();
+  }catch(err){
+    alert("삭제 실패: "+err.message);
+  }
+}
+
+async function loadRows(){
+  const params=new URLSearchParams();
+  if(statusFilter.value)params.set("status",statusFilter.value);
+  if(q.value)params.set("q",q.value);
+  if(dateFrom.value)params.set("date_from",dateFrom.value);
+  if(dateTo.value)params.set("date_to",dateTo.value);
+  try{
+    const res=await fetch("/api/work_orders_web?"+params.toString());
+    const data=await res.json();
+    rows=Array.isArray(data)?data:(data.items||[]);
+  }catch(e){
+    rows=JSON.parse(localStorage.getItem("work_orders_web_local")||"[]");
+  }
+  renderRows();
+}
+
+function renderRows(){
+  const filtered=rows.filter(r=>currentProduct==="전체" || r.product_group===currentProduct);
+  const counts={"전체":rows.length};
+  PRODUCTS.forEach(p=>counts[p]=rows.filter(r=>r.product_group===p).length);
+  Object.entries(counts).forEach(([k,v])=>{const el=document.getElementById("cnt_"+k);if(el)el.textContent=v>0?` (${v})`:'';});
+
+  const badge=document.getElementById('listCountBadge');
+  if(badge)badge.textContent=filtered.length+'건';
+  if(!filtered.length){
+    workOrderBody.innerHTML=`<tr><td colspan="11" class="center muted">저장된 작업지시서가 없습니다.</td></tr>`;
+    return;
+  }
+
+  workOrderBody.innerHTML=filtered.map(r=>{
+    const isSD = r.product_group==="시스템도어";
+    const rowClick = isSD
+      ? `onclick="openSdPopup(${r.id},event)"`
+      : `onclick='openEditor(${JSON.stringify(r.product_group)},${JSON.stringify(r).replaceAll("'","&#39;")})'`;
+    return `
+    <tr ${rowClick}>
+      <td class="center">${esc(r.id||"")}</td>
+      <td class="center">${esc((r.created_date||"").slice(0,10))}</td>
+      <td class="center">${esc(r.production_date||"")}</td>
+      <td class="center">${esc(r.due_date||"")}</td>
+      <td title="${esc(r.customer||"")}">${esc(r.customer||"")}</td>
+      <td class="center">${esc(r.product_group||"")}</td>
+      <td class="center">${esc(r.qty||"")}</td>
+      <td>${esc(r.model||"")}</td>
+      <td title="${esc(r.detail||"")}">${esc(r.detail||"")}</td>
+      <td>${esc(r.site_name||"")}</td>
+      <td class="center"><span class="status-badge">${esc(r.status||"작성중")}</span></td>
+      <td class="center" onclick="event.stopPropagation()"><button class="del-btn" onclick="deleteOrder(${r.id},event)">삭제</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function resetFilters(){
+  statusFilter.value="";
+  q.value="";
+  dateFrom.value="";
+  dateTo.value="";
+  setProductFilter("전체",false);
+  loadRows();
+}
+
+function updatePreview(){
+  const d=getFormData();
+  const items=[
+    ["주문일",d.order_date],["생산일",d.production_date],
+    ["납기일",d.due_date],["거래처",d.customer],
+    ["제품군",d.product_group],["수량",d.qty],
+    ["모델",d.model],["출고구분",d.ship_type],
+    ["지역",d.site_name],["거래처담당자",d.customer_manager],
+    ["상세내용",d.detail],["비고",d.memo],
+    ["제품군 입력1",d.custom_1],["제품군 입력2",d.custom_2],
+    ["제품군 특이사항",d.custom_note],["", ""]
+  ];
+  previewGrid.innerHTML=items.map(([a,b])=>`<div class="label">${esc(a)}</div><div>${esc(b).replace(/\n/g,"<br>")}</div>`).join("");
+}
+
+async function calculateSystemdoor(){
+  if(val("product_group")!=="시스템도어"){
+    alert("시스템도어 선택 시 사용 가능합니다.");
+    return;
+  }
+  const msg=document.getElementById("systemdoorCalcMsg");
+  if(msg)msg.textContent="계산 중...";
+  try{
+    const res=await fetch("/api/work_order_systemdoor/calc",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(getFormData())
+    });
+    const raw=await res.text();
+    let out=null;
+    try{
+      out=JSON.parse(raw);
+    }catch(parseErr){
+      throw new Error("서버가 JSON이 아닌 응답을 보냈습니다. 서버 콘솔 오류를 확인하세요. 응답: "+raw.slice(0,120));
+    }
+    if(!res.ok || out.ok===false)throw new Error(out.error||"계산 실패");
+    const data=out.outputs||{};
+    setText("out_door_w",data.door_width);
+    setText("out_door_h",data.door_height);
+    setText("out_door_gasket",data.door_gasket);
+    setText("out_osai_w",data.osai_width);
+    setText("out_osai_h",data.osai_height);
+    setText("out_osai_type",data.osai_type);
+    setText("out_glass_w",data.glass_width);
+    setText("out_glass_h",data.glass_height);
+    setText("out_osai_gasket",data.osai_gasket || "셀 주소 확인 필요");
+    if(msg)msg.textContent="계산 완료";
+    updatePreview();
+  }catch(e){
+    if(msg)msg.textContent="계산 실패";
+    alert("시스템도어 계산 실패: "+e.message);
+  }
+}
+function setText(id,v){
+  const el=document.getElementById(id);
+  if(el)el.textContent=(v===null||v===undefined)?"":v;
+}
+
+function printWorkOrder(){updatePreview();window.print();}
+
+/* ── 라벨 인쇄 ── */
+const LBL_CSS_BASE = `@page{size:100mm 80mm;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"맑은 고딕",Arial,sans-serif;width:100mm;height:80mm;padding:3mm}.lbl{width:100%;height:100%;border:2px solid #222;display:flex;flex-direction:column;border-radius:2mm}.lbl-hd{background:#1a3a5c;color:#fff;text-align:center;padding:2.5mm 2mm;font-size:9pt;font-weight:700;letter-spacing:1px;border-radius:1.5mm 1.5mm 0 0;flex-shrink:0}.lbl-row{display:flex;border-top:1px solid #ccc;flex:1;align-items:stretch;min-height:12mm}.lbl-key{background:#eef2f7;font-size:8pt;font-weight:700;color:#1a3a5c;padding:2mm;width:18mm;min-width:18mm;border-right:1px solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;word-break:keep-all}.lbl-val{padding:2mm 3mm;font-size:11pt;font-weight:600;flex:1;display:flex;align-items:center;word-break:break-all;line-height:1.3}`;
+const LBL_CSS_DETAIL = `@page{size:100mm 120mm;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"맑은 고딕",Arial,sans-serif;width:100mm;height:120mm;padding:3mm}.lbl{width:100%;height:100%;border:2px solid #222;display:flex;flex-direction:column;border-radius:2mm}.lbl-hd{background:#1a3a5c;color:#fff;text-align:center;padding:2mm;font-size:9pt;font-weight:700;letter-spacing:1px;border-radius:1.5mm 1.5mm 0 0;flex-shrink:0}.lbl-row{display:flex;border-top:1px solid #ccc;flex:1;align-items:stretch;min-height:13mm}.lbl-key{background:#eef2f7;font-size:7.5pt;font-weight:700;color:#1a3a5c;padding:1.5mm;width:16mm;min-width:16mm;border-right:1px solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;word-break:keep-all}.lbl-val{padding:1.5mm 2.5mm;font-size:10pt;font-weight:600;flex:1;display:flex;align-items:center;word-break:break-all;line-height:1.3}`;
+const LBL_CSS_SMALL = `@page{size:70mm 50mm;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"맑은 고딕",Arial,sans-serif;width:70mm;height:50mm;padding:2mm}.lbl{width:100%;height:100%;border:2px solid #222;display:flex;flex-direction:column;border-radius:1.5mm}.lbl-hd{background:#1a3a5c;color:#fff;text-align:center;padding:1.5mm 2mm;font-size:8pt;font-weight:700;border-radius:1mm 1mm 0 0;flex-shrink:0}.lbl-row{display:flex;border-top:1px solid #ccc;flex:1;align-items:stretch}.lbl-key{background:#eef2f7;font-size:7pt;font-weight:700;color:#1a3a5c;padding:1.5mm;width:14mm;min-width:14mm;border-right:1px solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;word-break:keep-all}.lbl-val{padding:1.5mm 2mm;font-size:9pt;font-weight:600;flex:1;display:flex;align-items:center;word-break:break-all;line-height:1.2}`;
+
+function lblDoc(css, body){
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css}</style></head><body>${body}<script>window.onload=()=>{window.print();}<\/script></body></html>`;
+}
+
+const LABEL_TEMPLATES = {
+  "기본양식": (d) => lblDoc(LBL_CSS_BASE, `
+    <div class="lbl">
+      <div class="lbl-hd">PLUSDOOR 작업지시서</div>
+      <div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">${d.customer}</div></div>
+      <div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">${d.product_color}</div></div>
+      <div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">${d.size}</div></div>
+      <div class="lbl-row"><div class="lbl-key">비고</div><div class="lbl-val">${d.memo||'-'}</div></div>
+    </div>`),
+  "현장형": (d) => lblDoc(LBL_CSS_BASE, `
+    <div class="lbl">
+      <div class="lbl-hd">PLUSDOOR</div>
+      <div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">${d.customer}</div></div>
+      <div class="lbl-row"><div class="lbl-key">지역</div><div class="lbl-val">${d.site_name}</div></div>
+      <div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">${d.product_color}</div></div>
+      <div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">${d.size}</div></div>
+    </div>`),
+  "상세형": (d) => lblDoc(LBL_CSS_DETAIL, `
+    <div class="lbl">
+      <div class="lbl-hd">PLUSDOOR 작업지시서</div>
+      <div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">${d.customer}</div></div>
+      <div class="lbl-row"><div class="lbl-key">지역</div><div class="lbl-val">${d.site_name}</div></div>
+      <div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">${d.product_color}</div></div>
+      <div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">${d.size}</div></div>
+      <div class="lbl-row"><div class="lbl-key">수량</div><div class="lbl-val">${d.qty}</div></div>
+      <div class="lbl-row"><div class="lbl-key">납기일</div><div class="lbl-val">${d.due_date}</div></div>
+      <div class="lbl-row"><div class="lbl-key">비고</div><div class="lbl-val">${d.memo||'-'}</div></div>
+    </div>`),
+  "소형": (d) => lblDoc(LBL_CSS_SMALL, `
+    <div class="lbl">
+      <div class="lbl-hd">PLUSDOOR</div>
+      <div class="lbl-row"><div class="lbl-key">거래처명</div><div class="lbl-val">${d.customer}</div></div>
+      <div class="lbl-row"><div class="lbl-key">제품</div><div class="lbl-val">${d.product_color}</div></div>
+      <div class="lbl-row"><div class="lbl-key">사이즈</div><div class="lbl-val">${d.size}</div></div>
+    </div>`),
+};
+
+const LABEL_PREVIEW_RENDERERS = {
+  "기본양식": function(d){
+    return '<div class="lp-hd">PLUSDOOR 작업지시서</div>'
+      +'<div class="lp-row"><div class="lp-key">거래처명</div><div class="lp-val big">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product_color)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">비고</div><div class="lp-val'+(d.memo?'':' dim')+'">'+esc(d.memo||'비고 없음')+'</div></div>';
+  },
+  "현장형": function(d){
+    return '<div class="lp-hd">PLUSDOOR</div>'
+      +'<div class="lp-row"><div class="lp-key">거래처명</div><div class="lp-val big">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">지역</div><div class="lp-val">'+esc(d.site_name)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product_color)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>';
+  },
+  "상세형": function(d){
+    return '<div class="lp-hd">PLUSDOOR 작업지시서</div>'
+      +'<div class="lp-row"><div class="lp-key">거래처명</div><div class="lp-val">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">지역</div><div class="lp-val">'+esc(d.site_name)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product_color)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">수량</div><div class="lp-val">'+esc(d.qty)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">납기일</div><div class="lp-val">'+esc(d.due_date)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">비고</div><div class="lp-val'+(d.memo?'':' dim')+'">'+esc(d.memo||'비고 없음')+'</div></div>';
+  },
+  "소형": function(d){
+    return '<div class="lp-hd" style="font-size:9px">PLUSDOOR</div>'
+      +'<div class="lp-row" style="min-height:40px"><div class="lp-key">거래처명</div><div class="lp-val big">'+esc(d.customer)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">제품</div><div class="lp-val">'+esc(d.product_color)+'</div></div>'
+      +'<div class="lp-row"><div class="lp-key">사이즈</div><div class="lp-val">'+esc(d.size)+'</div></div>';
+  },
+};
+
+function getLabelData(){
+  const d = getFormData();
+  return {
+    customer:      d.customer || '-',
+    site_name:     d.site_name || '-',
+    product_color: [d.product_group, d.model].filter(Boolean).join(' ') || '-',
+    size:          d.detail ? d.detail.split('\n')[0].substring(0, 80) : '-',
+    qty:           d.qty || '-',
+    due_date:      d.due_date || '-',
+    memo:          (d.memo || '').substring(0, 100),
+  };
+}
+
+function updateLabelPreview(){
+  const tpl = document.getElementById("labelTemplateSelectPreview")?.value || "기본양식";
+  const box = document.getElementById("labelPreviewBox");
+  if(!box) return;
+  const fn = LABEL_PREVIEW_RENDERERS[tpl];
+  box.innerHTML = fn ? fn(getLabelData()) : '';
+}
+
+function syncLabelTemplate(val){
+  const s = document.getElementById("labelTemplateSelectPreview");
+  if(s && s.value !== val) s.value = val;
+  updateLabelPreview();
+}
+
+function printLabel(){
+  const tpl = document.getElementById("labelTemplateSelectPreview")?.value || "기본양식";
+  const fn = LABEL_TEMPLATES[tpl];
+  if(!fn){ alert("라벨 양식을 찾을 수 없습니다."); return; }
+  const d = getLabelData();
+  const w = window.open("","_blank","width=420,height=380");
+  if(!w){ alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요."); return; }
+  w.document.write(fn(d));
+  w.document.close();
+}
+
+document.addEventListener("input",e=>{
+  if(e.target.closest("#editorModal")){updatePreview();updateLabelPreview();}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="product_group")updateProductArea();
+  if(e.target.closest("#editorModal")){updatePreview();updateLabelPreview();}
+});
+
+initProducts();
+loadRows();
+</script>
+
+<script id="plusdoor-calendar-v29">
+(function(){
+  let activeInput=null, calYear=0, calMonth=0;
+  function normalize(v){
+    v=String(v||"").trim();
+    const d=v.replace(/\D/g,"");
+    if(d.length===8)return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+    if(d.length===6)return `20${d.slice(0,2)}-${d.slice(2,4)}-${d.slice(4,6)}`;
+    return v;
+  }
+  function parse(v){
+    v=normalize(v);
+    const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+    if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+    return new Date();
+  }
+  function ensure(){
+    let pop=document.getElementById("plusdoorCalendarPopV29");
+    if(pop)return pop;
+    pop=document.createElement("div");
+    pop.id="plusdoorCalendarPopV29";
+    pop.className="plusdoor-calendar-pop";
+    pop.innerHTML=`<div class="plusdoor-calendar-head">
+      <button type="button" onclick="plusdoorMoveCalendarV29(-1)">◀</button>
+      <div id="plusdoorCalendarTitleV29" class="plusdoor-calendar-title"></div>
+      <button type="button" onclick="plusdoorMoveCalendarV29(1)">▶</button>
+      <button type="button" onclick="plusdoorCloseCalendarV29()">닫기</button>
+    </div><div id="plusdoorCalendarGridV29" class="plusdoor-calendar-grid"></div>`;
+    document.body.appendChild(pop);
+    return pop;
+  }
+  window.plusdoorOpenCalendarV29=function(input,btn){
+    activeInput=input;
+    const d=parse(input.value);
+    calYear=d.getFullYear();calMonth=d.getMonth();
+    plusdoorRenderCalendarV29();
+    const pop=ensure();
+    const r=(btn||input).getBoundingClientRect();
+    pop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-310))+"px";
+    pop.style.top=Math.max(8,Math.min(r.bottom+4,window.innerHeight-320))+"px";
+    pop.style.display="block";
+  };
+  window.plusdoorMoveCalendarV29=function(delta){
+    calMonth+=delta;
+    if(calMonth<0){calMonth=11;calYear--}
+    if(calMonth>11){calMonth=0;calYear++}
+    plusdoorRenderCalendarV29();
+  };
+  window.plusdoorCloseCalendarV29=function(){
+    const pop=document.getElementById("plusdoorCalendarPopV29");
+    if(pop)pop.style.display="none";
+  };
+  window.plusdoorSelectCalendarDateV29=function(y,m,d){
+    if(activeInput){
+      activeInput.value=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      activeInput.dispatchEvent(new Event("input",{bubbles:true}));
+      activeInput.dispatchEvent(new Event("change",{bubbles:true}));
+    }
+    plusdoorCloseCalendarV29();
+  };
+  window.plusdoorRenderCalendarV29=function(){
+    const title=document.getElementById("plusdoorCalendarTitleV29");
+    const grid=document.getElementById("plusdoorCalendarGridV29");
+    if(!title||!grid)return;
+    title.textContent=`${calYear}-${String(calMonth+1).padStart(2,"0")}`;
+    const dows=["일","월","화","수","목","금","토"];
+    let out=dows.map(d=>`<div class="dow">${d}</div>`).join("");
+    const first=new Date(calYear,calMonth,1), last=new Date(calYear,calMonth+1,0);
+    const selected=activeInput?normalize(activeInput.value):"";
+    const now=new Date(), today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+    for(let i=0;i<first.getDay();i++)out+="<div></div>";
+    for(let day=1;day<=last.getDate();day++){
+      const val=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+      const cls=[val===today?"today":"",val===selected?"selected":""].filter(Boolean).join(" ");
+      out+=`<button type="button" class="${cls}" onclick="plusdoorSelectCalendarDateV29(${calYear},${calMonth},${day})">${day}</button>`;
+    }
+    grid.innerHTML=out;
+  };
+  window.plusdoorEnhanceDateInputsV29=function(){
+    document.querySelectorAll("input.date-input").forEach(inp=>{
+      if(inp.dataset.calV29)return;
+      inp.dataset.calV29="1";
+      const wrap=document.createElement("span");
+      wrap.className="date-wrap";
+      inp.parentNode.insertBefore(wrap,inp);
+      wrap.appendChild(inp);
+      const btn=document.createElement("button");
+      btn.type="button";btn.className="cal-btn";btn.textContent="📅";
+      btn.onclick=e=>{e.preventDefault();plusdoorOpenCalendarV29(inp,btn)};
+      wrap.appendChild(btn);
+      inp.addEventListener("blur",()=>inp.value=normalize(inp.value));
+    });
+  };
+  document.addEventListener("DOMContentLoaded",plusdoorEnhanceDateInputsV29);
+})();
+</script>
+<!-- ── REGEN XML 생성기 모달 ───────────────────────────────────────────── -->
+<div id="regenBackdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:7000;display:none" onclick="if(event.target===this)closeRegenModal()"></div>
+<div id="regenModal" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(1380px,98vw);max-height:94vh;overflow-y:auto;background:#fff;border-radius:10px;z-index:7001;display:none;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+  <div style="background:#1a3a5c;color:#fff;padding:12px 16px;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">
+    <div>
+      <span style="font-size:15px;font-weight:700">REGEN XML 생성기</span>
+      <span style="font-size:11px;font-weight:400;opacity:.65;margin-left:8px">리젠도어 자동화 — 노란셀에 입력 후 XML 생성 클릭</span>
+    </div>
+    <button onclick="closeRegenModal()" style="background:transparent;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
+  </div>
+  <div style="padding:14px;overflow-x:auto">
+    <table style="border-collapse:collapse;font-size:12px;min-width:960px;width:100%">
+      <thead>
+        <tr style="background:#eef2f7">
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;text-align:center;white-space:nowrap">No.</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap;background:#fffde7">업체명</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap;background:#fffde7">폭 W</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap;background:#fffde7">높이 H</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap;background:#fffde7">문폭</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap;background:#fffde7">경첩방향</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap;background:#fffde7">FIX</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">REG-05</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">원재료</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">REG-08</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">REG-06</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">DC위치</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">FIX위치</th>
+          <th style="padding:7px 6px;border:1px solid #d0d7de;font-weight:700;color:#1a3a5c;white-space:nowrap">REG-06-20</th>
+        </tr>
+      </thead>
+      <tbody id="regenTbody"></tbody>
+    </table>
+  </div>
+  <div style="padding:12px 16px;display:flex;gap:8px;justify-content:space-between;border-top:1px solid #e8ecf0;background:#fafbfc;border-radius:0 0 10px 10px">
+    <button onclick="regenClearAll()" style="padding:7px 14px;background:#dc2626;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer">전체 초기화</button>
+    <div style="display:flex;gap:8px">
+      <button onclick="regenGenerateXml()" style="padding:7px 22px;background:#16a34a;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer">XML 생성</button>
+      <button onclick="closeRegenModal()" style="padding:7px 14px;background:#e5e7eb;color:#1a1e24;border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const MAX = 15;
+  const HINGE = ['좌측','우측'];
+  const FIX   = ['없음','우측','좌측','양측'];
+  const DC_BASE = 245, BAR_ENDS = 80, SAW = 8;
+  const REG05_OPTS = [4300, 5000];
+
+  function usable2(bl){ return bl - BAR_ENDS - SAW*3 - BAR_ENDS; }
+  function usable1(bl){ return bl - BAR_ENDS - SAW*2 - BAR_ENDS; }
+  function chooseBar(r){ for(const bl of REG05_OPTS){if(2*r<=usable2(bl))return bl;} for(const bl of REG05_OPTS){if(r<=usable1(bl))return bl;} return null; }
+
+  function calcReg06(frame, door, hinge, fix){
+    const reg06 = frame - 100;
+    const dsz = fix==='없음' ? frame-80 : door;
+    let dc, f1=null, f2=null;
+    if(hinge==='좌측'){
+      if(fix==='없음') dc=DC_BASE;
+      else if(fix==='우측'){dc=DC_BASE;f1=(dsz-20)+17.5;}
+      else if(fix==='좌측'){dc=reg06-(dsz-20)+DC_BASE;f1=reg06-(dsz-20)-17.5;}
+      else{dc=(reg06/2)-((dsz-20)/2)+DC_BASE;f1=(reg06/2)-((dsz-20)/2)-17.5;f2=(reg06/2)+((dsz-20)/2)+17.5;}
+    } else {
+      if(fix==='없음') dc=reg06-DC_BASE;
+      else if(fix==='우측'){dc=dsz-10-DC_BASE;f1=(dsz-20)+17.5;}
+      else if(fix==='좌측'){dc=reg06-DC_BASE;f1=reg06-(dsz-20)-17.5;}
+      else{dc=(reg06/2)+((dsz-20)/2)-DC_BASE;f1=(reg06/2)-((dsz-20)/2)-17.5;f2=(reg06/2)+((dsz-20)/2)+17.5;}
+    }
+    return {reg06,dc,f1,f2};
+  }
+
+  function inp(field, row){ return document.querySelector(`[data-rg="${field}"][data-ri="${row}"]`); }
+  function out(field, row){ return document.querySelector(`[data-ro="${field}"][data-ri="${row}"]`); }
+  function setOut(f, i, v, ok){ const el=out(f,i); if(el){el.textContent=v; el.style.opacity=ok===false?'0.35':'1';} }
+
+  function recalc(i){
+    const w=parseInt(inp('w',i)?.value), h=parseInt(inp('h',i)?.value), d=parseInt(inp('d',i)?.value);
+    const hinge=inp('hinge',i)?.value||'좌측', fix=inp('fix',i)?.value||'없음';
+    if(!w||!h){ ['r05','bl','r08','r06','dc','fp','r620'].forEach(f=>setOut(f,i,'-',false)); return; }
+    const reg05=h-30, bl=chooseBar(reg05);
+    setOut('r05',i,reg05,true);
+    setOut('bl',i,bl?bl+'mm':'불가',!!bl);
+    setOut('r08',i,w,true);
+    const door=d||w, lk=calcReg06(w,door,hinge,fix);
+    setOut('r06',i,Math.round(lk.reg06),true);
+    setOut('dc',i,lk.dc,true);
+    const fp = lk.f1!==null&&lk.f2!==null ? lk.f1+' / '+lk.f2 : lk.f1!==null ? String(lk.f1) : '없음';
+    setOut('fp',i,fp,true);
+    setOut('r620',i,'0',true);
+  }
+
+  function buildTable(){
+    const tbody=document.getElementById('regenTbody');
+    if(!tbody||tbody.children.length) return;
+    for(let i=0;i<MAX;i++){
+      const bg=i%2===0?'#fff':'#f8f9fa';
+      const sel=(opts)=>opts.map(o=>`<option>${o}</option>`).join('');
+      const iSt='width:100%;padding:4px 6px;border:1.5px solid #d0d7de;border-radius:4px;background:#fffde7;font-size:12px;font-family:inherit;box-sizing:border-box';
+      const oSt='text-align:center;padding:4px 6px;border:1px solid #e0e0e0;font-weight:600;font-size:12px';
+      const tr=document.createElement('tr');
+      tr.style.background=bg;
+      tr.innerHTML=`
+        <td style="text-align:center;padding:4px 6px;border:1px solid #e0e0e0;color:#999;font-size:11px">${i+1}</td>
+        <td style="padding:3px 4px;border:1px solid #e0e0e0;min-width:110px"><input data-rg="name" data-ri="${i}" style="${iSt}" placeholder="업체명"></td>
+        <td style="padding:3px 4px;border:1px solid #e0e0e0;min-width:72px"><input data-rg="w" data-ri="${i}" type="number" style="${iSt}" placeholder="폭"></td>
+        <td style="padding:3px 4px;border:1px solid #e0e0e0;min-width:72px"><input data-rg="h" data-ri="${i}" type="number" style="${iSt}" placeholder="높이"></td>
+        <td style="padding:3px 4px;border:1px solid #e0e0e0;min-width:72px"><input data-rg="d" data-ri="${i}" type="number" style="${iSt}" placeholder="문폭"></td>
+        <td style="padding:3px 4px;border:1px solid #e0e0e0"><select data-rg="hinge" data-ri="${i}" style="${iSt}">${sel(HINGE)}</select></td>
+        <td style="padding:3px 4px;border:1px solid #e0e0e0"><select data-rg="fix" data-ri="${i}" style="${iSt}">${sel(FIX)}</select></td>
+        <td data-ro="r05" data-ri="${i}" style="${oSt};color:#16a34a">-</td>
+        <td data-ro="bl"  data-ri="${i}" style="${oSt};color:#2563a8">-</td>
+        <td data-ro="r08" data-ri="${i}" style="${oSt};color:#16a34a">-</td>
+        <td data-ro="r06" data-ri="${i}" style="${oSt};color:#8e35d1">-</td>
+        <td data-ro="dc"  data-ri="${i}" style="${oSt};color:#dc2626">-</td>
+        <td data-ro="fp"  data-ri="${i}" style="${oSt};color:#d97706;white-space:nowrap">-</td>
+        <td data-ro="r620" data-ri="${i}" style="${oSt};color:#6b7280">-</td>`;
+      tbody.appendChild(tr);
+      tr.querySelectorAll('input,select').forEach(el=>{ el.addEventListener('input',()=>recalc(i)); el.addEventListener('change',()=>recalc(i)); });
+    }
+  }
+
+  window.openRegenModal = function(){
+    buildTable();
+    document.getElementById('regenBackdrop').style.display='block';
+    document.getElementById('regenModal').style.display='block';
+  };
+  window.closeRegenModal = function(){
+    document.getElementById('regenBackdrop').style.display='none';
+    document.getElementById('regenModal').style.display='none';
+  };
+  window.regenClearAll = function(){
+    if(!confirm('모든 입력값을 초기화하시겠습니까?')) return;
+    for(let i=0;i<MAX;i++){
+      ['name','w','h','d'].forEach(f=>{const el=inp(f,i);if(el)el.value='';});
+      const hEl=inp('hinge',i); if(hEl)hEl.value='좌측';
+      const fEl=inp('fix',i);   if(fEl)fEl.value='없음';
+      ['r05','bl','r08','r06','dc','fp','r620'].forEach(f=>setOut(f,i,'-',false));
+    }
+  };
+  window.regenGenerateXml = async function(){
+    const rows=[];
+    for(let i=0;i<MAX;i++){
+      const name=(inp('name',i)?.value||'').trim();
+      const w=inp('w',i)?.value, h=inp('h',i)?.value, d=inp('d',i)?.value;
+      const hinge=inp('hinge',i)?.value||'좌측', fix=inp('fix',i)?.value||'없음';
+      if(!name&&!w&&!h) continue;
+      if(!name){alert(`행 ${i+1}: 업체명을 입력해주세요.`);return;}
+      if(!w){alert(`행 ${i+1} (${name}): 폭(W)을 입력해주세요.`);return;}
+      if(!h){alert(`행 ${i+1} (${name}): 높이(H)를 입력해주세요.`);return;}
+      if(!d){alert(`행 ${i+1} (${name}): 문폭을 입력해주세요.`);return;}
+      rows.push({name,width:+w,height:+h,door:+d,hinge,fix});
+    }
+    if(!rows.length){alert('데이터를 1개 이상 입력해주세요.');return;}
+    try{
+      const res=await fetch('/api/regen/generate_xml',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
+      if(!res.ok){const e=await res.json().catch(()=>({}));alert('XML 생성 실패: '+(e.error||res.status));return;}
+      const blob=await res.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const t=new Date(), ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      a.href=url; a.download=`regen_${ds}.XML`; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),3000);
+    }catch(e){alert('XML 생성 실패: '+e.message);}
+  };
+})();
+</script>
+</body>
+</html>

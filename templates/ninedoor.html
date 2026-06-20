@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나인도어 작업지시서</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#111}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+
+.topbar{background:#1a3a5c;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.topbar h1{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.topbar .badge{background:#2563a8;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.back-btn{margin-left:auto;padding:5px 12px;border:1px solid rgba(255,255,255,.4);background:transparent;color:rgba(255,255,255,.8);cursor:pointer;border-radius:4px;font-size:12px}
+.back-btn:hover{background:rgba(255,255,255,.15)}
+
+.layout{display:grid;grid-template-columns:420px 1fr;min-height:calc(100vh - 46px)}
+
+.input-panel{background:#fff;border-right:2px solid #dde3eb;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.sec-box{border:1px solid #dde3eb;border-radius:6px;overflow:hidden}
+.sec-hd{background:#1a3a5c;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.sec-body{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sec-body.col3{grid-template-columns:1fr 1fr 1fr}
+.sec-body.col1{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:11px;font-weight:700;color:#555}
+.fg label .ref{font-weight:400;color:#aaa;font-size:10px;margin-left:2px}
+.fg input,.fg select,.fg textarea{width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;background:#fafbfc;transition:border-color .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#2563a8;outline:none;background:#fff;box-shadow:0 0 0 2px rgba(37,99,168,.1)}
+.fg textarea{resize:vertical;min-height:52px}
+
+.out-table{width:100%;border-collapse:collapse;font-size:12px}
+.out-table th{background:#e8ecf0;padding:5px 8px;text-align:left;font-weight:700;color:#1a3a5c;border:1px solid #ccc;font-size:11px}
+.out-table td{padding:6px 8px;border:1px solid #e0e6ec}
+.out-table tr:nth-child(even) td{background:#f8fafc}
+.ov{font-weight:700;color:#1a5cba;font-size:13px}
+.ov.empty{color:#bbb;font-weight:400;font-style:italic;font-size:11px}
+
+.save-btn{width:100%;padding:10px;background:#1a3a5c;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.save-btn:hover{background:#122b45}
+.print-btn{width:100%;padding:8px;background:#555;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px}
+.print-btn:hover{background:#333}
+
+.preview-panel{background:#e4e8ed;padding:20px;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:16px}
+.pv-label{font-size:11px;font-weight:700;color:#777;text-transform:uppercase;letter-spacing:.8px;align-self:flex-start}
+
+.wo-sheet{background:#fff;width:100%;max-width:720px;border:1px solid #aab;box-shadow:0 3px 16px rgba(0,0,0,.12);font-size:11px}
+.wo-hd{background:#1a3a5c;color:#fff;padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
+.wo-hd .wo-title{font-size:14px;font-weight:700}
+.wo-hd .wo-sub{font-size:10px;color:rgba(255,255,255,.65);margin-top:2px}
+.wo-hd .wo-type{background:#2563a8;padding:2px 9px;border-radius:3px;font-size:11px;font-weight:700}
+.wo-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.wo-sec{background:#1a3a5c;color:#fff;padding:3px 8px;font-size:11px;font-weight:700;margin-bottom:0}
+
+.wg{display:grid;border:1px solid #334155;border-right:none;border-bottom:none}
+.wg.col4{grid-template-columns:repeat(4,1fr)}
+.wg.col3{grid-template-columns:repeat(3,1fr)}
+.wg.col2{grid-template-columns:1fr 1fr}
+.wg-cell{border-right:1px solid #334155;border-bottom:1px solid #334155}
+.wg-cell.s2{grid-column:span 2}
+.wg-cell.s3{grid-column:span 3}
+.wg-cell.s4{grid-column:span 4}
+.wc-lbl{background:#e8ecf0;padding:3px 6px;font-size:10px;font-weight:700;color:#334155;border-bottom:1px solid #334155}
+.wc-val{padding:4px 6px;font-size:12px;min-height:24px}
+.wc-val.hi{color:#1a5cba;font-weight:700}
+.wc-val.accent{color:#e85d04;font-weight:700}
+
+.calc-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.calc-tbl th{background:#dde6ff;padding:4px 6px;text-align:center;border:1px solid #334155;font-weight:700;color:#1a3a5c}
+.calc-tbl td{padding:4px 6px;border:1px solid #cdd5e0;text-align:center}
+.calc-tbl .row-lbl{background:#eef3ff;font-weight:700;color:#1a3a5c;text-align:left;padding-left:8px}
+.calc-tbl .cv{font-weight:700;color:#1a5cba;font-size:12px}
+
+.note-box{border:1px solid #334155;padding:6px 8px;min-height:30px;font-size:11px;color:#999;font-style:italic}
+.note-box.has{color:#1a3a5c;font-style:normal;font-weight:600}
+
+.empty-state{text-align:center;padding:60px 20px;color:#aaa}
+.empty-state .icon{font-size:44px;opacity:.4;margin-bottom:10px}
+
+.toast{position:fixed;bottom:20px;right:20px;background:#1a3a5c;color:#fff;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.2);transform:translateY(60px);opacity:0;transition:all .25s;z-index:9999}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:#16a34a}
+.toast.err{background:#dc2626}
+
+@media print{
+  .input-panel,.topbar,.save-btn,.print-btn,.pv-label{display:none!important}
+  .layout{grid-template-columns:1fr}
+  .preview-panel{background:#fff;padding:0}
+  .wo-sheet{box-shadow:none;border:none;max-width:100%}
+}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  .input-panel{border-right:none;border-bottom:2px solid #dde3eb}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>나인도어 작업지시서</h1>
+  <span class="badge">비단열</span>
+  <button class="back-btn" onclick="history.back()">← 작업지시서 목록</button>
+</div>
+
+<div class="layout">
+
+  <!-- 좌측 입력 패널 -->
+  <div class="input-panel">
+
+    <!-- 기본정보 -->
+    <div class="sec-box">
+      <div class="sec-hd">📋 기본정보</div>
+      <div class="sec-body">
+        <div class="fg"><label>주문일</label><input type="text" id="f_order_date" placeholder="yyyy-mm-dd" maxlength="10" oninput="updatePreview()"></div>
+        <div class="fg"><label>생산일</label><input type="text" id="f_prod_date" placeholder="yyyy-mm-dd" maxlength="10" oninput="updatePreview()"></div>
+        <div class="fg"><label>납기일</label><input type="text" id="f_due_date" placeholder="yyyy-mm-dd" maxlength="10" oninput="updatePreview()"></div>
+        <div class="fg"><label>거래처</label><input type="text" id="f_customer" placeholder="거래처명" oninput="updatePreview()"></div>
+        <div class="fg"><label>수량</label><input type="number" id="f_qty" value="1" min="1" oninput="updatePreview()"></div>
+        <div class="fg"><label>출고구분</label>
+          <select id="f_ship" onchange="updatePreview()">
+            <option>납품</option><option>시공</option><option>화물</option><option>택배</option><option>직접픽업</option>
+          </select>
+        </div>
+        <div class="fg full"><label>현장명</label><input type="text" id="f_site" placeholder="현장명" oninput="updatePreview()"></div>
+        <div class="fg full"><label>비고</label><textarea id="f_memo" placeholder="비고사항" oninput="updatePreview()"></textarea></div>
+      </div>
+    </div>
+
+    <!-- 나인도어 제원 -->
+    <div class="sec-box">
+      <div class="sec-hd">🚪 나인도어 제원 입력</div>
+      <div class="sec-body col3">
+
+        <div class="fg"><label>가로(mm) <span class="ref">B4</span></label>
+          <input type="number" id="nd_width" placeholder="예: 1240" oninput="calc()">
+        </div>
+        <div class="fg"><label>세로(mm) <span class="ref">B5</span></label>
+          <input type="number" id="nd_height" placeholder="예: 2200" oninput="calc()">
+        </div>
+        <div class="fg"><label>묻힘(mm) <span class="ref">B6</span></label>
+          <input type="number" id="nd_buried" value="0" oninput="calc()">
+        </div>
+
+        <div class="fg"><label>소대방향 <span class="ref">B7</span></label>
+          <select id="nd_side_dir" onchange="calc()">
+            <option value="없음">없음</option>
+            <option value="좌">좌</option>
+            <option value="우">우</option>
+            <option value="양">양</option>
+          </select>
+        </div>
+        <div class="fg"><label>경첩방향 <span class="ref">B8</span></label>
+          <select id="nd_hinge" onchange="calc()">
+            <option value="우">우경첩</option>
+            <option value="좌">좌경첩</option>
+            <option value="양">양개</option>
+          </select>
+        </div>
+        <div class="fg"><label>소대개폐 <span class="ref">B9</span></label>
+          <select id="nd_side_open" onchange="calc()">
+            <option value="아니요">아니요</option>
+            <option value="예">예</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>알루미늄 색상 <span class="ref">F25</span></label>
+          <select id="nd_al_color" onchange="updatePreview()">
+            <option>블랙</option>
+            <option>화이트</option>
+            <option>화인</option>
+            <option>월넛</option>
+            <option>기타</option>
+          </select>
+        </div>
+        <div class="fg"><label>판넬 색상(전면) <span class="ref">F26</span></label>
+          <input type="text" id="nd_panel_front" placeholder="예: 라이트월넛" oninput="updatePreview()">
+        </div>
+        <div class="fg"><label>판넬 색상(후면)</label>
+          <input type="text" id="nd_panel_rear" placeholder="예: 샴페인" oninput="updatePreview()">
+        </div>
+
+        <div class="fg"><label>문유리 <span class="ref">A13</span></label>
+          <select id="nd_door_glass" onchange="calc()">
+            <option value="없음">없음</option>
+            <option value="있음">있음</option>
+          </select>
+        </div>
+        <div class="fg"><label>단조/격자 <span class="ref">A14</span></label>
+          <select id="nd_forged" onchange="calc()">
+            <option value="없음">없음</option>
+            <option value="단조">단조</option>
+            <option value="격자">격자</option>
+          </select>
+        </div>
+        <div class="fg"><label>소대유리 <span class="ref">A16</span></label>
+          <select id="nd_side_glass" onchange="calc()">
+            <option value="없음">없음</option>
+            <option value="있음">있음</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>소대단조 <span class="ref">A17</span></label>
+          <select id="nd_side_forged" onchange="calc()">
+            <option value="없음">없음</option>
+            <option value="있음">있음</option>
+          </select>
+        </div>
+        <div class="fg"><label>전자키 <span class="ref">F27</span></label>
+          <select id="nd_ekey" onchange="updatePreview()">
+            <option value="없음">없음</option>
+            <option value="MPS300">MPS300</option>
+            <option value="코맥스">코맥스</option>
+            <option value="701">701</option>
+            <option value="하이원">하이원</option>
+          </select>
+        </div>
+        <div class="fg"><label>게이트아이 <span class="ref">A40</span></label>
+          <select id="nd_gate" onchange="updatePreview()">
+            <option value="없음">없음</option>
+            <option value="있음(골드)">있음(골드)</option>
+            <option value="있음(블랙)">있음(블랙)</option>
+          </select>
+        </div>
+
+        <div class="fg full"><label>특이사항 <span class="ref">A44</span></label>
+          <textarea id="nd_note" placeholder="나인도어 제작 특이사항" oninput="updatePreview()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 계산 출력값 -->
+    <div class="sec-box">
+      <div class="sec-hd">📐 절단 계산값</div>
+      <div style="padding:10px">
+        <table class="out-table">
+          <thead>
+            <tr><th style="width:110px">항목</th><th>치수</th><th>비고</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><b>문짝 폭</b></td><td><span class="ov empty" id="o_door_w">-</span></td><td style="font-size:10px;color:#888">표준 960mm</td></tr>
+            <tr><td><b>문짝 높이</b></td><td><span class="ov empty" id="o_door_h">-</span></td><td style="font-size:10px;color:#888">세로-161</td></tr>
+            <tr style="background:#eef3ff"><td><b>날개/유리/보강/힌지바</b></td><td><span class="ov empty" id="o_bar_len">-</span></td><td style="font-size:10px;color:#888">세로-161</td></tr>
+            <tr><td><b>ㄷ자바</b></td><td><span class="ov empty" id="o_dbar">-</span></td><td style="font-size:10px;color:#888">문폭-28</td></tr>
+            <tr><td><b>통바/문지방</b></td><td><span class="ov empty" id="o_topbar">-</span></td><td style="font-size:10px;color:#888">세로-90</td></tr>
+            <tr><td><b>프레임 다대</b></td><td><span class="ov empty" id="o_frame_h">-</span></td><td style="font-size:10px;color:#888">세로-30</td></tr>
+            <tr><td><b>킷대</b></td><td><span class="ov empty" id="o_kit">-</span></td><td style="font-size:10px;color:#888">세로-150</td></tr>
+            <tr id="side_row" style="display:none"><td><b>소대판 폭</b></td><td><span class="ov empty" id="o_side_w">-</span></td><td style="font-size:10px;color:#888" id="o_side_w_note">가로-1082</td></tr>
+            <tr id="side_row2" style="display:none"><td><b>소대판 높이</b></td><td><span class="ov empty" id="o_side_h">-</span></td><td style="font-size:10px;color:#888">세로-192</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveOrder()">💾 작업지시서 저장</button>
+    <button class="print-btn" onclick="window.print()">🖨️ 인쇄</button>
+
+  </div><!-- /input-panel -->
+
+  <!-- 우측 미리보기 -->
+  <div class="preview-panel">
+    <div class="pv-label">작업지시서 미리보기</div>
+
+    <div id="emptyState" class="empty-state">
+      <div class="icon">🚪</div>
+      <p>가로·세로를 입력하면<br>미리보기가 표시됩니다</p>
+    </div>
+
+    <div class="wo-sheet" id="woSheet" style="display:none">
+
+      <div class="wo-hd">
+        <div>
+          <div class="wo-title">나인도어 작업지시서</div>
+          <div class="wo-sub">비단열 / 9-DOOR</div>
+        </div>
+        <span class="wo-type" id="p_ship">납품</span>
+      </div>
+
+      <div class="wo-body">
+
+        <!-- 기본정보 -->
+        <div class="wo-sec">기본정보</div>
+        <div class="wg col4">
+          <div class="wg-cell"><div class="wc-lbl">주문일</div><div class="wc-val" id="p_order">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">생산일</div><div class="wc-val" id="p_prod">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">납기일</div><div class="wc-val" id="p_due">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">수량</div><div class="wc-val hi" id="p_qty">1</div></div>
+          <div class="wg-cell s2"><div class="wc-lbl">거래처</div><div class="wc-val hi" id="p_customer">-</div></div>
+          <div class="wg-cell s2"><div class="wc-lbl">현장명</div><div class="wc-val" id="p_site">-</div></div>
+        </div>
+
+        <!-- 입력 제원 -->
+        <div class="wo-sec">입력 제원</div>
+        <div class="wg col4">
+          <div class="wg-cell"><div class="wc-lbl">가로(mm)</div><div class="wc-val hi" id="p_width">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">세로(mm)</div><div class="wc-val hi" id="p_height">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">묻힘(mm)</div><div class="wc-val" id="p_buried">0</div></div>
+          <div class="wg-cell"><div class="wc-lbl">소대방향</div><div class="wc-val" id="p_side_dir">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">경첩방향</div><div class="wc-val" id="p_hinge">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">소대개폐</div><div class="wc-val" id="p_side_open">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">문유리</div><div class="wc-val" id="p_door_glass">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">단조/격자</div><div class="wc-val" id="p_forged">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">소대유리</div><div class="wc-val" id="p_side_glass">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">소대단조</div><div class="wc-val" id="p_side_forged">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">전자키</div><div class="wc-val" id="p_ekey">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">게이트아이</div><div class="wc-val" id="p_gate">-</div></div>
+        </div>
+
+        <!-- 색상 -->
+        <div class="wo-sec">색상</div>
+        <div class="wg col3">
+          <div class="wg-cell"><div class="wc-lbl">알루미늄</div><div class="wc-val hi" id="p_al_color">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">판넬 전면</div><div class="wc-val hi" id="p_panel_front">-</div></div>
+          <div class="wg-cell"><div class="wc-lbl">판넬 후면</div><div class="wc-val" id="p_panel_rear">-</div></div>
+        </div>
+
+        <!-- 절단 계산 -->
+        <div class="wo-sec">절단 계산</div>
+        <table class="calc-tbl">
+          <thead>
+            <tr><th>항목</th><th>치수(mm)</th><th>항목</th><th>치수(mm)</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="row-lbl">문짝 (폭×높이)</td>
+              <td class="cv"><span id="pc_door">-</span></td>
+              <td class="row-lbl">날개/유리/보강/힌지바</td>
+              <td class="cv"><span id="pc_bar">-</span></td>
+            </tr>
+            <tr>
+              <td class="row-lbl">ㄷ자바</td>
+              <td class="cv"><span id="pc_dbar">-</span></td>
+              <td class="row-lbl">통바/문지방</td>
+              <td class="cv"><span id="pc_topbar">-</span></td>
+            </tr>
+            <tr>
+              <td class="row-lbl">프레임 다대</td>
+              <td class="cv"><span id="pc_frame">-</span></td>
+              <td class="row-lbl">킷대</td>
+              <td class="cv"><span id="pc_kit">-</span></td>
+            </tr>
+            <tr id="pc_side_row" style="display:none">
+              <td class="row-lbl">소대판 (폭×높이)</td>
+              <td class="cv" colspan="3"><span id="pc_side">-</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 특이사항 -->
+        <div class="wo-sec">특이사항</div>
+        <div class="note-box" id="p_note">-</div>
+
+        <!-- 비고 -->
+        <div id="p_memo_section" style="display:none">
+          <div class="wo-sec">비고</div>
+          <div class="note-box has" id="p_memo">-</div>
+        </div>
+
+      </div><!-- /wo-body -->
+    </div><!-- /wo-sheet -->
+  </div><!-- /preview-panel -->
+
+</div><!-- /layout -->
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const txt = (id, v) => { const el=$(id); if(el) el.textContent = v??"-"; };
+const show = (id, b) => { const el=$(id); if(el) el.style.display = b ? "" : "none"; };
+const fmt = v => (v===null||v===undefined||v==="") ? "-" : String(v);
+
+function setOv(id, v) {
+  const el = $(id);
+  if (!el) return;
+  if (!v || v==="-" || v==="0") { el.textContent="-"; el.className="ov empty"; }
+  else { el.textContent=v; el.className="ov"; }
+}
+
+function showToast(msg, type="") {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show " + type;
+  setTimeout(() => t.className = "toast", 2800);
+}
+
+// ── 핵심 계산 ──
+function doCalc() {
+  const W = parseFloat($("nd_width")?.value);
+  const H = parseFloat($("nd_height")?.value);
+  if (!W || !H) return null;
+
+  const sideDir   = $("nd_side_dir")?.value || "없음";
+  const buried    = parseFloat($("nd_buried")?.value) || 0;
+
+  // 표준 바 절단 길이 (날개바/유리바/보강대/힌지바)
+  const barLen  = H - 161;
+  // 문짝
+  const doorW   = 960;
+  const doorH   = H - 161;
+  // ㄷ자바
+  const dBar    = doorW - 28;
+  // 통바/문지방
+  const topBar  = H - 90;
+  // 프레임 다대
+  const frameH  = H - 30;
+  // 킷대
+  const kitH    = H - 150;
+
+  // 소대판 사이즈
+  let sideW = null, sideH = null;
+  if (sideDir === "좌" || sideDir === "우") {
+    sideW = W - 1082;
+    sideH = H - 192;
+  } else if (sideDir === "양") {
+    sideW = Math.round((W - 1085) / 2);
+    sideH = H - 192;
+  }
+
+  return { W, H, barLen, doorW, doorH, dBar, topBar, frameH, kitH, sideW, sideH, sideDir, buried };
+}
+
+function calc() {
+  const r = doCalc();
+
+  if (!r) {
+    ["o_door_w","o_door_h","o_bar_len","o_dbar","o_topbar","o_frame_h","o_kit","o_side_w","o_side_h"].forEach(id=>setOv(id,null));
+    show("side_row", false); show("side_row2", false);
+    show("emptyState", true); show("woSheet", false);
+    return;
+  }
+
+  setOv("o_door_w",  r.doorW+"mm");
+  setOv("o_door_h",  r.doorH+"mm");
+  setOv("o_bar_len", r.barLen+"mm");
+  setOv("o_dbar",    r.dBar+"mm");
+  setOv("o_topbar",  r.topBar+"mm");
+  setOv("o_frame_h", r.frameH+"mm");
+  setOv("o_kit",     r.kitH+"mm");
+
+  const hasSide = r.sideW !== null;
+  show("side_row",  hasSide);
+  show("side_row2", hasSide);
+  if (hasSide) {
+    setOv("o_side_w", r.sideW+"mm");
+    setOv("o_side_h", r.sideH+"mm");
+    const noteEl = $("o_side_w_note");
+    if (noteEl) noteEl.textContent = r.sideDir==="양" ? "(가로-1085)÷2" : "가로-1082";
+  }
+
+  updatePreview(r);
+}
+
+function updatePreview(r) {
+  r = r || doCalc();
+  if (!r) { show("emptyState",true); show("woSheet",false); return; }
+
+  show("emptyState", false);
+  show("woSheet", true);
+
+  txt("p_ship",       $("f_ship")?.value||"납품");
+  txt("p_order",      $("f_order_date")?.value||"-");
+  txt("p_prod",       $("f_prod_date")?.value||"-");
+  txt("p_due",        $("f_due_date")?.value||"-");
+  txt("p_qty",        $("f_qty")?.value||"1");
+  txt("p_customer",   $("f_customer")?.value||"-");
+  txt("p_site",       $("f_site")?.value||"-");
+
+  txt("p_width",      r.W+"mm");
+  txt("p_height",     r.H+"mm");
+  txt("p_buried",     r.buried+"mm");
+  txt("p_side_dir",   r.sideDir);
+  txt("p_hinge",      ($("nd_hinge")?.value||"-")+"경첩");
+  txt("p_side_open",  $("nd_side_open")?.value||"-");
+  txt("p_door_glass", $("nd_door_glass")?.value||"-");
+  txt("p_forged",     $("nd_forged")?.value||"-");
+  txt("p_side_glass", $("nd_side_glass")?.value||"-");
+  txt("p_side_forged",$("nd_side_forged")?.value||"-");
+  txt("p_ekey",       $("nd_ekey")?.value||"-");
+  txt("p_gate",       $("nd_gate")?.value||"-");
+
+  txt("p_al_color",   $("nd_al_color")?.value||"-");
+  txt("p_panel_front",$("nd_panel_front")?.value||"-");
+  txt("p_panel_rear", $("nd_panel_rear")?.value||"-");
+
+  // 절단 계산 미리보기
+  txt("pc_door",   `${r.doorW} × ${r.doorH}`);
+  txt("pc_bar",    r.barLen+"");
+  txt("pc_dbar",   r.dBar+"");
+  txt("pc_topbar", r.topBar+"");
+  txt("pc_frame",  r.frameH+"");
+  txt("pc_kit",    r.kitH+"");
+
+  const hasSide = r.sideW !== null;
+  show("pc_side_row", hasSide);
+  if (hasSide) txt("pc_side", `${r.sideW} × ${r.sideH}`);
+
+  // 특이사항
+  const note = $("nd_note")?.value?.trim()||"";
+  const noteEl = $("p_note");
+  if (noteEl) { noteEl.textContent = note||"-"; noteEl.className = note ? "note-box has" : "note-box"; }
+
+  const memo = $("f_memo")?.value?.trim()||"";
+  show("p_memo_section", !!memo);
+  if (memo) txt("p_memo", memo);
+}
+
+// ── 저장 ──
+async function saveOrder() {
+  const r = doCalc();
+  if (!r) { showToast("가로·세로를 입력해주세요", "err"); return; }
+
+  const body = {
+    product_group: "나인도어",
+    order_date:    $("f_order_date")?.value||"",
+    production_date: $("f_prod_date")?.value||"",
+    due_date:      $("f_due_date")?.value||"",
+    customer:      $("f_customer")?.value||"",
+    qty:           parseInt($("f_qty")?.value)||1,
+    model:         "비단열",
+    ship_type:     $("f_ship")?.value||"납품",
+    site_name:     $("f_site")?.value||"",
+    detail: [
+      `가로:${r.W}  세로:${r.H}  묻힘:${r.buried}`,
+      `소대방향:${r.sideDir}  경첩:${$("nd_hinge")?.value}  소대개폐:${$("nd_side_open")?.value}`,
+      `알루미늄:${$("nd_al_color")?.value}  전면:${$("nd_panel_front")?.value||"-"}  후면:${$("nd_panel_rear")?.value||"-"}`,
+      `문유리:${$("nd_door_glass")?.value}  단조/격자:${$("nd_forged")?.value}`,
+      `소대유리:${$("nd_side_glass")?.value}  소대단조:${$("nd_side_forged")?.value}`,
+      `전자키:${$("nd_ekey")?.value}  게이트아이:${$("nd_gate")?.value}`,
+      r.sideW ? `소대판:${r.sideW}×${r.sideH}` : "",
+    ].filter(Boolean).join(" | "),
+    memo: $("f_memo")?.value||"",
+    status: "작성중",
+    extra_json: JSON.stringify({
+      nd_width:r.W, nd_height:r.H, nd_buried:r.buried,
+      nd_side_dir:r.sideDir,
+      nd_hinge:$("nd_hinge")?.value,
+      nd_side_open:$("nd_side_open")?.value,
+      nd_al_color:$("nd_al_color")?.value,
+      nd_panel_front:$("nd_panel_front")?.value,
+      nd_panel_rear:$("nd_panel_rear")?.value,
+      nd_door_glass:$("nd_door_glass")?.value,
+      nd_forged:$("nd_forged")?.value,
+      nd_side_glass:$("nd_side_glass")?.value,
+      nd_side_forged:$("nd_side_forged")?.value,
+      nd_ekey:$("nd_ekey")?.value,
+      nd_gate:$("nd_gate")?.value,
+      nd_note:$("nd_note")?.value,
+    })
+  };
+
+  try {
+    const res = await fetch("/api/work_order_csv", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body)
+    });
+    const d = await res.json();
+    if (d.ok) { showToast("저장되었습니다", "ok"); }
+    else { showToast(d.error||"저장 실패", "err"); }
+  } catch(e) {
+    showToast("저장 실패: "+e.message, "err");
+  }
+}
+
+// 초기화
+document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date();
+  const ymd = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+  $("f_order_date").value = ymd;
+});
+</script>
+</body>
+</html>

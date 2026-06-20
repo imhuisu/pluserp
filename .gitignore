@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 로그
+flask_out.log
+flask_err.log
+
+# 업로드된 사진 파일 (서버에서 별도 관리)
+static/uploads/
+
+# 작업지시서 생성 결과물
+work_order_output/
+
+# Claude 설정
+.claude/

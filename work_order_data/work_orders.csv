@@ -1,0 +1,11 @@
+﻿id,created_at,updated_at,writer,status,workDate,productGroup,templateType,scheduleDate,releaseDate,customer,siteName,model,width,height,qty,deliveryType,smallDoorDirection,buryDepth,namma,hingeDirection,smallDoorOpen,doorSize,doorGlass,grill,smallDoorSize,smallDoorGlass,smallDoorGrill,postBar,dongBar,danBar,smallPost,smallTop,frame,reinforce,topExtra,colorChange,color,panel1,panel2,panel3,keyHeight,alColor,panelColor,digitalLock,keyType,content,specialNotes,memo,customerContact,output_xlsx,preview_png
+1,2026-06-02 17:01:51,2026-06-02 18:35:26,관리자,작성중,2026-06-02,나인도어,비단열,20260605,20260611,신현대창호,충남(천안),316,1240,2200,1,방문,좌,,,우,아니오,1000,,,,,,,,,,,,,,,,,,,,,,,게이트아이 푸시풀골드 리/무,,"1
+2
+3
+4
+5",,,1_2026-06-02_신현대창호_충남(천안)_나인도어비단열.xlsx,preview/1_preview.png
+2,2026-06-02 17:08:00,2026-06-04 08:11:08,관리자,작성중,2026-06-02,나인도어,비단열,2026-06-05,2026-06-11,대산기업(이천),경기(이천),316,1300,2400,1,방문,좌,0,,우,아니오,960,판,,,,,,,,,,,,,,,,,,,,,,게이트아이 푸시풀골드 리/무,,"1
+2
+3
+4
+5",1,,2_2026-06-02_대산기업(이천)_경기(이천)_나인도어비단열.xlsx,preview/2_preview.png

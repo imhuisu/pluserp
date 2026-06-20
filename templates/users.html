@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사용자관리</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:"맑은 고딕",Arial,sans-serif;margin:0;}
+.top-menu{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.top-menu button{border:1px solid #333;background:#fff;padding:7px 12px;cursor:pointer}
+.top-menu .active{background:#0078d7;color:#fff;font-weight:800}
+.panel{background:#fff;border:2px solid #333;padding:12px;margin-bottom:12px}
+.panel-title{font-size:16px;font-weight:900;border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:10px}
+label{display:block;font-weight:800;font-size:13px;margin-bottom:4px}
+input,select,button,textarea{font-family:inherit;font-size:13px}
+input,select,textarea{width:100%;padding:7px;border:1px solid #aaa}
+textarea{resize:vertical;height:34px}
+button{border:1px solid #333;background:#fff;padding:7px 11px;cursor:pointer}
+.primary{background:#0078d7;color:#fff;font-weight:800}
+.muted{background:#eee}
+.danger{background:#d83b01;color:#fff;font-weight:800}
+
+/* 그룹 추가 폼 */
+.group-add-grid{display:grid;grid-template-columns:160px 1fr auto;gap:8px;align-items:end;margin-bottom:10px}
+
+/* 사용자 추가 폼 */
+.user-add-top{display:grid;grid-template-columns:140px 120px 150px 120px 100px auto auto;gap:8px;align-items:end;margin-bottom:8px}
+
+/* ── 권한 박스: 5열 2행 그리드 ── */
+.perm-box{
+  display:grid;
+  grid-template-columns:repeat(5,152px);
+  gap:5px 8px;
+  padding:7px 10px;
+  border:1px solid #ccc;
+  border-radius:4px;
+  background:#fafafa;
+  width:fit-content;
+}
+.perm-row{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:4px;
+  white-space:nowrap;
+  height:26px;
+  width:152px;
+}
+.perm-row span{
+  font-size:12px;
+  font-weight:700;
+  color:#1a3a5c;
+  white-space:nowrap;
+  width:54px;
+  min-width:54px;
+}
+.perm-row select{
+  font-size:12px;
+  padding:3px 4px;
+  flex:1;
+  min-width:0;
+  border:1px solid #aaa;
+  border-radius:3px;
+}
+
+/* 테이블 공통 */
+.table-wrap{overflow-x:auto;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#ddd;border:1px solid #999;padding:7px 8px;text-align:center;white-space:nowrap}
+td{border:1px solid #ccc;padding:6px 7px;vertical-align:middle}
+td input,td select,td textarea{font-size:13px;padding:5px 6px;width:100%}
+.inactive{background:#f0f0f0;color:#777}
+.small{font-size:12px;color:#666;margin-top:6px}
+.password-tools{display:flex;gap:4px;align-items:center}
+.password-tools input{width:120px;min-width:0;flex:none}
+.action-col{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+
+/* 그룹 테이블 */
+.group-table{min-width:600px}
+
+/* 사용자 목록 테이블 */
+.user-table{min-width:1100px}
+.user-table .col-id   {width:160px}
+.user-table .col-name {width:140px}
+.user-table .col-group{width:150px}
+.user-table .col-role {width:120px}
+.user-table .col-active{width:90px}
+.user-table .col-pw   {width:200px}
+.user-table .col-login{width:130px}
+.user-table .col-act  {width:120px}
+
+@media(max-width:900px){
+  .group-add-grid,.user-add-top{grid-template-columns:1fr}
+  .perm-box{flex-wrap:wrap}
+  .top-menu{display:grid;grid-template-columns:repeat(2,1fr)}
+  table,thead,tbody,tr,th,td{display:block;width:100%}
+  thead{display:none}
+  tr{border:1px solid #999;margin:8px 0;background:#fff;padding:6px}
+  td{border:0;border-bottom:1px solid #eee}
+  td::before{content:attr(data-label);display:block;font-weight:800;color:#333;margin-bottom:3px}
+  .password-tools{display:grid;grid-template-columns:1fr 80px}
+}
+</style>
+<style id="pd-new-ui">
+:root{--primary:#1a3a5c;--primary-hover:#122b45;
+  --bg:#f0f2f5;--card:#fff;--border:#d0d7de;--border-light:#e8ecf0;
+  --text:#1a1e24;--text-muted:#6b7280;--input-bg:#fafbfc;--blue:#2563a8;--danger:#dc2626;}
+body{background:var(--bg)!important;padding:0 0 20px!important;color:var(--text)!important}
+.top-menu{display:none!important}
+.panel{background:var(--card)!important;border:none!important;border-radius:8px!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.06)!important;margin:14px!important;padding:14px!important;}
+.panel-title{background:var(--primary)!important;color:#fff!important;font-size:14px!important;
+  font-weight:700!important;padding:10px 14px!important;margin:-14px -14px 14px!important;
+  border:none!important;border-radius:8px 8px 0 0!important;}
+button{border-radius:5px!important;transition:all .15s!important;cursor:pointer!important;font-family:inherit!important}
+.primary{background:var(--primary)!important;color:#fff!important;border:none!important}
+.primary:hover{background:var(--primary-hover)!important}
+.danger{background:var(--danger)!important;color:#fff!important;border:none!important}
+.muted{background:#e5e7eb!important;color:var(--text)!important;border:1px solid var(--border)!important}
+input:not([type=file]):not([type=checkbox]):not([type=radio]),
+select,textarea{border:1.5px solid var(--border)!important;border-radius:5px!important;
+  background:var(--input-bg)!important;outline:none!important;}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)!important;
+  box-shadow:0 0 0 2px rgba(37,99,168,.1)!important;background:#fff!important;}
+label{font-size:11px!important;font-weight:700!important;color:var(--text-muted)!important}
+th{background:#eef2f7!important;color:var(--primary)!important;font-weight:700!important;
+  border-color:var(--border)!important;border-bottom:2px solid var(--border)!important;}
+td{border-color:var(--border-light)!important;}
+tbody tr:hover td{background:#f0f5ff!important;}
+.inactive td{background:#f9fafb!important;color:#9ca3af!important;}
+.action-col{display:flex!important;gap:4px!important;justify-content:center!important;}
+.password-tools{display:flex!important;gap:5px!important;align-items:center!important;}
+.password-tools input{width:120px!important;min-width:0!important;flex:none!important;}
+
+/* perm-box/perm-row는 pd-new-ui의 select width:100% 영향을 막음 */
+.perm-box{
+  display:grid!important;
+  grid-template-columns:repeat(5,152px)!important;
+  gap:5px 8px!important;
+  padding:7px 10px!important;border:1px solid var(--border)!important;
+  border-radius:5px!important;background:#fafbfc!important;
+  width:fit-content!important;height:auto!important;
+}
+.perm-row{
+  display:flex!important;flex-direction:row!important;
+  align-items:center!important;gap:4px!important;
+  white-space:nowrap!important;height:26px!important;
+  width:152px!important;
+}
+.perm-row span{
+  font-size:12px!important;font-weight:700!important;
+  color:var(--primary)!important;white-space:nowrap!important;
+  width:54px!important;min-width:54px!important;
+}
+.perm-row select{
+  font-size:12px!important;padding:3px 4px!important;
+  flex:1!important;min-width:0!important;max-width:none!important;
+  border-radius:3px!important;
+}
+</style>
+</head>
+<body>
+{{ top_menu("user_manage")|safe }}
+
+<div class="panel">
+  <div class="panel-title">그룹관리</div>
+  <div class="group-add-grid">
+    <div><label>신규 그룹명</label><input id="newGroupName" placeholder="예: 출고팀"></div>
+    <div><label>그룹 메모</label><input id="newGroupMemo" placeholder="그룹 설명"></div>
+    <button class="primary" onclick="createGroup()">그룹 추가</button>
+  </div>
+  <div class="table-wrap">
+    <table class="group-table">
+      <thead><tr>
+        <th style="width:160px">그룹명</th>
+        <th style="width:60px">순서</th>
+        <th>메모</th>
+        <th style="width:85px">상태</th>
+        <th style="width:120px">관리</th>
+      </tr></thead>
+      <tbody id="groupBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">사용자 추가</div>
+  <div class="user-add-top">
+    <div><label>아이디</label><input id="newUsername" placeholder="한글 가능"></div>
+    <div><label>이름</label><input id="newName"></div>
+    <div><label>비밀번호</label><input id="newPassword" type="password"></div>
+    <div><label>그룹</label><select id="newGroup" onchange="applyGroupPermToNew()"></select></div>
+    <div><label>권한구분</label><select id="newRole" onchange="syncNewRole()"><option>일반</option><option>관리자</option></select></div>
+    <div><label>시트별 권한</label><div id="newPerms" class="perm-box"></div></div>
+    <button class="primary" style="align-self:end" onclick="createUser()">사용자 추가</button>
+  </div>
+  <div class="small">권한은 못봄 / 읽기전용 / 수정·저장 3단계입니다. 관리자는 모든 권한이 자동 적용됩니다.</div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">사용자 목록</div>
+  <div class="table-wrap">
+    <table class="user-table">
+      <thead><tr>
+        <th class="col-id">아이디</th>
+        <th class="col-name">이름</th>
+        <th class="col-group">그룹</th>
+        <th class="col-role">권한구분</th>
+        <th>시트별 권한</th>
+        <th class="col-active">상태</th>
+        <th class="col-pw">비밀번호 변경</th>
+        <th class="col-login">최근 로그인</th>
+        <th class="col-act">관리</th>
+      </tr></thead>
+      <tbody id="userBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const PERMS={{ permission_labels|tojson }};
+const LEVELS={{ permission_levels|tojson }};
+const PERM_KEYS={{ all_permissions|tojson }};
+let GROUPS=[];
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function parsePerms(value){
+  const result={}; PERM_KEYS.forEach(k=>result[k]='none');
+  if(!value)return result;
+  if(typeof value==='object'){PERM_KEYS.forEach(k=>{if(LEVELS[value[k]])result[k]=value[k]});return result}
+  const text=String(value||'').trim(); if(!text)return result;
+  if(text.startsWith('{')){try{const obj=JSON.parse(text);PERM_KEYS.forEach(k=>{if(LEVELS[obj[k]])result[k]=obj[k]});return result}catch(e){}}
+  text.split(',').map(x=>x.trim()).filter(Boolean).forEach(k=>{if(result[k]!==undefined)result[k]='write'});
+  return result;
+}
+function permControls(selected={}){
+  const map=parsePerms(selected);
+  return PERM_KEYS.map(k=>`<div class="perm-row"><span>${PERMS[k]}</span><select data-perm="${k}">${Object.entries(LEVELS).map(([lv,label])=>`<option value="${lv}" ${map[k]===lv?'selected':''}>${label}</option>`).join('')}</select></div>`).join('');
+}
+function getPermMap(root){const obj={}; root.querySelectorAll('select[data-perm]').forEach(s=>obj[s.dataset.perm]=s.value); return obj;}
+function setAllPerms(root,level){root.querySelectorAll('select[data-perm]').forEach(s=>s.value=level)}
+function groupOptions(selected=''){return GROUPS.map(g=>`<option value="${esc(g.group_name)}" ${String(selected||'')===g.group_name?'selected':''}>${esc(g.group_name)}</option>`).join('')}
+function selectedGroupPerms(gn){const g=GROUPS.find(x=>x.group_name===gn);return g?parsePerms(g.permissions):{}}
+
+async function loadGroups(){
+  const res=await fetch('/api/check_groups');
+  const rows=await res.json();
+  GROUPS=Array.isArray(rows)?rows:[];
+  newGroup.innerHTML=groupOptions('');renderGroups();
+}
+function renderGroups(){
+  groupBody.innerHTML=GROUPS.map(g=>`<tr data-group-id="${g.id}">
+    <td data-label="그룹명"><input class="g-name" value="${esc(g.group_name)}" style="width:100%"></td>
+    <td data-label="순서"><input class="g-order" type="number" value="${esc(g.sort_order||0)}" style="width:100%"></td>
+    <td data-label="메모"><textarea class="g-memo" style="width:100%">${esc(g.memo||'')}</textarea></td>
+    <td data-label="상태"><select class="g-active" style="width:100%"><option value="1" ${Number(g.active)!==0?'selected':''}>사용중</option><option value="0" ${Number(g.active)===0?'selected':''}>사용안함</option></select></td>
+    <td data-label="관리"><div class="action-col"><button class="primary" onclick="saveGroup(${g.id})">저장</button><button class="danger" onclick="deleteGroup(${g.id})">삭제</button></div></td>
+  </tr>`).join('');
+}
+async function createGroup(){
+  const name=newGroupName.value.trim();
+  if(!name){alert('그룹명을 입력하세요.');return}
+  const res=await fetch('/api/check_groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_name:name,memo:newGroupMemo.value,permissions:{}})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){alert(data.error||'그룹 추가 실패');return}
+  newGroupName.value='';newGroupMemo.value='';
+  await loadGroups();await loadUsers();
+}
+async function saveGroup(id){
+  const tr=document.querySelector(`tr[data-group-id="${id}"]`);
+  const body={group_name:tr.querySelector('.g-name').value.trim(),memo:tr.querySelector('.g-memo').value,sort_order:Number(tr.querySelector('.g-order').value||0),active:Number(tr.querySelector('.g-active').value),permissions:getPermMap(tr.querySelector('.g-perms'))};
+  if(!body.group_name){alert('그룹명을 입력하세요.');return}
+  const res=await fetch('/api/check_groups/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){alert(data.error||'그룹 저장 실패');return}
+  alert('그룹이 저장되었습니다.');await loadGroups();await loadUsers();
+}
+async function deleteGroup(id){
+  if(!confirm('그룹을 삭제하시겠습니까?'))return;
+  const res=await fetch('/api/check_groups/'+id,{method:'DELETE'});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){alert(data.error||'그룹 삭제 실패');return}
+  await loadGroups();await loadUsers();
+}
+function defaultPerms(){const p={};PERM_KEYS.forEach(k=>p[k]=k==='user_manage'?'none':'write');return p;}
+function applyGroupPermToNew(){newPerms.innerHTML=permControls(defaultPerms());if(newRole.value==='관리자')setAllPerms(newPerms,'write');}
+function syncNewRole(){if(newRole.value==='관리자')setAllPerms(newPerms,'write');else applyGroupPermToNew();}
+function syncRowRole(id){const tr=document.querySelector(`tr[data-id="${id}"]`);if(tr.querySelector('.u-role').value==='관리자')setAllPerms(tr.querySelector('.u-perms'),'write')}
+function applyGroupPermToRow(id){const tr=document.querySelector(`tr[data-id="${id}"]`);tr.querySelector('.u-perms').innerHTML=permControls(selectedGroupPerms(tr.querySelector('.u-group').value));syncRowRole(id);}
+
+async function loadUsers(){
+  const res=await fetch('/api/users');const rows=await res.json();
+  userBody.innerHTML=rows.map(r=>{const inact=Number(r.active)!==1;return `<tr class="${inact?'inactive':''}" data-id="${r.id}">
+<td data-label="아이디" class="col-id"><input class="u-username" value="${esc(r.username)}"></td>
+<td data-label="이름" class="col-name"><input class="u-name" value="${esc(r.name||'')}"></td>
+<td data-label="그룹" class="col-group"><select class="u-group" onchange="applyGroupPermToRow(${r.id})">${groupOptions(r.user_group||'')}</select></td>
+<td data-label="권한구분" class="col-role"><select class="u-role" onchange="syncRowRole(${r.id})"><option ${r.role==='일반'?'selected':''}>일반</option><option ${r.role==='관리자'?'selected':''}>관리자</option></select></td>
+<td data-label="시트별 권한"><div class="perm-box u-perms">${permControls(r.permissions)}</div></td>
+<td data-label="상태" class="col-active"><select class="u-active"><option value="1" ${Number(r.active)===1?'selected':''}>사용중</option><option value="0" ${Number(r.active)!==1?'selected':''}>사용안함</option></select></td>
+<td data-label="비밀번호 변경" class="col-pw"><div class="password-tools"><input class="u-password" type="password" placeholder="새 비밀번호"><button class="muted" onclick="clearPw(${r.id})">지움</button></div></td>
+<td data-label="최근 로그인" class="col-login" style="white-space:nowrap">${esc(r.last_login||'')}</td>
+<td data-label="관리" class="col-act"><div class="action-col"><button class="primary" onclick="saveUser(${r.id})">저장</button><button class="danger" onclick="deleteUser(${r.id})">삭제</button></div></td>
+</tr>`}).join('');
+}
+function clearPw(id){document.querySelector(`tr[data-id="${id}"] .u-password`).value=''}
+async function createUser(){
+  const body={username:newUsername.value.trim(),name:newName.value.trim(),password:newPassword.value,user_group:newGroup.value,role:newRole.value,active:1,permissions:getPermMap(newPerms)};
+  const res=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json().catch(()=>({}));if(!res.ok){alert(data.error||'사용자 추가 실패');return}
+  newUsername.value='';newName.value='';newPassword.value='';newGroup.value='';newRole.value='일반';applyGroupPermToNew();await loadUsers();
+}
+async function saveUser(id){
+  const tr=document.querySelector(`tr[data-id="${id}"]`);const pw=tr.querySelector('.u-password').value;
+  const body={username:tr.querySelector('.u-username').value.trim(),name:tr.querySelector('.u-name').value.trim(),user_group:tr.querySelector('.u-group').value,role:tr.querySelector('.u-role').value,active:tr.querySelector('.u-active').value,permissions:getPermMap(tr.querySelector('.u-perms')),password:pw};
+  if(pw&&!confirm('이 사용자의 비밀번호를 변경하시겠습니까?'))return;
+  const res=await fetch('/api/users/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json().catch(()=>({}));if(!res.ok){alert(data.error||'저장 실패');return}
+  alert(pw?'저장 및 비밀번호 변경이 완료되었습니다.':'저장되었습니다.');await loadUsers();
+}
+async function deleteUser(id){
+  if(!confirm('이 사용자를 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.'))return;
+  const res=await fetch('/api/users/'+id,{method:'DELETE'});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){alert(data.error||'삭제 실패');return}
+  await loadUsers();
+}
+async function init(){newPerms.innerHTML=permControls({});await loadGroups();applyGroupPermToNew();await loadUsers()}init();
+</script>
+</body>
+</html>

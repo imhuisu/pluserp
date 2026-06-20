@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLUSDOOR 로그인</title>
+<style>
+:root{
+  --primary:#1a3a5c;--accent:#e85d04;--border:#d0d7de;--danger:#dc2626;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"맑은 고딕",Arial,sans-serif;font-size:13px;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:#f0f2f5;padding:20px;
+}
+/* 배경 로고 워터마크 */
+body::before{
+  content:"";position:fixed;inset:0;
+  background:url('/static/img/logo.png') center/min(480px,60vw) auto no-repeat;
+  opacity:.04;pointer-events:none;
+}
+
+.login-wrap{
+  width:min(420px,96vw);position:relative;z-index:1;
+  display:flex;flex-direction:column;gap:0;
+}
+
+/* 상단 로고 영역 */
+.login-top{
+  background:var(--primary);border-radius:12px 12px 0 0;
+  padding:28px 28px 22px;text-align:center;
+}
+.login-top img{width:200px;max-width:72%;height:auto;opacity:.95}
+.login-top h1{
+  margin-top:12px;font-size:15px;font-weight:600;
+  color:rgba(255,255,255,.85);letter-spacing:.5px;
+}
+
+/* 폼 영역 */
+.login-body{
+  background:#fff;border-radius:0 0 12px 12px;
+  padding:28px 28px 24px;
+  box-shadow:0 16px 48px rgba(0,0,0,.14);
+}
+
+.error-msg{
+  display:none;background:#fee2e2;border:1px solid #fca5a5;
+  color:#991b1b;padding:9px 12px;border-radius:6px;
+  font-size:13px;margin-bottom:14px;
+}
+
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#555;
+  letter-spacing:.3px;margin-bottom:5px;text-transform:uppercase}
+.form-group input{
+  width:100%;padding:10px 12px;border:1.5px solid var(--border);
+  border-radius:6px;font-size:14px;font-family:inherit;background:#fafbfc;
+  transition:border-color .15s,box-shadow .15s;outline:none;
+}
+.form-group input:focus{
+  border-color:var(--primary);background:#fff;
+  box-shadow:0 0 0 3px rgba(26,58,92,.1);
+}
+
+.save-row{
+  display:flex;align-items:center;gap:7px;
+  margin-bottom:18px;font-size:13px;color:#555;
+}
+.save-row input[type="checkbox"]{
+  width:15px;height:15px;accent-color:var(--primary);cursor:pointer;
+}
+
+.login-btn{
+  width:100%;padding:12px;background:var(--primary);color:#fff;
+  border:none;border-radius:7px;font-size:15px;font-weight:700;
+  font-family:inherit;cursor:pointer;transition:background .15s;
+  letter-spacing:.3px;
+}
+.login-btn:hover{background:#122b45}
+.login-btn:active{transform:scale(.99)}
+
+.login-footer{
+  text-align:center;margin-top:16px;font-size:11px;color:#9ca3af;
+  line-height:1.6;
+}
+.login-footer span{
+  display:inline-block;background:#f3f4f6;padding:2px 10px;
+  border-radius:10px;font-size:10px;color:#6b7280;
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-top">
+    <img src="/static/img/logo.png" alt="PLUSDOOR">
+    <h1>통합관리시스템</h1>
+  </div>
+
+  <div class="login-body">
+    <div class="error-msg" id="msg"></div>
+
+    <div class="form-group">
+      <label>아이디</label>
+      <input id="username" autocomplete="username" placeholder="아이디를 입력하세요">
+    </div>
+    <div class="form-group">
+      <label>비밀번호</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="비밀번호를 입력하세요">
+    </div>
+
+    <label class="save-row">
+      <input type="checkbox" id="saveId"> 아이디 저장
+    </label>
+
+    <button class="login-btn" onclick="login()">로그인</button>
+
+    <div class="login-footer">
+      2시간 동안 입력이 없으면 자동 로그아웃됩니다.<br>
+      <span>PLUSDOOR 통합관리시스템</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const qs = new URLSearchParams(location.search);
+const saved = localStorage.getItem('plusdoor_saved_id') || '';
+if (saved) { username.value = saved; saveId.checked = true; password.focus(); }
+else username.focus();
+if (qs.get('expired')) showMsg('로그인 시간이 만료되었습니다. 다시 로그인하세요.');
+
+function showMsg(t) { msg.style.display = 'block'; msg.textContent = t; }
+
+async function login() {
+  const u = username.value.trim(), p = password.value;
+  if (!u || !p) { showMsg('아이디와 비밀번호를 입력하세요.'); return; }
+  const res  = await fetch('/api/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username:u, password:p, next:qs.get('next')||'/'})
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) { showMsg(data.error || '로그인 실패'); return; }
+  if (saveId.checked) localStorage.setItem('plusdoor_saved_id', u);
+  else localStorage.removeItem('plusdoor_saved_id');
+  location.href = data.next || '/';
+}
+password.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+username.addEventListener('keydown', e => { if (e.key === 'Enter') password.focus(); });
+</script>
+</body>
+</html>
