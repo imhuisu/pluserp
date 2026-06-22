@@ -461,7 +461,7 @@ def api_permission_for_path(path):
 
 @app.before_request
 def enforce_login_and_timeout():
-    public_paths = ["/login", "/api/login", "/static/"]
+    public_paths = ["/login", "/api/login", "/static/", "/.well-known/"]
     if request.path.startswith(tuple(public_paths)):
         return None
 
@@ -1314,6 +1314,12 @@ def import_price_csv_if_empty(conn):
                     INSERT INTO price_regions(region_name, category, travel_time, region_grade, region_price)
                     VALUES (?, ?, ?, ?, ?)
                 """, (name, clean_value(row.get("대분류")), clean_value(row.get("예상소요시간")), grade, price_to_int(row.get("지역금액"))))
+
+@app.route('/.well-known/acme-challenge/<path:token>')
+def acme_challenge(token):
+    challenge_dir = r"D:\Plusdoor Web\nginx-1.30.2\html\.well-known\acme-challenge"
+    return send_from_directory(challenge_dir, token)
+
 
 @app.route("/")
 @require_perm("production")

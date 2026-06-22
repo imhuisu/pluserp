@@ -2393,10 +2393,6 @@ window.onload=async()=>{
   };
 
   window.closeScannerCapture = function(){
-    if(captured.length){
-      completionPasteFiles.push.apply(completionPasteFiles, captured);
-      renderCompletionPreview();
-    }
     if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
     document.getElementById("scannerModal").style.display = "none";
     captured = [];
