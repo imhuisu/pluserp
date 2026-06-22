@@ -836,6 +836,7 @@ input:focus,select:focus,textarea:focus{
     <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">
       <input type="file" id="photoManageInput" accept="image/*" capture="environment">
       <button class="primary" onclick="uploadManagedPhoto()">사진저장</button>
+      <button type="button" onclick="openScannerCapture('manage')" style="background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;font-weight:700;padding:7px 14px;font-size:13px;cursor:pointer">📷 스캐너 촬영 (CZUR)</button>
     </div>
     <div class="small">저장 파일명: 사진일자_거래처명_라벨번호_시간.jpg</div>
     <div id="photoManageList" class="photo-list"></div>
@@ -2285,8 +2286,10 @@ window.onload=async()=>{
 (function(){
   let stream = null;
   let captured = [];
+  let scannerMode = 'completion';
 
-  window.openScannerCapture = async function(){
+  window.openScannerCapture = async function(mode){
+    scannerMode = mode || 'completion';
     captured = [];
     renderThumbs();
     document.getElementById("scannerModal").style.display = "flex";
@@ -2386,11 +2389,24 @@ window.onload=async()=>{
     if(cnt) cnt.textContent = captured.length + "장 촬영됨";
   }
 
-  window.confirmScannerPhotos = function(){
+  window.confirmScannerPhotos = async function(){
     if(!captured.length){ alert("촬영된 사진이 없습니다."); return; }
-    completionPasteFiles.push.apply(completionPasteFiles, captured);
-    renderCompletionPreview();
-    closeScannerCapture();
+    if(scannerMode === 'manage'){
+      if(!photoManageItem){ alert("항목을 먼저 선택하세요."); return; }
+      for(const file of captured){
+        const fd = new FormData();
+        fd.append("photo", file);
+        fd.append("memo", "스캐너 촬영");
+        await fetch(`/api/schedules/${photoManageItem.id}/photos`, {method:"POST", body:fd});
+      }
+      closeScannerCapture();
+      await loadManagedPhotos(photoManageItem.id);
+      await loadAll();
+    } else {
+      completionPasteFiles.push.apply(completionPasteFiles, captured);
+      renderCompletionPreview();
+      closeScannerCapture();
+    }
   };
 
   window.closeScannerCapture = function(){
