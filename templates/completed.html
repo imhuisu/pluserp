@@ -46,6 +46,19 @@ td.center{text-align:center}.small{font-size:12px;color:#666}
 .top-menu button.active{background:#0078d7;color:#fff;font-weight:800}
 .current-page{font-size:18px;font-weight:800;margin:0 0 12px;border-bottom:2px solid #333;padding-bottom:8px}
 
+/* 스캐너 촬영 모달 */
+.scanner-modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:10002;padding:14px}
+.scanner-box{background:#111;border:2px solid #444;width:min(960px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+.scanner-header{background:#222;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.scanner-video-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:200px}
+.scanner-video-wrap video{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.scanner-controls{background:#1a1a1a;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.scanner-thumb-strip{background:#1a1a1a;border-top:1px solid #333;padding:8px 16px;display:flex;gap:6px;flex-wrap:wrap;min-height:52px;max-height:130px;overflow-y:auto;align-items:flex-start;flex-shrink:0}
+.scanner-thumb{position:relative;border:1px solid #555;flex-shrink:0;background:#2a2a2a}
+.scanner-thumb img{width:80px;height:60px;object-fit:cover;display:block}
+.scanner-thumb-del{position:absolute;top:1px;right:1px;background:#d83b01;color:#fff;border:none;padding:0 4px;font-size:10px;cursor:pointer;line-height:16px}
+.scanner-footer{background:#222;padding:10px 16px;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+
 </style>
 
 <style id="completed-edit-v7-style">
@@ -200,10 +213,35 @@ tbody tr:hover td{background:#f0f5ff!important;}
     <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">
       <input type="file" id="photoManageInput" accept="image/*" capture="environment">
       <button class="primary" onclick="uploadManagedPhoto()">사진저장</button>
+      <button type="button" onclick="openScannerCapture()" style="background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;font-weight:700;padding:7px 14px;font-size:13px;cursor:pointer">📷 스캐너 촬영 (CZUR)</button>
     </div>
     <div class="small">저장 파일명: 사진일자_거래처명_라벨번호_시간.jpg</div>
     <div id="photoManageList" class="photo-list"></div>
     <div class="actions"><button class="muted" onclick="hidePhotoManage()">닫기</button></div>
+  </div>
+</div>
+
+<div id="scannerModal" class="scanner-modal" onclick="if(event.target===this)closeScannerCapture()">
+  <div class="scanner-box">
+    <div class="scanner-header">
+      <span style="font-weight:700;font-size:15px">📷 스캐너 촬영 (CZUR)</span>
+      <button type="button" onclick="closeScannerCapture()" style="background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;line-height:1;font-weight:300">✕</button>
+    </div>
+    <div class="scanner-controls">
+      <select id="scannerDeviceSelect" onchange="onScannerDeviceChange()" style="flex:1;min-width:200px;background:#2a2a2a;color:#fff;border:1px solid #555;padding:7px;font-size:13px"></select>
+      <button type="button" onclick="captureScanner()" style="background:#0078d7;color:#fff;border:1px solid #0078d7;font-weight:800;padding:10px 24px;font-size:15px;cursor:pointer;white-space:nowrap">촬영</button>
+    </div>
+    <div class="scanner-video-wrap">
+      <video id="scannerVideo" autoplay playsinline muted></video>
+    </div>
+    <div id="scannerThumbStrip" class="scanner-thumb-strip">
+      <span style="color:#555;font-size:12px;line-height:52px">촬영된 사진 없음</span>
+    </div>
+    <div class="scanner-footer">
+      <span id="scannerCount" style="color:#aaa;font-size:12px;line-height:32px;margin-right:auto"></span>
+      <button type="button" onclick="confirmScannerPhotos()" style="background:#0078d7;color:#fff;border:1px solid #0078d7;font-weight:800;padding:8px 20px;cursor:pointer">사진 저장</button>
+      <button type="button" onclick="closeScannerCapture()" style="background:#444;color:#fff;border:1px solid #555;padding:8px 16px;cursor:pointer">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -246,6 +284,132 @@ function openAsFromCompleted(item){
   location.href='/as';
 }
 window.onload=searchCompleted;
+</script>
+
+<script>
+// ── 스캐너 촬영 (CZUR 1300A3 PRO) ─────────────────────────────────────────
+(function(){
+  let stream = null;
+  let captured = [];
+
+  window.openScannerCapture = async function(){
+    captured = [];
+    renderThumbs();
+    document.getElementById("scannerModal").style.display = "flex";
+    await initDevices();
+  };
+
+  async function initDevices(){
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({video:true});
+      tmp.getTracks().forEach(t=>t.stop());
+    } catch(e) {
+      alert("카메라 접근 권한이 필요합니다.\n브라우저 주소창의 카메라 아이콘을 확인하세요.");
+      return;
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d=>d.kind==="videoinput");
+    const sel = document.getElementById("scannerDeviceSelect");
+    sel.innerHTML = cams.map((d,i)=>
+      `<option value="${d.deviceId}">${d.label||("카메라 "+(i+1))}</option>`
+    ).join("");
+    const saved = localStorage.getItem("czur_device_id");
+    if(saved && cams.find(d=>d.deviceId===saved)) sel.value = saved;
+    await startStream(sel.value);
+  }
+
+  async function startStream(deviceId){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    const video = document.getElementById("scannerVideo");
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video:{ deviceId:{exact:deviceId}, width:{ideal:2560}, height:{ideal:1920} }
+      });
+      video.srcObject = stream;
+      await video.play();
+    } catch(e){
+      alert("카메라를 시작할 수 없습니다.\n" + e.message);
+    }
+  }
+
+  window.onScannerDeviceChange = async function(){
+    const sel = document.getElementById("scannerDeviceSelect");
+    localStorage.setItem("czur_device_id", sel.value);
+    await startStream(sel.value);
+  };
+
+  window.captureScanner = function(){
+    const video = document.getElementById("scannerVideo");
+    if(!stream || !video.videoWidth){ alert("카메라가 준비되지 않았습니다."); return; }
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video,0,0);
+    canvas.toBlob(function(blob){
+      if(!blob){ alert("캡처 실패"); return; }
+      const now = new Date();
+      const ts = now.getFullYear()
+        + String(now.getMonth()+1).padStart(2,"0")
+        + String(now.getDate()).padStart(2,"0")
+        + "_" + String(now.getHours()).padStart(2,"0")
+        + String(now.getMinutes()).padStart(2,"0")
+        + String(now.getSeconds()).padStart(2,"0");
+      const file = new File([blob], "scan_"+ts+".jpg", {type:"image/jpeg"});
+      captured.push(file);
+      renderThumbs();
+    }, "image/jpeg", 0.92);
+  };
+
+  window.removeScannerThumb = function(idx){
+    captured.splice(idx,1);
+    renderThumbs();
+  };
+
+  function renderThumbs(){
+    const strip = document.getElementById("scannerThumbStrip");
+    const cnt = document.getElementById("scannerCount");
+    if(!strip) return;
+    if(!captured.length){
+      strip.innerHTML = '<span style="color:#555;font-size:12px;line-height:52px">촬영된 사진 없음</span>';
+      if(cnt) cnt.textContent = "";
+      return;
+    }
+    strip.innerHTML = captured.map(function(f,i){
+      const url = URL.createObjectURL(f);
+      setTimeout(()=>URL.revokeObjectURL(url), 6000);
+      const name = f.name || "";
+      const shortName = name.length > 16 ? name.slice(0,14)+"…" : name;
+      const sizeKB = f.size ? Math.round(f.size/1024)+"KB" : "";
+      return '<div class="scanner-thumb" style="width:80px">'
+        + '<img src="'+url+'">'
+        + '<button class="scanner-thumb-del" onclick="removeScannerThumb('+i+')">X</button>'
+        + '<div style="font-size:10px;color:#ccc;padding:2px 2px 0;line-height:1.3;word-break:break-all" title="'+name+'">'+shortName+'</div>'
+        + '<div style="font-size:10px;color:#888;padding:0 2px 2px">'+sizeKB+'</div>'
+        + '</div>';
+    }).join("");
+    if(cnt) cnt.textContent = captured.length + "장 촬영됨";
+  }
+
+  window.confirmScannerPhotos = async function(){
+    if(!captured.length){ alert("촬영된 사진이 없습니다."); return; }
+    if(!photoManageItem){ alert("항목을 먼저 선택하세요."); return; }
+    for(const file of captured){
+      const fd = new FormData();
+      fd.append("photo", file);
+      fd.append("memo", "스캐너 촬영");
+      await fetch(`/api/schedules/${photoManageItem.id}/photos`, {method:"POST", body:fd});
+    }
+    closeScannerCapture();
+    await loadManagedPhotos(photoManageItem.id);
+    await searchCompleted();
+  };
+
+  window.closeScannerCapture = function(){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    document.getElementById("scannerModal").style.display = "none";
+    captured = [];
+  };
+})();
 </script>
 
 <div id="completedEditV7Modal" class="completed-edit-v7-modal" onclick="if(event.target.id==='completedEditV7Modal')closeCompletedEditV7()">
