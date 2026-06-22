@@ -1674,6 +1674,7 @@ function showCompleteModal(item){
   renderCompletionPreview();
   completeInfo.textContent=item?`${item.customer||""} / ${item.product_group||""} ${item.model||""} ${item.detail_content?`(${item.detail_content})`:""}/ 수량 ${item.qty||0}개 / 납기 ${fmtDate(item.delivery_date||item.due_date)}`:"";
   completeModal.style.display="flex";
+  setTimeout(()=>completionLabel.focus(),50);
 }
 function hideComplete(){completeModal.style.display="none";pendingCompleteItem=null;completionPasteFiles=[];}
 function closeComplete(e){if(e.target===completeModal)hideComplete()}
