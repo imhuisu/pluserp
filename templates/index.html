@@ -768,6 +768,7 @@ input:focus,select:focus,textarea:focus{
 
     <div class="detail-actions">
       <button class="primary" onclick="editDetailItem()">수정</button><button onclick="openScheduleCheckRequestV14()">확인요청</button>
+      <button style="background:#16a34a;color:#fff;border:none;font-weight:700" onclick="if(currentDetailItem){var item=currentDetailItem;hideDetail();showCompleteModal(item);}">완료</button>
       <button class="muted" onclick="hideDetail()">닫기</button>
     </div>
   </div>
