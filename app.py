@@ -1860,6 +1860,29 @@ def download_cert_file(filename):
     return send_from_directory(cert_dir, safe_name, as_attachment=True)
 
 
+@app.route("/api/mail/reg_files")
+@require_perm("mail")
+def list_reg_files():
+    import os as _os
+    reg_dir = str(APP_DIR.parent / "documents" / "기타서류")
+    if not _os.path.exists(reg_dir):
+        return jsonify([])
+    files = []
+    for fname in sorted(_os.listdir(reg_dir)):
+        fpath = _os.path.join(reg_dir, fname)
+        if _os.path.isfile(fpath) and not fname.startswith('.') and not fname.startswith('~'):
+            files.append({"name": fname, "size": _os.path.getsize(fpath)})
+    return jsonify(files)
+
+
+@app.route("/api/mail/reg_download/<path:filename>")
+@require_perm("mail")
+def download_reg_file(filename):
+    safe_name = os.path.basename(filename)
+    reg_dir = str(APP_DIR.parent / "documents" / "기타서류")
+    return send_from_directory(reg_dir, safe_name, as_attachment=True)
+
+
 @app.route("/api/mail/pdf/<path:filename>")
 @require_perm("mail")
 def serve_delivery_pdf(filename):

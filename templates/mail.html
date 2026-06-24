@@ -386,6 +386,7 @@ button:disabled{opacity:.5;cursor:default}
     <div class="form-btns">
       <button class="fsb active" id="btnDelivery" onclick="showForm('delivery')">📄 납품확인서</button>
       <button class="fsb" id="btnCertificate" onclick="showForm('certificate')">📋 성적서</button>
+      <button class="fsb" id="btnRegistration" onclick="showForm('registration')">🏢 등록증</button>
       <button class="fsb" id="btnDrawing" onclick="showForm('drawing')">📐 도면</button>
     </div>
   </div>
@@ -516,6 +517,18 @@ button:disabled{opacity:.5;cursor:default}
   </div>
 </div>
 
+<!-- ── 등록증 ── -->
+<div id="form-registration" style="display:none">
+  <div class="card">
+    <div class="card-hd">🏢 등록증</div>
+    <div class="card-body">
+      <div id="regDocGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px">
+        <div style="color:#bbb;text-align:center;padding:40px;grid-column:1/-1">불러오는 중…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── 도면 (준비중) ── -->
 <div id="form-drawing" style="display:none">
   <div class="card">
@@ -627,12 +640,13 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 
 // ── 서식 전환 ──
 function showForm(name){
-  ['delivery','certificate','drawing'].forEach(function(f){
+  ['delivery','certificate','registration','drawing'].forEach(function(f){
     document.getElementById('form-'+f).style.display = f===name?'block':'none';
     var btn = document.getElementById('btn'+f.charAt(0).toUpperCase()+f.slice(1));
     if(btn) btn.classList.toggle('active', f===name);
   });
   if(name==='certificate') loadCertDocs();
+  if(name==='registration') loadRegDocs();
 }
 
 // ── 성적서 탭 파일 목록 ──
@@ -661,6 +675,36 @@ async function loadCertDocs(){
         +'</div>';
     }).join('');
     certDocsLoaded=true;
+  }catch(e){
+    grid.innerHTML='<div style="color:#d83b01;text-align:center;padding:40px;grid-column:1/-1">로드 실패</div>';
+  }
+}
+
+// ── 등록증 탭 파일 목록 ──
+var regDocsLoaded = false;
+async function loadRegDocs(){
+  if(regDocsLoaded) return;
+  var grid = document.getElementById('regDocGrid');
+  try{
+    var r = await fetch('/api/mail/reg_files');
+    var files = await r.json();
+    if(!files.length){
+      grid.innerHTML='<div style="color:#bbb;text-align:center;padding:40px;grid-column:1/-1">파일 없음</div>';
+      regDocsLoaded=true; return;
+    }
+    grid.innerHTML = files.map(function(f){
+      var ext = f.name.split('.').pop().toLowerCase();
+      var icon = ext==='pdf'?'📄':['jpg','jpeg','png','gif','bmp'].includes(ext)?'🖼️':'📎';
+      var kb = f.size>1048576?(f.size/1048576).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
+      return '<div style="border:1px solid #e0e0e0;border-radius:8px;padding:14px 10px;text-align:center;background:#fff;display:flex;flex-direction:column;align-items:center">'
+        +'<div style="font-size:30px;margin-bottom:8px">'+icon+'</div>'
+        +'<div style="font-size:12px;color:#333;word-break:break-all;line-height:1.4;flex:1;margin-bottom:8px" title="'+esc(f.name)+'">'+esc(f.name)+'</div>'
+        +'<div style="font-size:11px;color:#aaa;margin-bottom:10px">'+kb+'</div>'
+        +'<a href="/api/mail/reg_download/'+encodeURIComponent(f.name)+'" download="'+esc(f.name)+'"'
+        +' style="display:inline-block;background:#1a3a5c;color:#fff;border-radius:4px;padding:5px 14px;font-size:12px;text-decoration:none;font-weight:700">📥 다운로드</a>'
+        +'</div>';
+    }).join('');
+    regDocsLoaded=true;
   }catch(e){
     grid.innerHTML='<div style="color:#d83b01;text-align:center;padding:40px;grid-column:1/-1">로드 실패</div>';
   }
