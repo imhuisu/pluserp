@@ -1,6 +1,6 @@
 @echo off
 echo [1/3] Git Pull...
-cd /d "D:\Plusdoor Web\production"
+cd /d "%~dp0"
 git pull
 
 echo [1.5/3] Installing packages...
