@@ -5,6 +5,9 @@
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>납품/시공 달력</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:"맑은 고딕",Arial,sans-serif;margin:0;}
@@ -108,6 +111,14 @@ tbody tr:hover td{background:#f0f5ff!important;}
 .type-fbtn{padding:4px 9px!important;font-size:12px!important;border:1.5px solid var(--border)!important;background:#fff!important;color:var(--text-muted)!important;border-radius:12px!important;line-height:1.4!important;}
 .type-fbtn:hover{border-color:var(--primary)!important;color:var(--primary)!important;}
 .type-fbtn.active{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important;font-weight:700!important;}
+@media(max-width:767px){
+  body{overflow-x:hidden!important}
+  .people-quick{grid-template-columns:1fr!important}
+  .panel{margin:8px!important;padding:10px!important}
+  .toolbar{gap:6px!important}
+  .month-title{min-width:0!important;font-size:16px!important}
+  .day{min-height:auto!important}
+}
 </style>
 </head>
 <body>
@@ -434,6 +445,7 @@ window.onload=loadCalendar;
     btn.onclick=function(e){
       e.preventDefault();
       e.stopPropagation();
+      if(inp._flatpickr){inp._flatpickr.open();return;}
       plusdoorOpenCalendarV15(inp,btn);
     };
   };
@@ -452,6 +464,22 @@ window.onload=loadCalendar;
     plusdoorEnhanceDateInputsV15();
     setInterval(()=>plusdoorEnhanceDateInputsV15(),1200);
   });
+})();
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  function _initFP(){
+    document.querySelectorAll('.date-wrap input,.plusdoor-date-wrap input').forEach(function(inp){
+      if(inp._flatpickr||inp.dataset.fpDone||inp.type==='hidden')return;
+      inp.dataset.fpDone='1';
+      flatpickr(inp,_fpOpts);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(_initFP,300);});
+  setInterval(_initFP,1800);
 })();
 </script>
 

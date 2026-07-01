@@ -5,6 +5,9 @@
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>제작완료 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:"맑은 고딕",Arial,sans-serif;margin:0;}
@@ -35,6 +38,7 @@ td.center{text-align:center}.small{font-size:12px;color:#666}
   body{padding:8px} h1{font-size:22px}
   .panel{padding:8px}.topbar{display:grid;grid-template-columns:1fr 70px 70px 70px;gap:6px}.search-input{width:100%}
   .completed-table,.completed-table thead,.completed-table tbody,.completed-table tr,.completed-table th,.completed-table td{display:block;width:100% !important}
+  .completed-table{min-width:0 !important}
   .completed-table thead{display:none}.completed-table tr{border:1px solid #999;margin:8px 0;background:#fff;padding:8px}
   .completed-table td{border:0;border-bottom:1px solid #eee;white-space:normal;text-align:left !important;display:grid;grid-template-columns:80px 1fr;gap:4px}
   .completed-table td::before{font-weight:800;color:#333}.completed-table td:nth-child(1)::before{content:'주문'} .completed-table td:nth-child(2)::before{content:'납기'} .completed-table td:nth-child(3)::before{content:'제품군'} .completed-table td:nth-child(4)::before{content:'거래처'} .completed-table td:nth-child(5)::before{content:'모델'} .completed-table td:nth-child(6)::before{content:'상세내용'} .completed-table td:nth-child(7)::before{content:'수량'} .completed-table td:nth-child(8)::before{content:'구분'} .completed-table td:nth-child(9)::before{content:'현장명'} .completed-table td:nth-child(10)::before{content:'라벨번호'} .completed-table td:nth-child(11)::before{content:'완료비고'} .completed-table td:nth-child(12)::before{content:'사진'} .completed-table td:nth-child(13)::before{content:'비고'} .completed-table td:nth-child(14)::before{content:'수정'} .completed-table td:nth-child(15)::before{content:'상태'} .completed-table td:nth-child(16)::before{content:'A/S접수'}
@@ -195,7 +199,6 @@ tbody tr:hover td{background:#f0f5ff!important;}
     <div><label>검색</label><input id="completedSearchQ" class="search-input" placeholder="거래처명 / 라벨번호 / 모델 / 현장명" onkeydown="if(event.key==='Enter')searchCompleted()"></div>
     <button class="primary" onclick="searchCompleted()">조회</button>
     <button class="muted" onclick="resetCompletedSearch()">초기화</button>
-    <button onclick="location.href='/'">생산관리</button>
   </div>
   <div class="small" style="margin-bottom:8px">검색 결과에서 사진촬영을 눌러 사진을 추가하거나 삭제할 수 있습니다.</div>
   <div class="completed-table-wrap">
@@ -609,6 +612,7 @@ window.onload=searchCompleted;
     btn.onclick=function(e){
       e.preventDefault();
       e.stopPropagation();
+      if(inp._flatpickr){inp._flatpickr.open();return;}
       plusdoorOpenCalendarV15(inp,btn);
     };
   };
@@ -627,6 +631,22 @@ window.onload=searchCompleted;
     plusdoorEnhanceDateInputsV15();
     setInterval(()=>plusdoorEnhanceDateInputsV15(),1200);
   });
+})();
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  function _initFP(){
+    document.querySelectorAll('.date-wrap input,.plusdoor-date-wrap input').forEach(function(inp){
+      if(inp._flatpickr||inp.dataset.fpDone||inp.type==='hidden')return;
+      inp.dataset.fpDone='1';
+      flatpickr(inp,_fpOpts);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(_initFP,300);});
+  setInterval(_initFP,1800);
 })();
 </script>
 

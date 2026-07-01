@@ -7,6 +7,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>일지관리 — PLUSDOOR</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 :root{
   --primary:#1a3a5c;--primary-hover:#122b45;--accent:#e85d04;
@@ -230,10 +233,24 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
   :root{--left-w:260px}
 }
 @media(max-width:640px){
-  .main-wrap{flex-direction:column;overflow:auto}
-  .left-panel{width:100%;height:auto;border-right:none;border-bottom:1.5px solid var(--border);overflow:visible}
-  .cust-list{max-height:240px}
-  .right-panel{overflow:visible}
+  body{height:100vh;overflow:hidden}
+  .main-wrap{flex:1;position:relative;overflow:hidden}
+  .left-panel,.mid-panel,.right-panel{
+    position:absolute;inset:0;width:100%;
+    border:none;display:flex;flex-direction:column;overflow-y:auto
+  }
+  .mid-panel{display:none}
+  .right-panel{display:none;background:#f4f6f9}
+  .cust-list{flex:1;overflow-y:auto;max-height:none}
+  .mid-list{flex:1;overflow-y:auto}
+  .main-wrap.show-visits .left-panel{display:none}
+  .main-wrap.show-visits .mid-panel{display:flex}
+  .main-wrap.mobile-detail .left-panel,.main-wrap.mobile-detail .mid-panel{display:none}
+  .main-wrap.mobile-detail .right-panel{display:flex}
+  .mobile-back-btn{display:flex!important;align-items:center;padding:8px 14px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;width:100%;flex-shrink:0}
+  .mobile-tab-row{display:flex!important;flex-shrink:0;background:#f0f2f5;border-bottom:1.5px solid var(--border)}
+  .mobile-tab{flex:1;padding:9px;border:none;background:transparent;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer}
+  .mobile-tab.active{background:#fff;color:var(--primary);border-bottom:2.5px solid var(--primary)}
 }
 </style>
 </head>
@@ -243,8 +260,8 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 
 <!-- 탭 버튼 -->
 <div class="tab-bar">
-  <button class="tab-btn active" id="tab-sales" onclick="switchTab('sales')">영업일지</button>
-  <button class="tab-btn" id="tab-consult" onclick="switchTab('consult')">상담일지</button>
+  {% if has_perm("journal_sales") %}<button class="tab-btn" id="tab-sales" onclick="switchTab('sales')">영업일지</button>{% endif %}
+  {% if has_perm("journal_consult") %}<button class="tab-btn" id="tab-consult" onclick="switchTab('consult')">상담일지</button>{% endif %}
 </div>
 
 <!-- ════════════ 영업일지 ════════════ -->
@@ -252,6 +269,11 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 
   <!-- ── 좌측: 검색 + 목록 ── -->
   <div class="left-panel">
+
+    <div class="mobile-tab-row" style="display:none">
+      <button class="mobile-tab active" id="mTabList" onclick="mobileShowList()">영업처 목록</button>
+      <button class="mobile-tab" id="mTabVisits" onclick="mobileShowVisits()">방문관리</button>
+    </div>
 
     <div class="filter-sec">
       <!-- 방문일 기간 조회 -->
@@ -325,6 +347,7 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 
   <!-- ── 중간: 방문 관리 ── -->
   <div class="mid-panel">
+    <button class="mobile-back-btn" onclick="mobileShowList()" style="display:none">← 영업처 목록</button>
     <div class="mid-hd">📅 방문 관리</div>
     <div class="mid-filter">
       <button class="mid-btn active" id="mBtn1" onclick="setOverdueFilter(1,this)">1개월 이상<b id="cnt-1m">0</b></button>
@@ -347,6 +370,7 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 
   <!-- ── 우측: 상세 ── -->
   <div class="right-panel" id="rightPanel">
+    <button class="mobile-back-btn" onclick="mobileBack()" style="display:none">← 목록으로</button>
     <div class="right-empty" id="rightEmpty">
       <div class="ico">🏢</div>
       <p>거래처를 선택하면 상세 정보가 표시됩니다</p>
@@ -537,6 +561,7 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 
   <!-- ── 우측: 상세 ── -->
   <div class="right-panel" id="ccRightPanel">
+    <button class="mobile-back-btn" onclick="ccMobileBack()" style="display:none">← 목록으로</button>
     <div class="right-empty" id="ccRightEmpty">
       <div class="ico">💬</div>
       <p>상담자를 선택하면 상세 정보가 표시됩니다</p>
@@ -745,13 +770,27 @@ function statusBadge(s){const m={'영업중':'bdg-영업중','거래중':'bdg-�
 function schedStatusBadge(s){const m={'접수':'bdg-접수','생산중':'bdg-생산중','완료':'bdg-완료','납품':'bdg-완료'};return `<span class="bdg ${m[s]||''}">${esc(s)}</span>`}
 
 // ── 탭 전환 ──────────────────────────────────────────────────────────────
+const _hasSales  = {{ 'true' if has_perm('journal_sales')   else 'false' }};
+const _hasConsult= {{ 'true' if has_perm('journal_consult') else 'false' }};
+const canWrite       = {{ 'true' if has_write_perm('journal_sales')   else 'false' }};
+const canWriteConsult= {{ 'true' if has_write_perm('journal_consult') else 'false' }};
+
 function switchTab(id){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
-  document.getElementById('tc-sales').style.display = id==='sales'?'':'none';
-  document.getElementById('tc-consult').style.display = id==='consult'?'':'none';
+  var tb=document.getElementById('tab-'+id);
+  if(tb) tb.classList.add('active');
+  var tcS=document.getElementById('tc-sales');
+  var tcC=document.getElementById('tc-consult');
+  if(tcS) tcS.style.display = id==='sales'?'':'none';
+  if(tcC) tcC.style.display = id==='consult'?'':'none';
   if(id==='consult') ccLoadClients();
 }
+
+// 초기 탭: 영업일지 권한 있으면 영업, 없으면 상담
+(function(){
+  if(_hasSales){ switchTab('sales'); loadLeads(); }
+  else if(_hasConsult){ switchTab('consult'); }
+})();
 
 // ── 영업일지 ─────────────────────────────────────────────────────────────
 let leads=[], selectedLeadId=null, selectionMode=false, selectedIds=new Set();
@@ -963,6 +1002,25 @@ async function selectLead(id){
 function showRight(){
   document.getElementById('rightEmpty').style.display='none';
   document.getElementById('rightContent').style.display='flex';
+  if(window.innerWidth<=640){
+    document.getElementById('tc-sales').classList.add('mobile-detail');
+  }
+}
+function mobileBack(){
+  document.getElementById('tc-sales').classList.remove('mobile-detail','show-visits');
+  document.getElementById('mTabList').classList.add('active');
+  document.getElementById('mTabVisits').classList.remove('active');
+}
+function mobileShowVisits(){
+  document.getElementById('tc-sales').classList.add('show-visits');
+  document.getElementById('tc-sales').classList.remove('mobile-detail');
+  document.getElementById('mTabVisits').classList.add('active');
+  document.getElementById('mTabList').classList.remove('active');
+}
+function mobileShowList(){
+  document.getElementById('tc-sales').classList.remove('show-visits','mobile-detail');
+  document.getElementById('mTabList').classList.add('active');
+  document.getElementById('mTabVisits').classList.remove('active');
 }
 
 // ── 신규 영업처 ──────────────────────────────────────────────────────────
@@ -1437,6 +1495,12 @@ function ccUpdateLinkStatus(linkedId, linkedName){
 function ccShowRight(){
   document.getElementById('ccRightEmpty').style.display='none';
   document.getElementById('ccRightContent').style.display='flex';
+  if(window.innerWidth<=640){
+    document.getElementById('tc-consult').classList.add('mobile-detail');
+  }
+}
+function ccMobileBack(){
+  document.getElementById('tc-consult').classList.remove('mobile-detail');
 }
 
 function ccOpenNew(){
@@ -1725,9 +1789,29 @@ async function loadJournalRegions(){
   }catch(e){}
 }
 
-loadJournalRegions();
-loadLeads();
+if(_hasSales) loadJournalRegions();
 </script>
 <datalist id="journalRegionList"></datalist>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  var _pdCalOpenOrig=window.pdCalOpen;
+  window.pdCalOpen=function(inp){
+    if(inp&&inp._flatpickr){inp._flatpickr.open();return;}
+    if(_pdCalOpenOrig)_pdCalOpenOrig(inp);
+  };
+  function _initFP(){
+    document.querySelectorAll('.date-wrap input').forEach(function(inp){
+      if(inp._flatpickr||inp.dataset.fpDone||inp.type==='hidden')return;
+      inp.dataset.fpDone='1';
+      flatpickr(inp,_fpOpts);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(_initFP,300);});
+  setInterval(_initFP,1800);
+})();
+</script>
 </body>
 </html>

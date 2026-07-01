@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <title>작업지시서 관리 — PLUSDOOR</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root{
@@ -908,7 +911,7 @@ loadRows();
       wrap.appendChild(inp);
       const btn=document.createElement("button");
       btn.type="button";btn.className="cal-btn";btn.textContent="📅";
-      btn.onclick=e=>{e.preventDefault();plusdoorOpenCalendarV29(inp,btn)};
+      btn.onclick=e=>{e.preventDefault();if(inp._flatpickr){inp._flatpickr.open();return;}plusdoorOpenCalendarV29(inp,btn)};
       wrap.appendChild(btn);
       inp.addEventListener("blur",()=>inp.value=normalize(inp.value));
     });
@@ -1081,6 +1084,22 @@ loadRows();
       setTimeout(()=>URL.revokeObjectURL(url),3000);
     }catch(e){alert('XML 생성 실패: '+e.message);}
   };
+})();
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  function _initFP(){
+    document.querySelectorAll('.date-wrap input,.plusdoor-date-wrap input').forEach(function(inp){
+      if(inp._flatpickr||inp.dataset.fpDone||inp.type==='hidden')return;
+      inp.dataset.fpDone='1';
+      flatpickr(inp,_fpOpts);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(_initFP,300);});
+  setInterval(_initFP,1800);
 })();
 </script>
 </body>

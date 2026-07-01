@@ -2,8 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <title>생산스케줄 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:"맑은 고딕",Arial,sans-serif;margin:0;padding:16px;background:#f5f5f5;color:#111}
@@ -48,7 +52,7 @@ button{border:1px solid #333;background:#fff;padding:7px 11px;cursor:pointer}
 .card td.left{text-align:left}
 .card select{padding:2px;font-size:12px}
 .card tr.status-working td{background:#ffe8e8}
-.summary-line{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #aaa;background:#fafafa;font-weight:800;font-size:13px}
+.summary-line{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #aaa;background:#eef2f7;font-weight:800;font-size:13px;box-shadow:inset 0 2px 4px rgba(0,0,0,.08)}
 .summary-line div{padding:6px 8px;text-align:center}
 .summary-line div{border-right:1px solid #aaa}
 .summary-line div:last-child{border-right:0}
@@ -111,6 +115,17 @@ button{border:1px solid #333;background:#fff;padding:7px 11px;cursor:pointer}
   .product-filter{grid-template-columns:repeat(2,1fr)}
   .board{grid-template-columns:1fr}
   .card table{font-size:12px}
+}
+@media(max-width:600px){
+  body{padding:6px}
+  .filters{grid-template-columns:1fr 1fr}
+  .factory-filter{grid-template-columns:repeat(2,1fr)}
+  .product-filter{grid-template-columns:repeat(3,1fr)}
+  .board{grid-template-columns:1fr}
+  .card-table-wrap{height:400px;max-height:400px}
+  .date-summary{flex-direction:column;align-items:stretch}
+  .date-summary .datebox{width:100%}
+  .completed-search input{width:100%}
 }
 
 .customer-info-box{margin-top:10px;border-top:2px solid #333;padding-top:8px}
@@ -578,7 +593,7 @@ input:focus,select:focus,textarea:focus{
 
 /* 모달 */
 .detail-box{border:none!important;border-radius:10px!important;
-  box-shadow:0 20px 60px rgba(0,0,0,.25)!important;padding:0!important;overflow:hidden!important;}
+  box-shadow:0 20px 60px rgba(0,0,0,.25)!important;padding:0!important;overflow-y:auto!important;overflow-x:hidden!important;}
 .detail-title{background:var(--primary)!important;color:#fff!important;
   padding:12px 20px!important;font-size:14px!important;font-weight:700!important;
   margin:0!important;border:none!important;}
@@ -735,7 +750,6 @@ input:focus,select:focus,textarea:focus{
         <button onclick="applyDueDateFilter()" style="flex-shrink:0">조회</button>
         <button class="muted" onclick="resetDueDateFilter()" style="flex-shrink:0">초기화</button>
       </div>
-      <div id="dateSummaryQty" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;width:100%"></div>
       <div id="activeDateFilterText" class="small" style="width:100%;margin-top:2px">처음에는 전체 예정제품이 보이고, 주문일 또는 생산일 기준 조회 시 해당 날짜 제품만 표시됩니다.</div>
     </div>
 
@@ -769,6 +783,7 @@ input:focus,select:focus,textarea:focus{
     <div class="detail-actions">
       <button class="primary" onclick="editDetailItem()">수정</button><button onclick="openScheduleCheckRequestV14()">확인요청</button>
       <button style="background:#16a34a;color:#fff;border:none;font-weight:700" onclick="if(currentDetailItem){var item=currentDetailItem;hideDetail();showCompleteModal(item);}">완료</button>
+      <button class="danger" onclick="if(currentDetailItem)deleteScheduleRow(currentDetailItem.id)">삭제</button>
       <button class="muted" onclick="hideDetail()">닫기</button>
     </div>
   </div>
@@ -784,16 +799,16 @@ input:focus,select:focus,textarea:focus{
     <div class="complete-form" style="padding:0 20px">
       <label>라벨번호</label>
       <input id="completionLabel" placeholder="예: PL-20260601-001">
-      <label>사진 첨부 <span style="font-weight:400;color:#888;font-size:11px">(선택, 여러장 가능)</span></label>
+      <label>완료비고</label>
+      <textarea id="completionMemo" placeholder="완료 관련 특이사항 입력"></textarea>
+      <button type="button" onclick="openScannerCapture()" style="background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;font-weight:700;width:100%;padding:10px;margin-top:6px;font-size:13px;cursor:pointer;letter-spacing:.5px">📷 스캐너 촬영 (CZUR)</button>
+      <label style="margin-top:8px">사진 첨부 <span style="font-weight:400;color:#888;font-size:11px">(선택, 여러장 가능)</span></label>
       <input type="file" id="completionPhotoInput" accept="image/*" capture="environment" onchange="renderCompletionPreview()">
       <div style="font-size:11px;color:#888;margin-top:3px">모바일: 사진 찍은 뒤 버튼을 다시 누르면 추가 촬영 가능 &nbsp;|&nbsp; PC: 파일을 끌어놓거나 Ctrl+V 붙여넣기</div>
       <div id="completionPasteArea" tabindex="0" style="border:2px dashed #bbb;background:#fafafa;padding:10px;text-align:center;cursor:pointer;border-radius:5px;font-size:12px;color:#888;margin-top:4px">
         PC에서 Ctrl+V 붙여넣기 또는 여기에 파일 끌어놓기
       </div>
-      <button type="button" onclick="openScannerCapture()" style="background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;font-weight:700;width:100%;padding:10px;margin-top:6px;font-size:13px;cursor:pointer;letter-spacing:.5px">📷 스캐너 촬영 (CZUR)</button>
       <div id="completionPhotoPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
-      <label>완료비고</label>
-      <textarea id="completionMemo" placeholder="완료 관련 특이사항 입력"></textarea>
     </div>
     <div class="detail-actions" style="padding-left:20px!important;padding-right:20px!important">
       <button class="primary" onclick="saveComplete()">완료저장</button>
@@ -819,9 +834,10 @@ input:focus,select:focus,textarea:focus{
     <div id="scannerThumbStrip" class="scanner-thumb-strip">
       <span style="color:#555;font-size:12px;line-height:52px">촬영된 사진 없음</span>
     </div>
+    <div id="scannerKeyDebug" style="color:#888;font-size:11px;text-align:center;padding:4px 12px;min-height:18px"></div>
     <div class="scanner-footer">
       <span id="scannerCount" style="color:#aaa;font-size:12px;line-height:32px;margin-right:auto"></span>
-      <button type="button" onclick="confirmScannerPhotos()" style="background:#0078d7;color:#fff;border:1px solid #0078d7;font-weight:800;padding:8px 20px;cursor:pointer">완료 모달에 추가</button>
+      <button type="button" id="scannerConfirmBtn" onclick="confirmScannerPhotos()" style="background:#0078d7;color:#fff;border:1px solid #0078d7;font-weight:800;padding:8px 20px;cursor:pointer">완료저장</button>
       <button type="button" onclick="closeScannerCapture()" style="background:#444;color:#fff;border:1px solid #555;padding:8px 16px;cursor:pointer">닫기</button>
     </div>
   </div>
@@ -1280,7 +1296,7 @@ async function saveItem(){
   loadAll()
 }
 async function deleteItem(){const id=itemId.value;if(!id){alert("삭제할 항목을 목록에서 더블클릭하세요.");return}if(!confirm("정말 삭제하시겠습니까?"))return;await fetch(`/api/schedules/${id}`,{method:"DELETE"});resetForm();loadAll()}
-async function deleteScheduleRow(id){if(!confirm("삭제하면 작업지시서·생산스케줄·캘린더에서 모두 삭제됩니다.\n계속하시겠습니까?"))return;await fetch(`/api/schedules/${id}`,{method:"DELETE"});loadAll()}
+async function deleteScheduleRow(id){if(!confirm("삭제하면 작업지시서·생산스케줄·캘린더에서 모두 삭제됩니다.\n계속하시겠습니까?"))return;await fetch(`/api/schedules/${id}`,{method:"DELETE"});hideDetail();loadAll()}
 async function changeStatus(id, value){
   const item=allRows.find(r=>Number(r.id)===Number(id));
   if(value==="완료"){
@@ -1809,21 +1825,20 @@ function renderCard(g){
           ${["접수","제작중","완료","출고","보류"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}
         </select>
       </td>
-      <td class="center"><button onclick='event.stopPropagation();deleteScheduleRow(${r.id})' style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:3px 6px;cursor:pointer;font-size:11px;font-weight:700">삭제</button></td>
-    </tr>`).join(""):`<tr><td colspan="11" class="center">-</td></tr>`;
+    </tr>`).join(""):`<tr><td colspan="10" class="center">-</td></tr>`;
   const sm=summaryData[g]||{total:0,selected:0};
   return `
     <div class="card">
       <div class="card-title" style="background:${COLORS[g]||"#333"}">${g}</div>
+      <div class="summary-line"><div>전체 ${sm.total||0}</div><div>선택일 ${sm.selected||0}</div><div>보류 ${sm.hold||0}</div></div>
       <div class="card-table-wrap">
         <table>
           <thead><tr>
-            <th class="date-col">주문</th><th class="date-col">생산</th><th class="customer-col">거래처</th><th class="model-col">모델</th><th class="detail-col">상세</th><th class="qty-col">수량</th><th class="type-col">구분</th><th class="site-col">지역</th><th class="memo-col">비고</th><th class="status-col">상태</th><th style="width:44px"></th>
+            <th class="date-col">주문</th><th class="date-col">생산</th><th class="customer-col">거래처</th><th class="model-col">모델</th><th class="detail-col">상세</th><th class="qty-col">수량</th><th class="type-col">구분</th><th class="site-col">지역</th><th class="memo-col">비고</th><th class="status-col">상태</th>
           </tr></thead>
           <tbody>${body}</tbody>
         </table>
       </div>
-      <div class="summary-line"><div>전체 ${sm.total||0}</div><div>선택일 ${sm.selected||0}</div><div>보류 ${sm.hold||0}</div></div>
     </div>`;
 }
 function renderCompleted(){
@@ -1901,23 +1916,6 @@ window.onload=async()=>{
     });
   }
 
-  function markTopMenu(){
-    const buttons=[...document.querySelectorAll("button,a")];
-    const labels=["단가표","일지관리","작업지시서","생산스케줄","생산스케쥴","제작완료","A/S관리","캘린더","사용자관리"];
-    const matched=buttons.filter(b=>labels.some(t=>(b.innerText||"").includes(t)));
-    if(matched.length>=4){
-      let parent=matched[0].parentElement;
-      for(let i=0;i<4 && parent;i++){
-        const count=[...parent.querySelectorAll("button,a")].filter(b=>labels.some(t=>(b.innerText||"").includes(t))).length;
-        if(count>=4){
-          parent.classList.add("top-menu");
-          break;
-        }
-        parent=parent.parentElement;
-      }
-    }
-  }
-
   function setStickyTableHeaders(){
     document.querySelectorAll(".card table thead th").forEach(th=>{
       th.style.position="sticky";
@@ -1928,7 +1926,6 @@ window.onload=async()=>{
   }
 
   document.addEventListener("DOMContentLoaded",function(){
-    markTopMenu();
     hideBottomCompletedShortcut();
     setStickyTableHeaders();
     setInterval(function(){
@@ -2217,6 +2214,7 @@ window.onload=async()=>{
     btn.onclick=function(e){
       e.preventDefault();
       e.stopPropagation();
+      if(inp._flatpickr){inp._flatpickr.open();return;}
       plusdoorOpenCalendarV15(inp,btn);
     };
   };
@@ -2235,6 +2233,22 @@ window.onload=async()=>{
     plusdoorEnhanceDateInputsV15();
     setInterval(()=>plusdoorEnhanceDateInputsV15(),1200);
   });
+})();
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  function _initFP(){
+    document.querySelectorAll('.date-wrap input,.plusdoor-date-wrap input').forEach(function(inp){
+      if(inp._flatpickr||inp.dataset.fpDone||inp.type==='hidden')return;
+      inp.dataset.fpDone='1';
+      flatpickr(inp,_fpOpts);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(_initFP,300);});
+  setInterval(_initFP,1800);
 })();
 </script>
 
@@ -2293,6 +2307,8 @@ window.onload=async()=>{
     scannerMode = mode || 'completion';
     captured = [];
     renderThumbs();
+    const confirmBtn = document.getElementById("scannerConfirmBtn");
+    if(confirmBtn) confirmBtn.textContent = scannerMode === 'completion' ? '완료저장' : '사진 추가';
     document.getElementById("scannerModal").style.display = "flex";
     await initDevices();
   };
@@ -2314,21 +2330,36 @@ window.onload=async()=>{
     ).join("");
     // 이전에 저장한 CZUR 장치 자동 선택
     const saved = localStorage.getItem("czur_device_id");
-    if(saved && cams.find(d=>d.deviceId===saved)) sel.value = saved;
+    if(saved && cams.find(d=>d.deviceId===saved)){
+      sel.value = saved;
+    } else if(saved){
+      localStorage.removeItem("czur_device_id");
+      showScannerDebug("CZUR가 감지되지 않아 기본 카메라를 사용합니다.");
+    }
     await startStream(sel.value);
   }
 
   async function startStream(deviceId){
     if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
     const video = document.getElementById("scannerVideo");
+    const captureBtn = document.querySelector('#scannerModal button[onclick="captureScanner()"]');
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video:{ deviceId:{exact:deviceId}, width:{ideal:2560}, height:{ideal:1920} }
-      });
+      const constraint = deviceId
+        ? { deviceId:{exact:deviceId}, width:{ideal:2560}, height:{ideal:1920} }
+        : { width:{ideal:1920}, height:{ideal:1080} };
+      stream = await navigator.mediaDevices.getUserMedia({ video: constraint });
       video.srcObject = stream;
-      await video.play();
+      if(captureBtn) captureBtn.textContent = "카메라 로딩중...";
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => { video.play().then(resolve).catch(reject); };
+        video.onerror = reject;
+        setTimeout(reject, 8000); // 8초 타임아웃
+      });
+      if(captureBtn) captureBtn.textContent = "촬영";
     } catch(e){
-      alert("카메라를 시작할 수 없습니다.\n" + e.message);
+      stream = null;
+      if(captureBtn) captureBtn.textContent = "촬영";
+      alert("카메라를 시작할 수 없습니다.\nCZUR 연결 상태를 확인하거나 다른 카메라를 선택하세요.\n(" + (e.message||e) + ")");
     }
   }
 
@@ -2407,6 +2438,7 @@ window.onload=async()=>{
       completionPasteFiles.push.apply(completionPasteFiles, captured);
       renderCompletionPreview();
       closeScannerCapture();
+      await saveComplete();
     }
   };
 
@@ -2415,6 +2447,32 @@ window.onload=async()=>{
     document.getElementById("scannerModal").style.display = "none";
     captured = [];
   };
+
+  // USB 발판/스위치 이벤트 감지 (키보드·마우스 모두 감지)
+  function scannerModalOpen(){
+    const modal = document.getElementById("scannerModal");
+    return modal && modal.style.display === "flex";
+  }
+  function showScannerDebug(msg){
+    const dbg = document.getElementById("scannerKeyDebug");
+    if(dbg) dbg.textContent = msg;
+  }
+  document.addEventListener("keydown", function(e){
+    if(!scannerModalOpen()) return;
+    showScannerDebug("키 감지: " + e.code + " (" + e.key + ")");
+    if(["Space","Enter","F1","F2","F8"].includes(e.code)){
+      e.preventDefault();
+      captureScanner();
+    }
+  });
+  document.addEventListener("mousedown", function(e){
+    if(!scannerModalOpen()) return;
+    // 좌클릭(0)은 UI 버튼이므로 제외, 우클릭(2)·중간(1)·추가버튼(3,4) 감지
+    if(e.button === 0) return;
+    showScannerDebug("마우스 버튼 감지: button=" + e.button);
+    e.preventDefault();
+    captureScanner();
+  });
 })();
 </script>
 

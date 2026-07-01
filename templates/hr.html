@@ -1,0 +1,2703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인사관리 - PLUSDOOR</title>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;background:#f0f2f5;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+button{border:1px solid #ccc;background:#fff;padding:7px 14px;cursor:pointer;border-radius:5px}
+:root{--primary:#1a3a5c;--accent:#e85d04;--border:#dde2e8;--line:#9bb5cc}
+
+.page-wrap{flex:1;display:flex;flex-direction:column;padding:10px 14px;min-height:0}
+.main-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--primary);flex-shrink:0}
+.main-tab{padding:7px 22px;background:#f0f2f5;border:1px solid #ccc;border-bottom:none;cursor:pointer;font-size:13px;font-weight:600;color:#555;border-radius:6px 6px 0 0;margin-bottom:-2px}
+.main-tab.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.main-tab:hover:not(.on){background:#e8edf3}
+
+.tab-section{display:none;flex:1;flex-direction:column;min-height:0}
+.tab-section.show{display:flex}
+
+.coming-soon{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:#999;padding:60px 0}
+.coming-soon .icon{font-size:48px}
+.coming-soon p{font-size:15px;font-weight:600}
+
+/* 휴가관리 */
+.lv-wrap{display:flex;flex:1;gap:12px;min-height:0;overflow:hidden}
+.lv-left{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+.lv-right{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto}
+.lv-toolbar{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.lv-toolbar button{padding:5px 12px;font-size:12px;font-weight:700}
+.lv-btn{background:#f5f7fa;color:#333;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-weight:700}
+.lv-btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.lv-panel{background:#fff;border-radius:8px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.lv-panel-hd{padding:8px 12px;background:#f5f7fa;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--primary);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.lv-member-list{overflow-y:auto;flex:1}
+.lv-member-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px;padding:7px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:12px}
+.lv-member-row:hover{background:#f0f4ff}
+.lv-member-row.sel{background:#e8f0ff;font-weight:700}
+.lv-member-name{font-weight:600}
+.lv-member-dept{font-size:11px;color:#555;font-weight:500}
+.lv-badge{font-size:13px;font-weight:700;padding:3px 6px;border-radius:10px;white-space:nowrap}
+.lv-badge .lv-n{display:inline-block;width:30px;text-align:center}
+.lv-badge.ok{background:#dcfce7;color:#166534}
+.lv-badge.warn{background:#fef3c7;color:#92400e}
+.lv-badge.empty{background:#fee2e2;color:#991b1b}
+/* 캘린더 */
+.lv-cal-nav{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.lv-cal-nav button{padding:3px 10px;font-size:13px;font-weight:700}
+.lv-cal-nav .lv-cal-title{font-size:15px;font-weight:700;min-width:110px;text-align:center}
+.lv-dept-filter{display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.lv-dept-btn{padding:3px 10px;font-size:11px;font-weight:700;border-radius:12px;border:1px solid #c5d5f0;background:#fff;color:#1a3a5c;cursor:pointer}
+.lv-dept-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.lv-cal-wrap{overflow:auto}
+.lv-cal{width:100%;border-collapse:collapse}
+.lv-cal th{background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:5px 2px;text-align:center;border:1px solid #c5d5f0}
+.lv-cal td{vertical-align:top;border:1px solid #e0e6ee;padding:3px 4px;min-width:80px;min-height:60px}
+.lv-cal td.today{background:#fffbeb}
+.lv-cal td.other-month{background:#f8f8f8;color:#bbb}
+.lv-cal-date{font-size:11px;font-weight:700;margin-bottom:2px}
+.lv-cal-date.sun{color:#dc2626}
+.lv-cal-date.sat{color:#2563eb}
+.lv-cal-item{font-size:11px;font-weight:700;color:#111;padding:2px 5px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lv-cal-item.pending{background:#fef3c7;border-left:3px solid #f59e0b}
+.lv-cal-item.approved{background:#dcfce7;border-left:3px solid #22c55e}
+.lv-cal-item.rejected{background:#fee2e2;color:#991b1b;border-left:3px solid #ef4444;text-decoration:line-through}
+/* 직원 검색 */
+.lv-member-search{padding:7px 10px;border:1px solid #ddd;border-radius:5px;font-size:12px;margin:6px 8px;width:calc(100% - 16px);box-sizing:border-box;flex-shrink:0;outline:none}
+.lv-member-search:focus{border-color:var(--primary)}
+/* 직원 상세 */
+.lv-mdetail{background:#fff;border-radius:8px;border:1px solid var(--border);padding:14px;display:none;flex-direction:column;gap:10px}
+.lv-mdetail.open{display:flex}
+.lv-mdetail-hd{font-size:13px;font-weight:700;color:var(--primary);border-bottom:1px solid #e8edf5;padding-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.lv-mdetail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.lv-mdetail-item{font-size:12px;color:#444}
+.lv-mdetail-item span{color:#888;font-size:11px;display:block}
+.lv-mdetail-stats{display:flex;gap:10px;margin-top:2px}
+.lv-mdetail-stat{flex:1;background:#f5f7fa;border-radius:6px;padding:8px;text-align:center}
+.lv-mdetail-stat .sv{font-size:18px;font-weight:700}
+.lv-mdetail-stat .sl{font-size:11px;color:#888;margin-top:2px}
+/* 신청 내역 */
+.lv-req-list{overflow-y:auto;flex:1}
+.lv-req-row{display:grid;grid-template-columns:80px 60px 180px 75px 90px 120px 1fr 100px 100px auto;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;text-align:center}
+.lv-req-row>span:nth-child(7){text-align:left}
+.lv-req-row.hd{background:#f5f7fa;font-weight:700;font-size:12px;color:#333;position:sticky;top:0}
+.lv-status{font-size:12px;font-weight:700;padding:3px 10px;border-radius:10px;display:inline-block}
+.lv-status.pending{background:#dbeafe;color:#1d4ed8}
+.lv-status.approved{background:#dcfce7;color:#166534}
+.lv-status.rejected{background:#fee2e2;color:#991b1b}
+/* 연차신청 모달 */
+.lv-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center}
+.lv-modal-bg.open{display:flex}
+.lv-modal{background:#fff;border-radius:10px;width:min(460px,96vw);box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;max-height:90vh}
+.lv-modal-hd{padding:14px 18px;background:var(--primary);color:#fff;border-radius:10px 10px 0 0;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between}
+.lv-modal-hd button{background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;line-height:1}
+.lv-modal-body{padding:18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.lv-modal-ft{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.lv-field{display:flex;flex-direction:column;gap:3px}
+.lv-field label{font-size:11px;font-weight:700;color:#555}
+.lv-field input,.lv-field select,.lv-field textarea{padding:7px 9px;border:1px solid #ddd;border-radius:5px;font-size:13px;width:100%}
+.lv-date-wrap{display:flex;align-items:center;border:1px solid #ddd;border-radius:5px;overflow:hidden;background:#fff}
+.lv-date-wrap input{border:none!important;border-radius:0!important;flex:1;min-width:0;padding:7px 9px!important}
+.lv-date-wrap input:focus{outline:none;box-shadow:none}
+.lv-date-wrap .lv-cal-open-btn{flex-shrink:0;border:none;border-left:1px solid #ddd;background:#f5f7fa;padding:0 10px;font-size:14px;cursor:pointer;height:100%;min-height:34px}
+.lv-field textarea{resize:vertical;min-height:60px}
+.lv-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lv-days-badge{display:inline-block;background:#e8f0ff;color:#1a3a5c;font-weight:700;padding:3px 10px;border-radius:5px;font-size:12px;margin-top:2px}
+
+/* 조직도 */
+.org-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-shrink:0;flex-wrap:wrap}
+.org-toolbar input{padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px}
+.org-toolbar input:focus{outline:none;border-color:var(--primary)}
+.org-toolbar span{font-size:12px;color:#888}
+.btn-edit-mode{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--primary);background:#fff;color:var(--primary)}
+.btn-edit-mode.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-add-dept{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #16a34a;background:#fff;color:#16a34a;display:none}
+.btn-add-dept.show{display:inline-block}
+.btn-save-order{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #d97706;background:#fff;color:#d97706;display:none}
+.btn-save-order.show{display:inline-block}
+
+.org-outer{flex:1;overflow:auto;background:#eef2f6;border-radius:8px;border:1px solid var(--border);min-height:0}
+.org-chart{min-width:840px;padding:24px 30px 40px;position:relative;display:flex;flex-direction:column;align-items:center;gap:0}
+#ocSvg{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+
+/* Person card */
+.oc-card{display:inline-flex;flex-direction:column;align-items:center;background:#fff;border:1.5px solid #d0dcea;border-radius:10px;padding:10px 8px 8px;width:96px;gap:4px;text-align:center;transition:box-shadow .15s,border-color .15s;position:relative;z-index:1;vertical-align:top;overflow:hidden}
+.edit-mode .oc-card{padding-bottom:30px}
+.oc-card:hover{box-shadow:0 3px 12px rgba(26,58,92,.18);border-color:#8ab0cc}
+.oc-card.highlight{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(232,93,4,.25)!important}
+.oc-card.dim{opacity:.3}
+.oc-photo{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #c0d4e4;display:block}
+.oc-nophoto{width:54px;height:54px;border-radius:50%;background:#cfdbe8;display:flex;align-items:center;justify-content:center;font-size:22px;color:#7fa0bc}
+.oc-name{font-size:12px;font-weight:700;color:#111;line-height:1.2;word-break:keep-all}
+.oc-rank{font-size:10px;background:#e8f0f8;color:var(--primary);border-radius:3px;padding:1px 6px;font-weight:700}
+.oc-tag{font-size:9px;color:#777;line-height:1.3;word-break:keep-all}
+.oc-phone{font-size:10px;color:#555}
+.oc-phone a{color:var(--primary);text-decoration:none}
+.oc-phone a:hover{text-decoration:underline}
+.oc-hire{font-size:10px;color:#888;margin-top:1px}
+
+/* Edit overlay on card — 하단 반반 버튼 */
+.oc-card-btns{position:absolute;bottom:0;left:0;right:0;display:none;border-top:1px solid #d0dcea}
+.edit-mode .oc-card-btns{display:flex}
+.oc-card-btns button{flex:1;padding:7px 0;font-size:11px;font-weight:700;border:none;cursor:pointer;line-height:1}
+.btn-edit-card{background:#2563eb;color:#fff}
+.btn-del-card{background:#d83b01;color:#fff}
+
+/* Row layout */
+.oc-row{display:flex;justify-content:center;gap:20px;position:relative;z-index:1;width:100%}
+
+/* 미래전략팀 box */
+.oc-strategy-box{border:2px solid var(--primary);border-radius:10px;background:#f0f5fa;padding:12px 16px 10px;display:inline-flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1}
+.oc-strategy-label{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:.5px}
+.oc-strategy-members{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+/* Dept row */
+.oc-dept-row{display:flex;width:100%;border:2px solid var(--primary);border-radius:10px;overflow:hidden;background:#fff;position:relative;z-index:1}
+.oc-dept-col{flex:1;border-right:1px solid #dde6f0;display:flex;flex-direction:column;min-width:190px}
+.oc-dept-col:last-child{border-right:none}
+.oc-dept-label-wrap{background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 4px}
+.oc-dept-label{font-size:13px;font-weight:700;letter-spacing:.5px;flex:1;text-align:center}
+.btn-edit-dept{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:11px;padding:2px 6px;border-radius:3px;cursor:pointer;display:none;font-weight:700}
+.btn-del-dept{background:rgba(220,50,0,.6);border:none;color:#fff;font-size:11px;padding:2px 6px;border-radius:3px;cursor:pointer;display:none;font-weight:700}
+.edit-mode .btn-edit-dept,.edit-mode .btn-del-dept{display:inline-block}
+.oc-dept-head-wrap{display:flex;justify-content:center;padding:10px 8px 4px;border-bottom:1px dashed #d4dfe8}
+.oc-dept-total{text-align:center;font-size:10px;color:#999;padding-bottom:6px;font-weight:600}
+.oc-teams{display:flex;flex-direction:column;gap:8px;padding:8px;flex:1}
+.oc-team-block{border:1px solid #e0e8f0;border-radius:7px;overflow:hidden}
+.oc-team-name-wrap{background:#edf2f8;display:flex;align-items:center;gap:4px;padding:5px 10px;border-bottom:1px solid #dde6f0}
+.oc-team-name{color:var(--primary);font-size:11px;font-weight:700;flex:1}
+.btn-edit-team,.btn-del-team{background:transparent;border:none;font-size:11px;cursor:pointer;padding:1px 4px;border-radius:3px;font-weight:700;display:none}
+.btn-edit-team{color:var(--primary)}
+.btn-del-team{color:#d83b01}
+.edit-mode .btn-edit-team,.edit-mode .btn-del-team{display:inline-block}
+.oc-team-cards{display:flex;flex-wrap:wrap;gap:7px;padding:8px}
+
+/* Edit mode add buttons */
+.btn-add-member{background:#16a34a;color:#fff;border:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;cursor:pointer;display:none;margin:4px 8px 6px}
+.btn-add-team{background:#0078d7;color:#fff;border:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;cursor:pointer;display:none;margin:0 8px 8px}
+.edit-mode .btn-add-member,.edit-mode .btn-add-team{display:inline-block}
+
+.oc-title{font-size:17px;font-weight:700;color:var(--primary);letter-spacing:.5px;margin-bottom:16px;text-align:center}
+.oc-gap{flex-shrink:0}
+
+/* 총괄 없는 부서 add-head */
+.btn-add-head{background:#e85d04;color:#fff;border:none;font-size:11px;font-weight:700;padding:5px 10px;border-radius:5px;cursor:pointer;display:none;margin:8px auto 4px}
+.edit-mode .btn-add-head{display:block}
+/* 총괄 수정/삭제 */
+.oc-head-edit-bar{display:none;justify-content:center;gap:6px;padding:2px 0 4px}
+.edit-mode .oc-head-edit-bar{display:flex}
+.btn-head-edit{background:var(--primary);color:#fff;border:none;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;cursor:pointer}
+.btn-head-del{background:#d83b01;color:#fff;border:none;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;cursor:pointer}
+
+/* 드래그 */
+.oc-card-ghost{opacity:.35!important;background:#dce8f5!important}
+.oc-card-drag{box-shadow:0 8px 24px rgba(26,58,92,.35)!important;transform:scale(1.06);z-index:9999!important}
+.oc-team-cards.drag-over{background:#f0f7ff;outline:2px dashed #7ab0d4;outline-offset:-2px}
+.oc-strategy-members.drag-over{background:#e8f3ff;outline:2px dashed #7ab0d4;outline-offset:-2px}
+.oc-dept-col.sortable-ghost{opacity:.4;background:#e8f0f8!important}
+.edit-mode .oc-dept-label-wrap{cursor:grab}
+.edit-mode .oc-dept-label-wrap:active{cursor:grabbing}
+
+/* ── 상세 모달 ── */
+.detail-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;align-items:center;justify-content:center}
+.detail-modal-bg.open{display:flex}
+.detail-modal-box{background:#fff;border-radius:12px;width:min(360px,96vw);box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.detail-modal-hd{background:var(--primary);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between}
+.detail-modal-hd span{font-weight:700;font-size:14px}
+.detail-modal-hd button{background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 2px;line-height:1}
+.detail-photo-wrap{display:flex;justify-content:center;padding:22px 0 10px;background:#f5f7fa}
+.detail-photo{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.detail-nophoto{width:90px;height:90px;border-radius:50%;background:#dde3ee;display:flex;align-items:center;justify-content:center;font-size:36px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.detail-name-block{text-align:center;padding:10px 16px 14px;background:#f5f7fa}
+.detail-name{font-size:18px;font-weight:800;color:var(--primary)}
+.detail-rank{font-size:13px;color:#666;margin-top:2px}
+.detail-info-grid{display:grid;grid-template-columns:80px 1fr;gap:0;border-top:1px solid #eee}
+.detail-info-label{font-size:11px;font-weight:700;color:#888;padding:9px 14px;background:#f9fafb;border-bottom:1px solid #eee}
+.detail-info-value{font-size:13px;color:#222;padding:9px 14px;border-bottom:1px solid #eee;word-break:break-all}
+.detail-modal-ft{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #eee}
+/* ── 모달 ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal-box{background:#fff;border-radius:10px;width:min(440px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-hd{background:var(--primary);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:10px 10px 0 0}
+.modal-hd span{font-weight:700;font-size:14px}
+.modal-hd button{background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 2px;line-height:1}
+.modal-body{padding:16px}
+.modal-body label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:4px;margin-top:10px}
+.modal-body label:first-child{margin-top:0}
+.modal-body input,.modal-body select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+.modal-body input:focus,.modal-body select:focus{outline:none;border-color:var(--primary)}
+.modal-ft{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--border)}
+.modal-ft button{padding:7px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;border:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-danger{background:#d83b01;color:#fff}
+.btn-cancel{background:#eee;color:#555}
+
+/* Photo preview */
+.photo-preview-wrap{display:flex;align-items:center;gap:10px;margin-top:6px}
+.photo-preview-wrap img,.photo-preview-wrap .no-photo{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;background:#e8f0f8}
+
+@media(max-width:767px){
+  body{height:auto!important;overflow:auto!important}
+  .page-wrap{padding:6px 8px;flex:none}
+  .main-tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .main-tab{white-space:nowrap;padding:7px 14px;flex-shrink:0}
+  .tab-section{flex:none!important}
+  .tab-section.show{display:block!important}
+  .lv-wrap{flex-direction:column!important;overflow:visible!important;height:auto}
+  .lv-left{width:100%!important;overflow:visible!important;height:auto}
+  .lv-right{width:100%;overflow:visible!important;height:auto;display:block}
+  .lv-left .lv-panel{flex:none!important;height:auto}
+  .lv-member-list{max-height:260px}
+  .lv-cal td{min-width:38px!important;min-height:40px!important}
+  .lv-cal-wrap{overflow-x:auto}
+  .lv-req-list{overflow-x:auto!important;max-height:none!important}
+  .lv-req-row{min-width:860px}
+  .org-outer{height:auto!important;min-height:400px;flex:none!important}
+  .org-toolbar input{width:140px}
+}
+</style>
+</head>
+<body>
+{{ top_menu("hr")|safe }}
+<div class="page-wrap">
+  <div class="main-tabs">
+    {% if has_perm("hr_leave") %}<button class="main-tab" id="tabBtnLeave" onclick="switchTab('leave')">휴가관리</button>{% endif %}
+    {% if has_perm("hr_org") %}<button class="main-tab" id="tabBtnOrg" onclick="switchTab('org')">조직도</button>{% endif %}
+    {% if has_perm("hr_attendance") %}<button class="main-tab" id="tabBtnAttendance" onclick="switchTab('attendance')">근태관리</button>{% endif %}
+  </div>
+
+  {% if has_perm("hr_attendance") %}
+  <div class="tab-section" id="secAttendance">
+    <div id="attMain" style="padding:8px 0">
+      <!-- 회사 근로조건 설정 -->
+      <div style="background:#f0f4f8;border:1px solid #c2d0e0;border-radius:6px;padding:10px 16px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:13px">
+          <span style="font-weight:700;color:#1a3a5c;white-space:nowrap">근로조건</span>
+          <label style="display:flex;align-items:center;gap:5px;white-space:nowrap">
+            업무시간
+            <input type="text" id="attCondWorkStart" placeholder="08:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+            ~
+            <input type="text" id="attCondWorkEnd" placeholder="17:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;white-space:nowrap">
+            휴게시간
+            <input type="text" id="attCondBreakStart" placeholder="12:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+            ~
+            <input type="text" id="attCondBreakEnd" placeholder="13:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;white-space:nowrap">
+            연장인정
+            <input type="text" id="attCondOTStart" placeholder="07:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+            ~
+            <input type="text" id="attCondOTEnd" placeholder="26:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+            <span style="font-size:11px;color:#888">(익일은 24+ 입력, 예: 26:00)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;white-space:nowrap">
+            휴일근로
+            <input type="text" id="attCondHolStart" placeholder="09:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+            ~
+            <input type="text" id="attCondHolEnd" placeholder="18:00" style="font-size:12px;padding:2px 5px;border:1px solid #ccc;border-radius:3px;width:54px;text-align:center">
+          </label>
+          <span style="white-space:nowrap;color:#444">일과 <strong id="attCondDailyHours" style="color:#1a3a5c">-</strong></span>
+          <button onclick="attSaveCond()" style="padding:4px 13px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer">적용</button>
+        </div>
+      </div>
+
+      <!-- 파일 업로드 -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <label style="font-weight:700;font-size:13px;white-space:nowrap">근태파일 업로드</label>
+        <input type="file" id="attFile" accept=".xls,.xlsx" style="font-size:13px">
+        <button onclick="attUpload()" style="padding:6px 14px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">불러오기</button>
+        <button onclick="attLoadSavedData()" style="padding:6px 14px;background:#555;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">저장된 내역 불러오기</button>
+        <span id="attMonthLabel" style="font-size:13px;color:#555;font-weight:600"></span>
+      </div>
+
+      <!-- 저장된 내역 불러오기 모달 -->
+      <div id="attLoadModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:8px;padding:20px 24px;min-width:360px;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+          <div style="font-weight:700;font-size:14px;margin-bottom:14px;color:#1a3a5c">저장된 근태내역 목록</div>
+          <div id="attLoadList" style="max-height:320px;overflow-y:auto;border:1px solid #ccc;border-radius:4px;margin-bottom:14px;font-size:12px"></div>
+          <div style="display:flex;justify-content:flex-end">
+            <button onclick="document.getElementById('attLoadModal').style.display='none'" style="padding:6px 16px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;font-size:13px;cursor:pointer">닫기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 직원 선택 -->
+      <div id="attEmpRow" style="display:none;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <label style="font-weight:700;font-size:13px">직원 선택</label>
+        <input type="text" id="attEmpSel" list="attEmpDatalist" placeholder="이름 입력 또는 선택..." autocomplete="off"
+          oninput="attEmpInput(this)" style="font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:4px;min-width:150px">
+        <datalist id="attEmpDatalist"></datalist>
+        <button onclick="attPrev()" style="padding:5px 12px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;font-size:13px;cursor:pointer">◀ 이전</button>
+        <button onclick="attNext()" style="padding:5px 12px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;font-size:13px;cursor:pointer">다음 ▶</button>
+        <button onclick="attCopyPage2()" style="padding:5px 14px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:700">근로내역 복사</button>
+        <button id="attSaveBtn" onclick="attSaveData()" style="padding:5px 14px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:700">저장</button>
+      </div>
+
+      <!-- 두 페이지 나란히 -->
+      <div id="attPagesWrap" style="display:none;gap:20px;align-items:flex-start;overflow-x:auto;padding-bottom:8px">
+
+        <!-- 페이지1: 외출/추가근로 입력 + 캘린더 -->
+        <div id="attPage1" style="display:inline-block;vertical-align:top;background:#fff;border:1px solid #ccc;padding:12px;box-sizing:border-box;font-size:12px;min-width:280px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+
+            <!-- 추가근로/조기출근 -->
+            <div>
+              <div style="font-weight:700;font-size:12px;margin-bottom:5px;border-bottom:1px solid #ccc;padding-bottom:3px">추가근로/조기출근</div>
+              <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">
+                <thead>
+                  <tr style="background:#f0f0f0">
+                    <th style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700">직원</th>
+                    <th style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700;width:44px">날짜</th>
+                    <th style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700">시간</th>
+                    <th style="border:1px solid #ccc;padding:2px;width:16px" class="att-hide-btn"></th>
+                  </tr>
+                </thead>
+                <tbody id="attExtraBody">
+                  <tr class="att-ex-row">
+                    <td style="border:1px solid #ccc;padding:1px"><input type="text" list="attEmpDatalist" class="att-emp-ex" placeholder="이름..." autocomplete="off" style="width:100%;font-size:11px;border:none;padding:2px 3px;box-sizing:border-box"></td>
+                    <td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="6/1"></td>
+                    <td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="2시간"></td>
+                    <td style="border:1px solid #ccc;padding:1px;text-align:center" class="att-hide-btn"><button onclick="this.closest('tr').remove()" style="border:none;background:none;color:#d83b01;cursor:pointer;font-size:13px;padding:0;line-height:1">×</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button onclick="attExtraAddRow()" class="att-hide-btn" style="font-size:11px;padding:2px 7px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#f5f5f5">+ 줄 추가</button>
+            </div>
+
+            <!-- 외출 내역 -->
+            <div>
+              <div style="font-weight:700;font-size:12px;margin-bottom:5px;border-bottom:1px solid #ccc;padding-bottom:3px">외출 내역</div>
+              <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">
+                <thead>
+                  <tr style="background:#f0f0f0">
+                    <th style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700">직원</th>
+                    <th style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700;width:44px">날짜</th>
+                    <th style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700">외출시간</th>
+                    <th style="border:1px solid #ccc;padding:2px;width:16px" class="att-hide-btn"></th>
+                  </tr>
+                </thead>
+                <tbody id="attGoOutBody">
+                  <tr class="att-go-row">
+                    <td style="border:1px solid #ccc;padding:1px"><input type="text" list="attEmpDatalist" class="att-emp-go" placeholder="이름..." autocomplete="off" style="width:100%;font-size:11px;border:none;padding:2px 3px;box-sizing:border-box"></td>
+                    <td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="6/1"></td>
+                    <td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="1시간 30분"></td>
+                    <td style="border:1px solid #ccc;padding:1px;text-align:center" class="att-hide-btn"><button onclick="this.closest('tr').remove()" style="border:none;background:none;color:#d83b01;cursor:pointer;font-size:13px;padding:0;line-height:1">×</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button onclick="attGoOutAddRow()" class="att-hide-btn" style="font-size:11px;padding:2px 7px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#f5f5f5">+ 줄 추가</button>
+            </div>
+
+            <!-- 공휴일 달력 -->
+            <div id="attCalWrap" style="display:none;flex-direction:column;gap:6px">
+              <div style="font-weight:700;font-size:12px;border-bottom:1px solid #ccc;padding-bottom:4px;color:#1a3a5c">공휴일 지정</div>
+              <div style="font-size:11px;color:#888;margin-bottom:2px">날짜 클릭 → 전 직원 공휴일 적용</div>
+              <div id="attCalGrid"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 페이지2: 개인 근로 내역 -->
+        <div id="attPage2" style="display:inline-block;vertical-align:top;background:#fff">
+          <table id="attTable" style="border-collapse:collapse;font-size:12px;width:794px;table-layout:fixed">
+            <thead>
+              <tr>
+                <td style="border:1px solid #ccc;padding:5px 8px;background:#dbeafe;font-weight:700;font-size:11px;white-space:nowrap;text-align:center">성명</td>
+                <td id="attCapName" style="border:1px solid #ccc;padding:5px 8px;font-weight:700;text-align:center" colspan="5"></td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #ccc;padding:5px 8px;background:#dbeafe;font-weight:700;font-size:11px;white-space:nowrap;text-align:center">근무월</td>
+                <td id="attCapMonth" style="border:1px solid #ccc;padding:5px 8px;font-weight:700;text-align:center" colspan="5"></td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #ccc;padding:5px 8px;background:#dbeafe;font-weight:700;font-size:11px;white-space:nowrap;text-align:center">출근일</td>
+                <td id="attWorkDays" style="border:1px solid #ccc;padding:5px 8px;font-weight:700;text-align:center"></td>
+                <td style="border:1px solid #ccc;padding:5px 8px;background:#dbeafe;font-weight:700;font-size:11px;white-space:nowrap;text-align:center">평일연장 합산</td>
+                <td id="attWeekdayOT" style="border:1px solid #ccc;padding:5px 8px;font-weight:700;color:#1a3a5c;text-align:center"></td>
+                <td style="border:1px solid #ccc;padding:5px 8px;background:#dbeafe;font-weight:700;font-size:11px;white-space:nowrap;text-align:center">휴일근로 합산</td>
+                <td id="attHolidayOT" style="border:1px solid #ccc;padding:5px 8px;font-weight:700;color:#c00;text-align:center"></td>
+              </tr>
+              <tr style="height:5px;background:#fff"><td colspan="6" style="border:none;padding:0"></td></tr>
+              <tr style="background:#f0f0f0">
+                <th style="border:1px solid #ccc;padding:5px;text-align:center;width:120px">일자</th>
+                <th style="border:1px solid #ccc;padding:5px;text-align:center;width:110px">출근</th>
+                <th style="border:1px solid #ccc;padding:5px;text-align:center;width:110px">퇴근</th>
+                <th style="border:1px solid #ccc;padding:5px;text-align:center;width:164px">근무시간</th>
+                <th style="border:1px solid #ccc;padding:5px;text-align:center;width:145px">연장근로</th>
+                <th style="border:1px solid #ccc;padding:5px;text-align:center;width:145px">휴일근로</th>
+              </tr>
+            </thead>
+            <tbody id="attTbody"></tbody>
+          </table>
+          <div style="border:1px solid #ccc;border-top:none;padding:6px 10px;font-size:11px;color:#333;background:#fffbe6;width:794px;box-sizing:border-box">
+            붉은색 부분은 휴일입니다. 출퇴근 인정시간 및 출근일은 자동합산 되니 출근일자, 출근시간, 퇴근시간 정확하게 확인해주시기 바랍니다.
+          </div>
+          <!-- 선택된 직원 요약 -->
+          <div id="attP1Summary" style="display:none;border:1px solid #ccc;border-top:none;padding:10px 12px;font-size:11px;width:794px;box-sizing:border-box;background:#fff"></div>
+        </div>
+
+        <!-- 페이지3: 월 통계 -->
+        <div id="attPage3" style="display:inline-block;vertical-align:top;background:#fff;border:1px solid #ccc;padding:12px;box-sizing:border-box;font-size:12px;min-width:530px;margin-right:12px">
+          <div style="font-weight:700;font-size:13px;color:#1a3a5c;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:10px">
+            월 통계 — <span id="attStatMonth"></span>
+          </div>
+          <div style="overflow-y:auto;max-height:calc(100vh - 260px)">
+          <table style="border-collapse:collapse;width:100%;font-size:12px">
+            <thead style="position:sticky;top:0;z-index:1">
+              <tr style="background:#f0f0f0">
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:130px">이름</th>
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:70px">출근일</th>
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:150px">평일 연장근로</th>
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:150px">휴일근로</th>
+              </tr>
+            </thead>
+            <tbody id="attStatBody"></tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- 페이지4: 연통계 -->
+        <div id="attPage4" style="display:inline-block;vertical-align:top;background:#fff;border:1px solid #ccc;padding:12px;box-sizing:border-box;font-size:12px;min-width:530px">
+          <div style="font-weight:700;font-size:13px;color:#1a3a5c;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:10px">
+            연 통계 — <span id="attYearStatLabel"></span>
+          </div>
+          <div style="overflow-y:auto;max-height:calc(100vh - 260px)">
+          <table style="border-collapse:collapse;width:100%;font-size:12px">
+            <thead style="position:sticky;top:0;z-index:1">
+              <tr style="background:#f0f0f0">
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:130px">이름</th>
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:70px">출근일</th>
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:150px">평일 연장근로</th>
+                <th style="border:1px solid #ccc;padding:5px 8px;text-align:center;width:150px">휴일근로</th>
+              </tr>
+            </thead>
+            <tbody id="attYearStatBody"></tbody>
+          </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if has_perm("hr_leave") %}
+  <div class="tab-section" id="secLeave">
+    <div class="lv-wrap">
+      <!-- 좌측: 직원 연차 현황 -->
+      <div class="lv-left">
+        <div class="lv-toolbar">
+          <span style="font-size:13px;font-weight:700" id="lvYear">2026년</span>
+          {% if has_perm("hr_leave") %}
+          <button class="lv-btn-primary" onclick="openLeaveModal()">+ 연차 신청</button>
+          {% endif %}
+        </div>
+        <div class="lv-panel" style="flex:1">
+          <div class="lv-panel-hd">
+            직원 연차 현황
+            <span style="font-size:13px;color:#888;font-weight:700"><span style="display:inline-block;width:30px;text-align:center">부여</span>/<span style="display:inline-block;width:30px;text-align:center">사용</span>/<span style="display:inline-block;width:30px;text-align:center">잔여</span></span>
+          </div>
+          <div style="display:flex;gap:4px;margin:6px 8px">
+            <input type="text" class="lv-member-search" id="lvMemberSearchInput" placeholder="직원 이름 검색..." style="margin:0;flex:1;width:auto" autocomplete="off" onkeydown="if(event.key==='Enter')lvDoSearch()">
+            <button class="lv-btn-primary" style="padding:0 10px;font-size:12px;flex-shrink:0" onclick="lvDoSearch()">조회</button>
+            <button class="lv-btn" style="padding:0 10px;font-size:12px;flex-shrink:0" onclick="lvResetSearch()">초기화</button>
+          </div>
+          <div class="lv-member-list" id="lvMemberList"></div>
+        </div>
+      </div>
+      <!-- 우측: 캘린더 + 신청내역 -->
+      <div class="lv-right">
+        <!-- 캘린더 -->
+        <div class="lv-panel" style="flex-shrink:0">
+          <div class="lv-panel-hd" style="flex-direction:column;align-items:flex-start;gap:6px">
+            <div style="display:flex;align-items:center;gap:10px;width:100%">
+              <div class="lv-cal-nav">
+                <button onclick="lvChangeMonth(-1)">◀</button>
+                <span class="lv-cal-title" id="lvCalTitle"></span>
+                <button onclick="lvChangeMonth(1)">▶</button>
+              </div>
+              <button onclick="lvGoToday()" style="font-size:11px;padding:3px 8px">오늘</button>
+            </div>
+            <div class="lv-dept-filter" id="lvDeptFilter"></div>
+          </div>
+          <div class="lv-cal-wrap">
+            <table class="lv-cal"><thead><tr>
+              <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+            </tr></thead><tbody id="lvCalBody"></tbody></table>
+          </div>
+        </div>
+        <!-- 신청 내역 -->
+        <div class="lv-panel" style="flex-shrink:0">
+          <div class="lv-panel-hd">
+            신청 내역
+            <span id="lvReqCount" style="font-size:11px;color:#888;font-weight:400"></span>
+          </div>
+          <div class="lv-req-list" style="max-height:220px">
+            <div class="lv-req-row hd">
+              <span>이름</span><span>부서</span><span>기간</span><span>일수</span><span>종류</span><span>결재자</span><span>사유</span><span>1차결재</span><span>2차결재</span><span>상태</span>
+            </div>
+            <div id="lvReqBody"></div>
+          </div>
+        </div>
+        <!-- 직원 상세 -->
+        <div class="lv-mdetail" id="lvMemberDetail">
+          <div class="lv-mdetail-hd">
+            <span id="lvMdName"></span>
+            <button onclick="closeLvMemberDetail()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#888;padding:0">✕</button>
+          </div>
+          <div id="lvMdInfo"></div>
+          <div class="lv-mdetail-stats">
+            <div class="lv-mdetail-stat"><div class="sv" style="color:#1a3a5c" id="lvMdEntitled">-</div><div class="sl">부여 연차</div></div>
+            <div class="lv-mdetail-stat"><div class="sv" style="color:#d97706" id="lvMdUsed">-</div><div class="sl">사용 연차</div></div>
+            <div class="lv-mdetail-stat"><div class="sv" id="lvMdRemaining">-</div><div class="sl">잔여 연차</div></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:6px">신청 내역</div>
+            <div id="lvMdReqList" style="max-height:180px;overflow-y:auto"></div>
+          </div>
+          <!-- 퇴직 정산 -->
+          <div id="lvSettleSection" style="border-top:1px solid #e8edf5;padding-top:10px;display:none">
+            <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:6px">퇴직 정산 계산</div>
+            <div style="display:flex;gap:0;align-items:center;border:1px solid #ddd;border-radius:5px;overflow:hidden">
+              <input type="text" id="lvSettleDate" placeholder="퇴직일 (YYYY-MM-DD)" autocomplete="off" style="flex:1;padding:6px 9px;border:none;font-size:12px;outline:none">
+              <button type="button" id="lvSettleCalBtn" style="border:none;border-left:1px solid #ddd;background:#f5f7fa;padding:0 10px;font-size:14px;cursor:pointer;height:34px">📅</button>
+              <button class="lv-btn lv-btn-primary" style="padding:0 12px;font-size:12px;height:34px;border-radius:0;border:none;border-left:1px solid #1a3a5c" onclick="calcSettle()">계산</button>
+            </div>
+            <div id="lvSettleResult" style="margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 연차 신청 모달 -->
+  <div class="lv-modal-bg" id="lvModal">
+    <div class="lv-modal">
+      <div class="lv-modal-hd"><span id="lvModalTitle">연차 신청</span><button onclick="closeLeaveModal()">✕</button></div>
+      <div class="lv-modal-body">
+        <input type="hidden" id="lvReqId">
+        <select id="lvMemberSel" onchange="lvUpdateApprover()" style="display:none"></select>
+        <div class="lv-field">
+          <label>신청인</label>
+          <div id="lvMemberNameLabel" style="padding:7px 10px;background:#f5f7fa;border:1px solid #ddd;border-radius:5px;font-size:13px;font-weight:600;color:#1a3a5c"></div>
+        </div>
+        <!-- 결재 박스 -->
+        <div style="display:flex;gap:8px;margin-bottom:4px" id="lvApproverWrap">
+          <div id="lvAp1Box" style="flex:1;border:1px solid #c5d5f0;border-radius:7px;padding:10px 8px;text-align:center;background:#f8faff">
+            <div style="font-size:10px;color:#888;margin-bottom:5px;font-weight:600">1차 결재</div>
+            <div id="lvAp1Name" style="font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:6px">-</div>
+            <div id="lvAp1StatusBadge"></div>
+          </div>
+          <div id="lvAp2Box" style="flex:1;border:1px solid #c5d5f0;border-radius:7px;padding:10px 8px;text-align:center;background:#f8faff">
+            <div style="font-size:10px;color:#888;margin-bottom:5px;font-weight:600">2차 결재</div>
+            <div id="lvAp2Name" style="font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:6px">-</div>
+            <div id="lvAp2StatusBadge"></div>
+          </div>
+        </div>
+        <!-- 연차 현황 -->
+        <div style="display:flex;gap:0;border:1px solid #c5d5f0;border-radius:6px;overflow:hidden;text-align:center;margin-bottom:4px">
+          <div style="flex:1;padding:7px 4px;border-right:1px solid #c5d5f0">
+            <div style="font-size:10px;color:#888;margin-bottom:2px">총 연차</div>
+            <div style="font-size:15px;font-weight:700"><strong id="lvEntitled">-</strong>일</div>
+          </div>
+          <div style="flex:1;padding:7px 4px;border-right:1px solid #c5d5f0">
+            <div style="font-size:10px;color:#888;margin-bottom:2px">사용</div>
+            <div style="font-size:15px;font-weight:700"><strong id="lvUsed">-</strong>일</div>
+          </div>
+          <div style="flex:1;padding:7px 4px">
+            <div style="font-size:10px;color:#888;margin-bottom:2px">잔여</div>
+            <div style="font-size:15px;font-weight:700"><strong id="lvRemaining">-</strong>일</div>
+          </div>
+        </div>
+        <div class="lv-field-row">
+          <div class="lv-field">
+            <label>휴가 종류</label>
+            <select id="lvType" onchange="lvCalcDays()">
+              <option>연차</option>
+              <option>반차(오전)</option>
+              <option>반차(오후)</option>
+              <option>병가</option>
+              <option>경조사</option>
+              <option>기타</option>
+            </select>
+          </div>
+          <div class="lv-field">
+            <label>상태</label>
+            <select id="lvStatus">
+              <option value="신청">신청</option>
+              <option value="승인">승인</option>
+              <option value="반려">반려</option>
+            </select>
+          </div>
+        </div>
+        <div class="lv-field-row">
+          <div class="lv-field">
+            <label>시작일</label>
+            <div class="lv-date-wrap">
+              <input type="text" id="lvStart" placeholder="YYYY-MM-DD" autocomplete="off">
+              <button type="button" class="lv-cal-open-btn" id="lvStartCalBtn">📅</button>
+            </div>
+          </div>
+          <div class="lv-field">
+            <label>종료일</label>
+            <div class="lv-date-wrap">
+              <input type="text" id="lvEnd" placeholder="YYYY-MM-DD" autocomplete="off">
+              <button type="button" class="lv-cal-open-btn" id="lvEndCalBtn">📅</button>
+            </div>
+          </div>
+        </div>
+        <div class="lv-field">
+          <label>사용 일수</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" id="lvDays" min="0.5" step="0.5" style="width:80px">
+            <span class="lv-days-badge" id="lvDaysBadge">0일</span>
+          </div>
+        </div>
+        <div class="lv-field">
+          <label>사유</label>
+          <textarea id="lvReason" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="lv-modal-ft">
+        <button id="lvDelBtn" onclick="deleteLeaveReq()" style="margin-right:auto;display:none;background:#fee2e2;color:#991b1b;border-color:#fca5a5">삭제</button>
+        <button onclick="closeLeaveModal()">취소</button>
+        <button class="lv-btn-primary" onclick="saveLeaveReq()">저장</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if has_perm("hr_org") %}
+  <div class="tab-section" id="secOrg">
+    <div class="org-toolbar">
+      <input type="text" id="orgSearch" placeholder="이름·직급·팀 검색..." oninput="filterOrg(this.value)">
+      <span id="orgCount"></span>
+      {% if has_write_perm("hr_org") %}
+      <button class="btn-edit-mode" id="editModeBtn" onclick="toggleEditMode()">✏️ 편집 모드</button>
+      <button class="btn-add-dept" id="addDeptBtn" onclick="openDeptModal()">+ 부서 추가</button>
+      <button class="btn-save-order" id="saveOrderBtn" onclick="saveCurrentOrder()">💾 현재 순서 저장</button>
+      {% endif %}
+    </div>
+    <div class="org-outer" id="orgOuter">
+      <div class="org-chart" id="orgChart">
+        <svg id="ocSvg"></svg>
+        <div class="oc-title">플러스도어 총괄 조직도</div>
+        <div id="orgBody"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- 직원 상세 모달 -->
+<div class="detail-modal-bg" id="memberDetailModal" onclick="if(event.target===this)closeMemberDetail()">
+  <div class="detail-modal-box">
+    <div class="detail-modal-hd">
+      <span>직원 상세</span>
+      <button onclick="closeMemberDetail()">✕</button>
+    </div>
+    <div class="detail-photo-wrap" id="detailPhotoWrap"></div>
+    <div class="detail-name-block">
+      <div class="detail-name" id="detailName"></div>
+      <div class="detail-rank" id="detailRankDept"></div>
+    </div>
+    <div class="detail-info-grid" id="detailInfoGrid"></div>
+    <div class="detail-modal-ft">
+      <button class="btn-edit-detail" id="detailEditBtn" onclick="closeMemberDetail();openMemberModal(window._detailMemberId)" style="background:var(--primary);color:#fff;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer">수정</button>
+      <button onclick="closeMemberDetail()" style="padding:8px 20px;border-radius:6px;cursor:pointer">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 겸직 추가 모달 -->
+<div class="modal-bg" id="concurrentModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-hd"><span>겸직 팀장 추가</span><button onclick="closeConcurrentModal()">✕</button></div>
+    <div class="modal-body" style="padding:16px">
+      <div style="font-size:12px;color:#666;margin-bottom:10px">기존 직원을 선택하면 해당 팀의 팀장으로 추가됩니다.</div>
+      <input type="text" id="concurrentSearch" placeholder="이름 검색..." oninput="renderConcurrentList(this.value)"
+        style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:5px;font-size:13px;margin-bottom:8px">
+      <div id="concurrentList" style="max-height:300px;overflow-y:auto;border:1px solid #eee;border-radius:5px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 직원 추가/편집 모달 -->
+<div class="modal-bg" id="memberModal">
+  <div class="modal-box">
+    <div class="modal-hd"><span id="memberModalTitle">직원 추가</span><button onclick="closeMemberModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="fMemberId">
+      <label>이름 <span style="color:#d83b01">*</span></label>
+      <input type="text" id="fName" placeholder="이름">
+      <label>직급</label>
+      <select id="fRank">
+        <option value="">선택</option>
+        <option>회장</option><option>대표이사</option><option>이사</option>
+        <option>공장장</option><option>부장</option><option>차장</option><option>과장</option>
+        <option>대리</option><option>주임</option><option>사원</option>
+      </select>
+      <label>연락처</label>
+      <input type="text" id="fPhone" placeholder="010-0000-0000">
+      <label>입사일자</label>
+      <input type="date" id="fHireDate">
+      <label>소속 부서</label>
+      <select id="fDept" onchange="onDeptChange()"></select>
+      <label>소속 팀</label>
+      <select id="fTeam">
+        <option value="">팀 없음 (부서 직속)</option>
+      </select>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:10px">
+        <label style="display:flex;align-items:center;gap:6px;margin:0">
+          <input type="checkbox" id="fIsHead" style="width:auto"> 총괄 (부서장)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;margin:0">
+          <input type="checkbox" id="fIsTeamLeader" style="width:auto"> 팀장
+        </label>
+      </div>
+      <label style="margin-top:10px">역할 태그 <span style="font-weight:400;color:#888;font-size:11px">(미래전략팀 등 역할 표기용)</span></label>
+      <input type="text" id="fTeamTag" placeholder="예: 품질,생산,안전">
+      <label>사진</label>
+      <div class="photo-preview-wrap" id="fPhotoWrap">
+        <img id="fPhotoPreview" src="" style="display:none">
+        <div class="no-photo" id="fNoPhoto">👤</div>
+        <div>
+          <input type="file" id="fPhoto" accept="image/*" onchange="previewPhoto(this)" style="font-size:12px">
+          <div style="font-size:11px;color:#888;margin-top:4px">파일 선택 또는 이미지 붙여넣기 (Ctrl+V)</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button id="fDeleteBtn" class="btn-danger" onclick="deleteMember()" style="margin-right:auto;display:none">삭제</button>
+      <button class="btn-cancel" onclick="closeMemberModal()">취소</button>
+      <button class="btn-primary" onclick="saveMember()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 부서/팀 이름 편집 모달 -->
+<div class="modal-bg" id="nameModal">
+  <div class="modal-box" style="width:min(320px,96vw)">
+    <div class="modal-hd"><span id="nameModalTitle">이름 변경</span><button onclick="document.getElementById('nameModal').classList.remove('open')">✕</button></div>
+    <div class="modal-body">
+      <label>이름</label>
+      <input type="text" id="fNameVal">
+      <div id="fSortOrderWrap" style="display:none">
+        <label style="margin-top:10px">표시 순서 <span style="font-size:11px;color:#888;font-weight:400">(숫자 작을수록 앞에 표시)</span></label>
+        <input type="number" id="fSortOrder" min="0" step="10" value="0">
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn-cancel" onclick="document.getElementById('nameModal').classList.remove('open')">취소</button>
+      <button class="btn-primary" onclick="saveNameModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var CAN_WRITE = {{ 'true' if has_write_perm('hr_org') else 'false' }};
+var editMode = false;
+var orgData = [];
+var lvYear=new Date().getFullYear(), lvMonth=new Date().getMonth()+1;
+
+/* ── 탭 전환 ── */
+function switchTab(tab){
+  ['Attendance','Leave','Org'].forEach(function(t){
+    var s=document.getElementById('sec'+t);
+    var b=document.getElementById('tabBtn'+t);
+    if(s) s.classList.toggle('show', t.toLowerCase()===tab);
+    if(b) b.classList.toggle('on', t.toLowerCase()===tab);
+  });
+  if(tab==='org') loadOrg();
+  if(tab==='leave') initLeave();
+  localStorage.setItem('hr_active_tab', tab);
+}
+
+var hasA={{ 'true' if has_perm('hr_attendance') else 'false' }};
+var hasL={{ 'true' if has_perm('hr_leave') else 'false' }};
+var hasO={{ 'true' if has_perm('hr_org') else 'false' }};
+(function(){
+  var saved=localStorage.getItem('hr_active_tab');
+  if(saved==='leave'&&hasL){ switchTab('leave'); return; }
+  if(saved==='org'&&hasO){ switchTab('org'); return; }
+  if(saved==='attendance'&&hasA){ switchTab('attendance'); return; }
+  if(hasL) switchTab('leave');
+  else if(hasO) switchTab('org');
+  else if(hasA) switchTab('attendance');
+})();
+
+/* ── 편집 모드 ── */
+function toggleEditMode(){
+  editMode = !editMode;
+  var btn = document.getElementById('editModeBtn');
+  var addBtn = document.getElementById('addDeptBtn');
+  var saveBtn = document.getElementById('saveOrderBtn');
+  btn.textContent = editMode ? '✅ 편집 중' : '✏️ 편집 모드';
+  btn.classList.toggle('on', editMode);
+  if(addBtn) addBtn.classList.toggle('show', editMode);
+  if(saveBtn) saveBtn.classList.toggle('show', editMode);
+  document.getElementById('orgChart').classList.toggle('edit-mode', editMode);
+  if(editMode) initSortable(); else destroySortable();
+}
+
+/* ── 조직도 로드 ── */
+async function loadOrg(){
+  try {
+    var r = await fetch('/api/org');
+    orgData = await r.json();
+    buildConcurrentMap();
+    renderOrg();
+  } catch(e) {
+    document.getElementById('orgBody').innerHTML = '<div style="padding:20px;color:#d83b01">불러오기 실패</div>';
+  }
+}
+
+/* ── 조직도 렌더링 ── */
+function esc(v){ return String(v||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+var _concurrentNames = {}; // 겸직 팀장: {name: count}
+function buildConcurrentMap(){
+  _concurrentNames = {};
+  orgData.forEach(function(d){
+    (d.teams||[]).forEach(function(t){
+      (t.members||[]).forEach(function(m){
+        if(m.is_team_leader) _concurrentNames[m.name] = (_concurrentNames[m.name]||0)+1;
+      });
+    });
+  });
+}
+
+function cardHtml(m, extraId, extraCls){
+  var photoHtml = m.photo
+    ? '<img class="oc-photo" src="/static/org_photos/'+esc(m.photo)+'?t='+encodeURIComponent(m.updated_at||'')+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+    + '<div class="oc-nophoto" style="display:none">👤</div>'
+    : '<div class="oc-nophoto">👤</div>';
+  var tag = m.team_tag ? '<div class="oc-tag">'+esc(m.team_tag)+'</div>' : '';
+  var concurrent = (m.is_team_leader && (_concurrentNames[m.name]||0)>1)
+    ? '<div style="font-size:9px;font-weight:700;color:#fff;background:#7c3aed;border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px">겸직팀장</div>' : '';
+  var btns = CAN_WRITE
+    ? '<div class="oc-card-btns"><button class="btn-edit-card" onclick="openMemberModal('+m.id+')">수정</button><button class="btn-del-card" onclick="confirmDeleteMember('+m.id+',\''+esc(m.name)+'\')">삭제</button></div>'
+    : '';
+  return '<div class="oc-card'+(extraCls?' '+extraCls:'')+'"'+(extraId?' id="'+extraId+'"':'')+
+    ' data-mid="'+m.id+'" data-name="'+esc(m.name)+'" data-rank="'+esc(m.rank)+'" data-team="'+esc(m.team_tag)+'"'+
+    ' ondblclick="openMemberDetail('+m.id+')" style="cursor:pointer">'
+    +btns+photoHtml
+    +'<div class="oc-name">'+esc(m.name)+'</div>'
+    +'<div class="oc-rank">'+esc(m.rank)+'</div>'
+    +concurrent+tag
+    +'<div class="oc-phone"><a href="tel:'+esc(m.phone)+'">'+esc(m.phone)+'</a></div>'
+    +(m.hire_date ? '<div class="oc-hire">입사 '+esc(m.hire_date)+'</div>' : '')
+    +'</div>';
+}
+
+function renderOrg(){
+  var html = '';
+  // top depts (special type) → 경영진, 미래전략팀
+  var special = orgData.filter(function(d){ return d.dept_type==='special'; });
+  var regular = orgData.filter(function(d){ return d.dept_type==='regular'; });
+
+  // 경영진 row (first special)
+  if(special.length > 0){
+    var exec = special[0];
+    var members = exec.members || [];
+    // 회장 (first member)
+    if(members.length > 0){
+      html += '<div class="oc-row" id="oc-row-chairman"><div>'+cardHtml(members[0], 'oc-chairman', '')+'</div></div>';
+    }
+    // 대표이사 (rest)
+    if(members.length > 1){
+      html += '<div class="oc-gap" style="height:36px"></div>';
+      html += '<div class="oc-row" id="oc-row-ceo">';
+      for(var i=1;i<members.length;i++) html += cardHtml(members[i], 'oc-ceo'+(i), '');
+      html += '</div>';
+    }
+    if(CAN_WRITE){
+      html += '<div style="text-align:center;margin-top:4px"><button class="btn-add-member" onclick="openMemberModal(null,'+exec.id+',null,0)">+ 경영진 추가</button></div>';
+    }
+  }
+
+  // 미래전략팀 (second special if exists) — 오른쪽 배치
+  if(special.length > 1){
+    var strat = special[1];
+    html += '<div class="oc-gap" style="height:28px"></div>';
+    html += '<div style="display:flex;width:100%;justify-content:flex-end;padding-right:4%;position:relative;z-index:1">';
+    html += '<div class="oc-strategy-box" id="oc-strategy-box">';
+    html += '<div class="oc-strategy-label">'+esc(strat.label)+'</div>';
+    html += '<div class="oc-strategy-members" data-dept-id="'+strat.id+'" data-team-id="">';
+    (strat.members||[]).forEach(function(m){ html += cardHtml(m,'',''); });
+    if(CAN_WRITE) html += '<button class="btn-add-member" onclick="openMemberModal(null,'+strat.id+',null,0)">+ 추가</button>';
+    html += '</div></div></div>';
+  }
+
+  // 4개 부서 row
+  var DEPT_COLORS = ['#1a3a5c','#15803d','#b45309','#7c3aed'];
+  var DEPT_LIGHT  = ['#edf2f8','#dcfce7','#fef3c7','#ede9fe'];
+  if(regular.length > 0){
+    html += '<div class="oc-gap" style="height:36px"></div>';
+    html += '<div class="oc-dept-row" id="oc-dept-row">';
+    regular.forEach(function(dept, di){
+      var dc = DEPT_COLORS[di % DEPT_COLORS.length];
+      var dl = DEPT_LIGHT[di % DEPT_LIGHT.length];
+      html += '<div class="oc-dept-col" data-dept-id="'+dept.id+'">';
+      // dept header
+      html += '<div class="oc-dept-label-wrap" style="background:'+dc+'">';
+      html += '<div class="oc-dept-label">'+esc(dept.label)+'</div>';
+      if(CAN_WRITE){
+        html += '<button class="btn-edit-dept" onclick="openNameModal(\'dept\','+dept.id+',\''+esc(dept.label)+'\')">수정</button>';
+        html += '<button class="btn-del-dept" onclick="confirmDeleteDept('+dept.id+',\''+esc(dept.label)+'\')">삭제</button>';
+      }
+      html += '</div>';
+      // head
+      if(dept.head){
+        var hm = dept.head;
+        html += '<div class="oc-dept-head-wrap" id="oc-head-'+dept.id+'" data-dept-id="'+dept.id+'" data-team-id="">'+cardHtml(hm,'','')+'</div>';
+        html += '<div class="oc-dept-total" style="color:'+dc+'">총괄</div>';
+      } else {
+        html += '<div class="oc-dept-head-wrap" id="oc-head-'+dept.id+'" data-dept-id="'+dept.id+'" data-team-id="">';
+        if(CAN_WRITE) html += '<button class="btn-add-head" onclick="openMemberModal(null,'+dept.id+',null,1)">+ 총괄 지정</button>';
+        html += '</div>';
+      }
+      // teams
+      html += '<div class="oc-teams" id="teams-'+dept.id+'">';
+      (dept.teams||[]).forEach(function(team){
+        html += '<div class="oc-team-block">';
+        html += '<div class="oc-team-name-wrap" style="background:'+dl+'">';
+        html += '<div class="oc-team-name" style="color:'+dc+'">'+esc(team.label)+'</div>';
+        if(CAN_WRITE){
+          html += '<button class="btn-edit-team" onclick="openNameModal(\'team\','+team.id+',\''+esc(team.label)+'\','+team.sort_order+')">수정</button>';
+          html += '<button class="btn-del-team" onclick="confirmDeleteTeam('+team.id+',\''+esc(team.label)+'\')">삭제</button>';
+        }
+        html += '</div>';
+        html += '<div class="oc-team-cards" data-dept-id="'+dept.id+'" data-team-id="'+team.id+'">';
+        (team.members||[]).forEach(function(m){ html += cardHtml(m,'',''); });
+        if(CAN_WRITE) html += '<button class="btn-add-member" onclick="openMemberModal(null,'+dept.id+','+team.id+',0)">+ 직원 추가</button>'
+          +'<button class="btn-add-member" style="background:#7c3aed;color:#fff" onclick="openConcurrentModal('+dept.id+','+team.id+')">+ 겸직 추가</button>';
+        html += '</div></div>';
+      });
+      if(CAN_WRITE) html += '<button class="btn-add-team" onclick="openTeamModal('+dept.id+')">+ 팀 추가</button>';
+      html += '</div>'; // oc-teams
+      // direct members (no team, not head)
+      if((dept.members||[]).length > 0){
+        html += '<div class="oc-team-block" style="margin:0 8px 8px"><div class="oc-team-name-wrap"><div class="oc-team-name">기타 직원</div></div><div class="oc-team-cards" data-dept-id="'+dept.id+'" data-team-id="">';
+        dept.members.forEach(function(m){ html += cardHtml(m,'',''); });
+        if(CAN_WRITE) html += '<button class="btn-add-member" onclick="openMemberModal(null,'+dept.id+',null,0)">+ 직원 추가</button>';
+        html += '</div></div>';
+      }
+      html += '</div>'; // oc-dept-col
+    });
+    html += '</div>'; // oc-dept-row
+  }
+
+  document.getElementById('orgBody').innerHTML = html;
+  if(editMode) document.getElementById('orgChart').classList.add('edit-mode');
+  setTimeout(drawLines, 80);
+  if(editMode){ destroySortable(); setTimeout(initSortable, 100); }
+}
+
+/* ── 드래그 정렬 ── */
+var _sortInst = [];
+
+function initSortable(){
+  if(!window.Sortable) return;
+  destroySortable();
+
+  function memberMoveOpts(putAllowed){
+    return {
+      group:          { name: 'org-members', pull: true, put: putAllowed },
+      draggable:      '.oc-card',
+      animation:      150,
+      forceFallback:  true,
+      fallbackOnBody: true,
+      fallbackTolerance: 4,
+      ghostClass:     'oc-card-ghost',
+      dragClass:      'oc-card-drag',
+      onEnd: function(evt){
+        if(evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
+        var mid = evt.item.dataset.mid;
+        if(!mid || isNaN(parseInt(mid))) return;
+        var to = evt.to;
+        var from = evt.from;
+        var newDeptId = parseInt(to.dataset.deptId);
+        var newTeamId = to.dataset.teamId ? parseInt(to.dataset.teamId) : null;
+        if(isNaN(newDeptId)) return;
+        fetch('/api/org/members/'+mid+'/move', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({dept_id: newDeptId, team_id: newTeamId, sort_order: evt.newIndex * 10, is_head: 0})
+        }).then(function(r){
+          if(!r.ok){ loadOrg(); return; }
+          // 이동 후 영향받은 컨테이너 전체 순서 저장 (sort_order 충돌 방지)
+          var toIds = Array.from(to.querySelectorAll(':scope > .oc-card')).map(function(c){ return {id:parseInt(c.dataset.mid)}; }).filter(function(i){ return !isNaN(i.id); });
+          var fromIds = (from!==to) ? Array.from(from.querySelectorAll(':scope > .oc-card')).map(function(c){ return {id:parseInt(c.dataset.mid)}; }).filter(function(i){ return !isNaN(i.id); }) : [];
+          var items = toIds.concat(fromIds);
+          if(items.length>0) fetch('/api/org/members/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:items})});
+        });
+      }
+    };
+  }
+
+  /* 팀/직속 카드 드래그 */
+  document.querySelectorAll('.oc-team-cards, .oc-strategy-members').forEach(function(el){
+    _sortInst.push(Sortable.create(el, memberMoveOpts(true)));
+  });
+
+  /* 총괄 카드 드래그 (꺼내기만 가능, 드롭 불가) */
+  document.querySelectorAll('.oc-dept-head-wrap').forEach(function(el){
+    _sortInst.push(Sortable.create(el, memberMoveOpts(false)));
+  });
+
+  /* 부서 열 순서 드래그 */
+  var deptRow = document.getElementById('oc-dept-row');
+  if(deptRow){
+    var dInst = Sortable.create(deptRow, {
+      animation:      200,
+      handle:         '.oc-dept-label-wrap',
+      draggable:      '.oc-dept-col',
+      forceFallback:  true,
+      fallbackOnBody: true,
+      ghostClass:     'sortable-ghost',
+      onEnd: function(){
+        var ids = Array.from(deptRow.querySelectorAll(':scope > .oc-dept-col'))
+                       .map(function(c){ return parseInt(c.dataset.deptId); });
+        fetch('/api/org/departments/reorder', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ids: ids})
+        }).then(function(r){ if(!r.ok) loadOrg(); });
+      }
+    });
+    _sortInst.push(dInst);
+  }
+}
+
+function destroySortable(){
+  _sortInst.forEach(function(inst){ try{ inst.destroy(); }catch(e){} });
+  _sortInst = [];
+}
+
+/* ── SVG 연결선 ── */
+function drawLines(){
+  var chart = document.getElementById('orgChart');
+  var svg   = document.getElementById('ocSvg');
+  if(!chart||!svg) return;
+  var cr = chart.getBoundingClientRect();
+  svg.setAttribute('width',  chart.scrollWidth);
+  svg.setAttribute('height', chart.scrollHeight);
+  svg.innerHTML = '';
+
+  function pos(id){
+    var el = document.getElementById(id);
+    if(!el) return null;
+    var r = el.getBoundingClientRect();
+    return {cx:   (r.left+r.right)/2  - cr.left,
+            midY: (r.top+r.bottom)/2  - cr.top,
+            left: r.left              - cr.left,
+            top:  r.top               - cr.top,
+            bot:  r.bottom            - cr.top};
+  }
+  function ln(x1,y1,x2,y2){
+    if(isNaN(x1)||isNaN(y1)||isNaN(x2)||isNaN(y2)) return;
+    var l = document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',Math.round(x1)); l.setAttribute('y1',Math.round(y1));
+    l.setAttribute('x2',Math.round(x2)); l.setAttribute('y2',Math.round(y2));
+    l.setAttribute('stroke','#9bb5cc'); l.setAttribute('stroke-width','2');
+    l.setAttribute('stroke-linecap','round');
+    svg.appendChild(l);
+  }
+
+  var ch = pos('oc-chairman');
+  var sb = pos('oc-strategy-box');
+  var dr = pos('oc-dept-row');
+  var ceos = [];
+  for(var i=1;i<=10;i++){ var cp=pos('oc-ceo'+i); if(cp) ceos.push(cp); }
+
+  /* ① 회장 → CEO 포크 */
+  if(ch && ceos.length){
+    var forkY = (ch.bot + ceos[0].top) / 2;
+    ln(ch.cx, ch.bot, ch.cx, forkY);
+    if(ceos.length === 1){
+      ln(ch.cx, forkY, ceos[0].cx, forkY);
+      ln(ceos[0].cx, forkY, ceos[0].cx, ceos[0].top);
+    } else {
+      var xs = ceos.map(function(c){ return c.cx; });
+      ln(Math.min.apply(null,xs), forkY, Math.max.apply(null,xs), forkY);
+      ceos.forEach(function(c){ ln(c.cx, forkY, c.cx, c.top); });
+    }
+  }
+
+  /* ② CEO 하단 합류 → T-분기 (미래전략팀 가지 + 부서 트렁크) */
+  var mergeX, mergeY;
+  if(ceos.length > 0){
+    mergeX = ceos.reduce(function(s,c){ return s+c.cx; }, 0) / ceos.length;
+    var ceoBot = Math.max.apply(null, ceos.map(function(c){ return c.bot; }));
+    mergeY = ceoBot + 18;          // CEO 바로 아래 합류점
+
+    if(ceos.length > 1){
+      /* 각 CEO 아래로 내려와 수평선 합류 */
+      var minCx = Math.min.apply(null, ceos.map(function(c){ return c.cx; }));
+      var maxCx = Math.max.apply(null, ceos.map(function(c){ return c.cx; }));
+      ceos.forEach(function(c){ ln(c.cx, c.bot, c.cx, mergeY); });
+      ln(minCx, mergeY, maxCx, mergeY);
+    }
+
+    /* 트렁크: mergeY → 부서 row (전략팀 가지는 트렁크 중간에서 분기) */
+    if(dr){ ln(mergeX, mergeY, mergeX, dr.top); }
+    /* 전략팀 가지: 트렁크 중간(전략팀 좌측면 센터 높이)에서 우측으로 */
+    if(sb){ ln(mergeX, sb.midY, sb.left, sb.midY); }
+  } else if(ch){
+    mergeX = ch.cx;
+    mergeY = ch.bot + 18;
+    if(dr){ ln(mergeX, ch.bot, mergeX, dr.top); }
+    if(sb){ ln(mergeX, sb.midY, sb.left, sb.midY); }
+  }
+}
+window.addEventListener('resize', drawLines);
+
+/* ── 검색 ── */
+function filterOrg(q){
+  q=(q||'').trim().toLowerCase();
+  var cards=document.querySelectorAll('.oc-card');
+  var matched=0;
+  cards.forEach(function(c){
+    var ok=!q||(c.dataset.name||'').toLowerCase().includes(q)||(c.dataset.rank||'').toLowerCase().includes(q)||(c.dataset.team||'').toLowerCase().includes(q);
+    c.classList.toggle('highlight',!!q&&ok);
+    c.classList.toggle('dim',!!q&&!ok);
+    if(ok) matched++;
+  });
+  var el=document.getElementById('orgCount');
+  if(el) el.textContent=q?(matched+'명 검색됨'):'';
+  if(!q) cards.forEach(function(c){c.classList.remove('highlight','dim');});
+}
+
+/* ── 직원 모달 ── */
+function openMemberModal(memberId, deptId, teamId, isHead){
+  var modal = document.getElementById('memberModal');
+  document.getElementById('fMemberId').value = memberId||'';
+  document.getElementById('fName').value = '';
+  document.getElementById('fRank').value = '';
+  document.getElementById('fPhone').value = '';
+  document.getElementById('fHireDate').value = '';
+  document.getElementById('fTeamTag').value = '';
+  document.getElementById('fIsHead').checked = !!isHead;
+  document.getElementById('fIsTeamLeader').checked = false;
+  document.getElementById('fPhoto').value = '';
+  _pastedPhotoBlob = null;
+  document.getElementById('fPhotoPreview').style.display = 'none';
+  document.getElementById('fNoPhoto').style.display = 'flex';
+  document.getElementById('fDeleteBtn').style.display = memberId ? 'inline-block' : 'none';
+  document.getElementById('memberModalTitle').textContent = memberId ? '직원 수정' : '직원 추가';
+
+  // 부서 드롭다운 채우기
+  var deptSel = document.getElementById('fDept');
+  deptSel.innerHTML = '';
+  orgData.forEach(function(d){ deptSel.innerHTML += '<option value="'+d.id+'">'+esc(d.label)+'</option>'; });
+
+  if(memberId){
+    // 기존 멤버 정보 찾기
+    var m = findMember(memberId);
+    if(m){
+      document.getElementById('fName').value = m.name||'';
+      document.getElementById('fRank').value = m.rank||'';
+      document.getElementById('fPhone').value = m.phone||'';
+      document.getElementById('fHireDate').value = m.hire_date||'';
+      document.getElementById('fTeamTag').value = m.team_tag||'';
+      document.getElementById('fIsHead').checked = !!m.is_head;
+      document.getElementById('fIsTeamLeader').checked = !!m.is_team_leader;
+      deptSel.value = m.dept_id;
+      if(m.photo){
+        var img = document.getElementById('fPhotoPreview');
+        img.src = '/static/org_photos/'+m.photo+'?t='+encodeURIComponent(m.updated_at||'');
+        img.style.display = 'block';
+        document.getElementById('fNoPhoto').style.display = 'none';
+      }
+    }
+  } else {
+    if(deptId) deptSel.value = deptId;
+  }
+
+  onDeptChange(teamId || (memberId ? findMember(memberId)?.team_id : null));
+  modal.classList.add('open');
+  setTimeout(function(){ document.getElementById('fName').focus(); }, 50);
+}
+
+function findMember(id){
+  for(var i=0;i<orgData.length;i++){
+    var d=orgData[i];
+    if(d.head && d.head.id==id) return d.head;
+    for(var j=0;j<(d.members||[]).length;j++) if(d.members[j].id==id) return d.members[j];
+    for(var j=0;j<(d.teams||[]).length;j++) for(var k=0;k<(d.teams[j].members||[]).length;k++) if(d.teams[j].members[k].id==id) return d.teams[j].members[k];
+  }
+  return null;
+}
+function findMemberWithDept(id){
+  for(var i=0;i<orgData.length;i++){
+    var d=orgData[i];
+    if(d.head && d.head.id==id) return {m:d.head, deptLabel:d.label};
+    for(var j=0;j<(d.members||[]).length;j++) if(d.members[j].id==id) return {m:d.members[j], deptLabel:d.label};
+    for(var j=0;j<(d.teams||[]).length;j++) for(var k=0;k<(d.teams[j].members||[]).length;k++) if(d.teams[j].members[k].id==id) return {m:d.teams[j].members[k], deptLabel:d.label};
+  }
+  return null;
+}
+function openMemberDetail(id){
+  var found = findMemberWithDept(id);
+  if(!found) return;
+  var m = found.m;
+  window._detailMemberId = id;
+
+  // 사진
+  var photoWrap = document.getElementById('detailPhotoWrap');
+  if(m.photo){
+    photoWrap.innerHTML = '<img class="detail-photo" src="/static/org_photos/'+esc(m.photo)+'?t='+encodeURIComponent(m.updated_at||'')+'">';
+  } else {
+    photoWrap.innerHTML = '<div class="detail-nophoto">👤</div>';
+  }
+
+  // 이름/직급
+  document.getElementById('detailName').textContent = m.name||'';
+  document.getElementById('detailRankDept').textContent = [m.rank, found.deptLabel].filter(Boolean).join(' · ');
+
+  // 정보 그리드
+  var rows = [];
+  if(m.phone) rows.push(['연락처', '<a href="tel:'+esc(m.phone)+'">'+esc(m.phone)+'</a>']);
+  if(found.deptLabel) rows.push(['부서', esc(found.deptLabel)]);
+  if(m.team_tag) rows.push(['팀', esc(m.team_tag)]);
+  if(m.hire_date) rows.push(['입사일', esc(m.hire_date)]);
+  document.getElementById('detailInfoGrid').innerHTML = rows.map(function(r){
+    return '<div class="detail-info-label">'+r[0]+'</div><div class="detail-info-value">'+r[1]+'</div>';
+  }).join('');
+
+  // 수정 버튼 권한
+  document.getElementById('detailEditBtn').style.display = (typeof CAN_WRITE !== 'undefined' && CAN_WRITE) ? 'inline-block' : 'none';
+
+  document.getElementById('memberDetailModal').classList.add('open');
+}
+function closeMemberDetail(){
+  document.getElementById('memberDetailModal').classList.remove('open');
+}
+
+function onDeptChange(presetTeamId){
+  var deptId = parseInt(document.getElementById('fDept').value);
+  var dept = orgData.find(function(d){ return d.id===deptId; });
+  var teamSel = document.getElementById('fTeam');
+  teamSel.innerHTML = '<option value="">팀 없음 (부서 직속)</option>';
+  if(dept && dept.teams) dept.teams.forEach(function(t){ teamSel.innerHTML += '<option value="'+t.id+'">'+esc(t.label)+'</option>'; });
+  if(presetTeamId) teamSel.value = presetTeamId;
+}
+
+function closeMemberModal(){ document.getElementById('memberModal').classList.remove('open'); }
+
+/* ── 겸직 추가 ── */
+var _concurrentTargetDept = null, _concurrentTargetTeam = null;
+function openConcurrentModal(deptId, teamId){
+  _concurrentTargetDept = deptId;
+  _concurrentTargetTeam = teamId;
+  document.getElementById('concurrentSearch').value = '';
+  renderConcurrentList('');
+  document.getElementById('concurrentModal').classList.add('open');
+}
+function closeConcurrentModal(){ document.getElementById('concurrentModal').classList.remove('open'); }
+function renderConcurrentList(q){
+  var all = [];
+  orgData.forEach(function(d){
+    if(d.head) all.push(d.head);
+    (d.members||[]).forEach(function(m){ all.push(m); });
+    (d.teams||[]).forEach(function(t){ (t.members||[]).forEach(function(m){ all.push(m); }); });
+  });
+  // 이름 중복 제거
+  var seen = {}, unique = [];
+  all.forEach(function(m){ if(!seen[m.name]){ seen[m.name]=true; unique.push(m); } });
+  var filtered = q ? unique.filter(function(m){ return m.name.includes(q); }) : unique;
+  filtered.sort(function(a,b){ return a.name.localeCompare(b.name,'ko'); });
+  var html = filtered.map(function(m){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f0f0f0;font-size:13px">'
+      +'<div><strong>'+esc(m.name)+'</strong> <span style="color:#888;font-size:11px">'+esc(m.rank||'')+'</span></div>'
+      +'<button onclick="addConcurrentLeader('+m.id+')" style="background:#7c3aed;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;font-weight:700">추가</button>'
+      +'</div>';
+  }).join('');
+  document.getElementById('concurrentList').innerHTML = html || '<div style="padding:16px;text-align:center;color:#aaa;font-size:12px">직원 없음</div>';
+}
+async function addConcurrentLeader(srcMemberId){
+  var src = null;
+  orgData.forEach(function(d){
+    if(d.head && d.head.id==srcMemberId) src=d.head;
+    (d.members||[]).forEach(function(m){ if(m.id==srcMemberId) src=m; });
+    (d.teams||[]).forEach(function(t){ (t.members||[]).forEach(function(m){ if(m.id==srcMemberId) src=m; }); });
+  });
+  if(!src){ alert('직원 정보를 찾을 수 없습니다.'); return; }
+  var body = {
+    dept_id: _concurrentTargetDept,
+    team_id: _concurrentTargetTeam,
+    name: src.name, rank: src.rank||'', phone: src.phone||'',
+    hire_date: src.hire_date||'', team_tag: '', is_head: false, is_team_leader: true
+  };
+  var r = await fetch('/api/org/members', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(!r.ok){ alert('추가 실패'); return; }
+  closeConcurrentModal();
+  loadOrg();
+}
+
+var _pastedPhotoBlob = null;
+function previewPhoto(input){
+  if(input.files && input.files[0]){
+    _pastedPhotoBlob = null;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = document.getElementById('fPhotoPreview');
+      img.src = e.target.result; img.style.display = 'block';
+      document.getElementById('fNoPhoto').style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function showPhotoBlob(blob){
+  _pastedPhotoBlob = blob;
+  var url = URL.createObjectURL(blob);
+  var img = document.getElementById('fPhotoPreview');
+  img.src = url; img.style.display = 'block';
+  document.getElementById('fNoPhoto').style.display = 'none';
+}
+document.addEventListener('paste', function(e){
+  if(!document.getElementById('memberModal').classList.contains('open')) return;
+  var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for(var i=0;i<items.length;i++){
+    if(items[i].type.indexOf('image')===0){
+      e.preventDefault();
+      showPhotoBlob(items[i].getAsFile());
+      break;
+    }
+  }
+});
+
+async function saveMember(){
+  var name = document.getElementById('fName').value.trim();
+  if(!name){ alert('이름을 입력하세요.'); return; }
+  var memberId = document.getElementById('fMemberId').value;
+  var body = {
+    dept_id: parseInt(document.getElementById('fDept').value),
+    team_id: document.getElementById('fTeam').value ? parseInt(document.getElementById('fTeam').value) : null,
+    name: name,
+    rank: document.getElementById('fRank').value,
+    phone: document.getElementById('fPhone').value.trim(),
+    hire_date: document.getElementById('fHireDate').value,
+    team_tag: document.getElementById('fTeamTag').value.trim(),
+    is_head: document.getElementById('fIsHead').checked,
+    is_team_leader: document.getElementById('fIsTeamLeader').checked
+  };
+  var url = memberId ? '/api/org/members/'+memberId : '/api/org/members';
+  var method = memberId ? 'PUT' : 'POST';
+  var r = await fetch(url, {method:method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(!r.ok){ alert('저장 실패'); return; }
+  var res = await r.json();
+  var finalId = memberId || res.id;
+  // 사진 업로드 (파일 또는 붙여넣기)
+  var photoFile = document.getElementById('fPhoto').files[0] || _pastedPhotoBlob;
+  if(photoFile){
+    var fd = new FormData(); fd.append('photo', photoFile, 'photo.png');
+    await fetch('/api/org/members/'+finalId+'/photo', {method:'POST', body:fd});
+  }
+  closeMemberModal();
+  loadOrg();
+}
+
+async function confirmDeleteMember(id, name){
+  if(!confirm(name+' 을(를) 삭제하시겠습니까?')) return;
+  await fetch('/api/org/members/'+id, {method:'DELETE'});
+  loadOrg();
+}
+async function deleteMember(){
+  var id = document.getElementById('fMemberId').value;
+  var name = document.getElementById('fName').value;
+  if(!id) return;
+  if(!confirm(name+' 을(를) 삭제하시겠습니까?')) return;
+  await fetch('/api/org/members/'+id, {method:'DELETE'});
+  closeMemberModal(); loadOrg();
+}
+
+/* ── 부서/팀 이름 모달 ── */
+var _nameModalCb = null;
+function openNameModal(type, id, label, sortOrder){
+  document.getElementById('nameModalTitle').textContent = type==='dept' ? '부서 이름 변경' : '팀 수정';
+  document.getElementById('fNameVal').value = label||'';
+  var sortWrap = document.getElementById('fSortOrderWrap');
+  if(type === 'team'){
+    sortWrap.style.display = 'block';
+    document.getElementById('fSortOrder').value = sortOrder !== undefined ? sortOrder : 0;
+  } else {
+    sortWrap.style.display = 'none';
+  }
+  _nameModalCb = async function(){
+    var newLabel = document.getElementById('fNameVal').value.trim();
+    if(!newLabel){ alert('이름을 입력하세요.'); return; }
+    var body = {label: newLabel};
+    if(type === 'team') body.sort_order = parseInt(document.getElementById('fSortOrder').value)||0;
+    var url = type==='dept' ? '/api/org/departments/'+id : '/api/org/teams/'+id;
+    await fetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    document.getElementById('nameModal').classList.remove('open');
+    loadOrg();
+  };
+  document.getElementById('nameModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('fNameVal').focus(); document.getElementById('fNameVal').select(); }, 50);
+}
+function saveNameModal(){ if(_nameModalCb) _nameModalCb(); }
+
+/* ── 부서 추가 ── */
+function openDeptModal(){
+  document.getElementById('nameModalTitle').textContent = '새 부서 추가';
+  document.getElementById('fNameVal').value = '';
+  _nameModalCb = async function(){
+    var label = document.getElementById('fNameVal').value.trim();
+    if(!label){ alert('부서 이름을 입력하세요.'); return; }
+    await fetch('/api/org/departments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({label:label, dept_type:'regular'})});
+    document.getElementById('nameModal').classList.remove('open');
+    loadOrg();
+  };
+  document.getElementById('nameModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('fNameVal').focus(); }, 50);
+}
+
+async function confirmDeleteDept(id, label){
+  if(!confirm('「'+label+'」 부서와 모든 소속 직원을 삭제합니다.\n계속하시겠습니까?')) return;
+  await fetch('/api/org/departments/'+id, {method:'DELETE'});
+  loadOrg();
+}
+
+/* ── 팀 추가 ── */
+function openTeamModal(deptId){
+  document.getElementById('nameModalTitle').textContent = '새 팀 추가';
+  document.getElementById('fNameVal').value = '';
+  _nameModalCb = async function(){
+    var label = document.getElementById('fNameVal').value.trim();
+    if(!label){ alert('팀 이름을 입력하세요.'); return; }
+    await fetch('/api/org/teams', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dept_id:deptId, label:label})});
+    document.getElementById('nameModal').classList.remove('open');
+    loadOrg();
+  };
+  document.getElementById('nameModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('fNameVal').focus(); }, 50);
+}
+
+async function confirmDeleteTeam(id, label){
+  if(!confirm('「'+label+'」 팀을 삭제합니다. (소속 직원은 부서 직속으로 이동)\n계속하시겠습니까?')) return;
+  await fetch('/api/org/teams/'+id, {method:'DELETE'});
+  loadOrg();
+}
+
+/* ══════════════════════════════════
+   휴가관리
+══════════════════════════════════ */
+var lvMembers=[], lvRequests=[];
+var lvActiveDept='all', lvInited=false;
+var LV_MY_NAME={{ current_user_name|tojson }};
+var LV_CAN_WRITE={{ 'true' if lv_can_write else 'false' }};
+var LV_USER_SCOPE={{ lv_user_scope|tojson }};
+
+var fpStart, fpEnd;
+function initLeave(){
+  if(lvInited) return;
+  lvInited=true;
+  document.getElementById('lvYear').textContent=lvYear+'년';
+  var fpOpts={locale:'ko', dateFormat:'Y-m-d', disableMobile:true, allowInput:true, clickOpens:false,
+    parseDate:function(s){ if(/^\d{2}-/.test(s)) s='20'+s; return flatpickr.parseDate(s,'Y-m-d'); },
+    onChange:function(){ lvCalcDays(); }};
+  fpStart=flatpickr('#lvStart', Object.assign({}, fpOpts, {
+    onClose:function(sel,ds){ if(fpEnd&&(!fpEnd.selectedDates.length||fpEnd.selectedDates[0]<sel[0])) fpEnd.setDate(ds); }
+  }));
+  fpEnd=flatpickr('#lvEnd', Object.assign({}, fpOpts, {}));
+  document.getElementById('lvStartCalBtn').onclick=function(){ fpStart.open(); };
+  document.getElementById('lvEndCalBtn').onclick=function(){ fpEnd.open(); };
+  loadLeaveMembers();
+}
+
+async function loadLeaveMembers(){
+  var r=await fetch('/api/hr/leave/members');
+  lvMembers=await r.json();
+  renderLvMemberList();
+  populateLvMemberSel();
+  buildDeptFilter();
+  loadLeaveRequests();
+}
+
+var lvMemberSearchQ='';
+function lvDoSearch(){
+  lvMemberSearchQ=document.getElementById('lvMemberSearchInput').value.trim().toLowerCase();
+  renderLvMemberList();
+}
+function lvResetSearch(){
+  document.getElementById('lvMemberSearchInput').value='';
+  lvMemberSearchQ='';
+  renderLvMemberList();
+}
+function renderLvMemberList(){
+  var html='';
+  var pool;
+  if(LV_USER_SCOPE.type==='admin') pool=lvMembers;
+  else if(LV_USER_SCOPE.type==='dept_head') pool=lvMembers.filter(function(m){return m.dept_id===LV_USER_SCOPE.dept_id;});
+  else if(LV_USER_SCOPE.type==='team_leader') pool=lvMembers.filter(function(m){return LV_USER_SCOPE.team_ids.indexOf(m.team_id)!==-1;});
+  else pool=lvMembers.filter(function(m){return m.name===LV_MY_NAME;});
+  var filtered=(lvMemberSearchQ
+    ?pool.filter(function(m){return m.name.toLowerCase().includes(lvMemberSearchQ);})
+    :pool.slice()).sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+  filtered.forEach(function(m){
+    var cls=m.remaining<=0?'empty':m.remaining<=3?'warn':'ok';
+    var badge=m.hire_date
+      ?'<span class="lv-badge '+cls+'"><span class="lv-n">'+m.entitled+'</span>/<span class="lv-n">'+m.used+'</span>/<span class="lv-n">'+m.remaining+'</span></span>'
+      :'<span class="lv-badge warn">입사일 미입력</span>';
+    html+='<div class="lv-member-row" onclick="lvFilterMember('+m.id+')" id="lvMrow_'+m.id+'">'
+      +'<div><div class="lv-member-name">'+esc(m.name)+' <span style="font-size:10px;color:#888;font-weight:400">'+esc(m.rank)+'</span></div>'
+      +'<div class="lv-member-dept">'+esc(m.dept_label)+(m.team_label?' · '+esc(m.team_label):'')+'</div></div>'+badge+'</div>';
+  });
+  document.getElementById('lvMemberList').innerHTML=html||'<div style="padding:20px;text-align:center;color:#aaa;font-size:12px">직원 없음</div>';
+}
+
+function populateLvMemberSel(filter){
+  var sel=document.getElementById('lvMemberSel');
+  var prevVal=sel.value;
+  sel.innerHTML='';
+  var q=(filter||'').trim().toLowerCase();
+  lvMembers.filter(function(m){ return !q||m.name.toLowerCase().includes(q); })
+  .forEach(function(m){
+    var o=document.createElement('option');
+    o.value=m.id;
+    o.dataset.ap1=m.approver1_name||'';
+    o.dataset.ap2=m.approver2_name||'-';
+    o.dataset.entitled=m.entitled;
+    o.dataset.used=m.used;
+    o.dataset.remaining=m.remaining;
+    o.textContent=m.dept_label+' - '+m.name+' '+m.rank;
+    sel.appendChild(o);
+  });
+  if(prevVal) sel.value=prevVal;
+  if(!sel.value && sel.options.length) sel.selectedIndex=0;
+  lvUpdateApprover();
+}
+
+function lvFilterMemberSel(q){
+  populateLvMemberSel(q);
+  lvUpdateApprover();
+}
+
+function lvApStatusBadge(status){
+  var color=status==='승인'?'#16a34a':status==='반려'?'#dc2626':'#2563eb';
+  return '<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff;background:'+color+'">'+esc(status||'신청')+'</span>';
+}
+
+function lvUpdateApprover(ap1Status, ap2Status){
+  var sel=document.getElementById('lvMemberSel');
+  var opt=sel.options[sel.selectedIndex];
+  var ap1=opt?opt.dataset.ap1||'':'';
+  var ap2=opt?opt.dataset.ap2||'-':'-';
+  // 1차 박스
+  var ap1Box=document.getElementById('lvAp1Box');
+  if(ap1){
+    ap1Box.style.display='';
+    document.getElementById('lvAp1Name').textContent=ap1;
+    document.getElementById('lvAp1StatusBadge').innerHTML=lvApStatusBadge(ap1Status||'신청');
+  } else {
+    ap1Box.style.display='none';
+  }
+  // 2차 박스
+  document.getElementById('lvAp2Name').textContent=ap2;
+  document.getElementById('lvAp2StatusBadge').innerHTML=lvApStatusBadge(ap2Status||'신청');
+  // 연차 현황
+  document.getElementById('lvEntitled').textContent=opt?opt.dataset.entitled||'-':'-';
+  document.getElementById('lvUsed').textContent=opt?opt.dataset.used||'0':'-';
+  var rem=opt?parseFloat(opt.dataset.remaining||0):null;
+  var remEl=document.getElementById('lvRemaining');
+  remEl.textContent=rem!==null?rem:'-';
+  remEl.style.color=rem!==null?(rem<=0?'#dc2626':rem<=3?'#d97706':'#15803d'):'#374151';
+}
+
+function buildDeptFilter(){
+  var depts={};
+  lvMembers.forEach(function(m){ depts[m.dept_id]=m.dept_label; });
+  var html='<button class="lv-dept-btn on" data-dept="all" onclick="lvSetDept(\'all\')">전체</button>';
+  Object.keys(depts).forEach(function(did){
+    html+='<button class="lv-dept-btn" data-dept="'+did+'" onclick="lvSetDept('+did+')">'+esc(depts[did])+'</button>';
+  });
+  document.getElementById('lvDeptFilter').innerHTML=html;
+}
+
+function lvSetDept(did){
+  lvActiveDept=did;
+  document.querySelectorAll('.lv-dept-btn').forEach(function(b){
+    b.classList.toggle('on', String(b.dataset.dept)===String(did));
+  });
+  renderLvCalendar();
+}
+
+var lvSelectedMember=null;
+function lvFilterMember(id){
+  lvSelectedMember = (lvSelectedMember===id) ? null : id;
+  document.querySelectorAll('.lv-member-row').forEach(function(r){
+    r.classList.toggle('sel', parseInt(r.id.replace('lvMrow_',''))===lvSelectedMember);
+  });
+  renderLvCalendar();
+  renderLvReqList();
+  if(lvSelectedMember) renderLvMemberDetail(lvSelectedMember);
+  else closeLvMemberDetail();
+}
+function closeLvMemberDetail(){
+  document.getElementById('lvMemberDetail').classList.remove('open');
+}
+function renderLvMemberDetail(id){
+  var m=lvMembers.find(function(x){return x.id===id;});
+  if(!m) return;
+  document.getElementById('lvMdName').textContent=m.name+' '+m.rank+' · '+m.dept_label;
+  document.getElementById('lvMdEntitled').textContent=m.entitled;
+  document.getElementById('lvMdUsed').textContent=m.used;
+  var remEl=document.getElementById('lvMdRemaining');
+  remEl.textContent=m.remaining;
+  remEl.style.color=m.remaining<=0?'#dc2626':m.remaining<=3?'#d97706':'#15803d';
+  document.getElementById('lvMdInfo').innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px">'
+    +'<div><span style="font-size:11px;color:#888;display:block">입사일</span>'+(m.hire_date||'-')+'</div>'
+    +'<div><span style="font-size:11px;color:#888;display:block">부서</span>'+esc(m.dept_label)+'</div>'
+    +'<div><span style="font-size:11px;color:#888;display:block">직급</span>'+esc(m.rank)+'</div>'
+    +'<div><span style="font-size:11px;color:#888;display:block">연락처</span>'+(m.phone||'-')+'</div>'
+    +'</div>';
+  var reqs=lvRequests.filter(function(r){return r.member_id===id;});
+  reqs.sort(function(a,b){return a.start_date<b.start_date?1:-1;});
+  if(!reqs.length){
+    document.getElementById('lvMdReqList').innerHTML='<div style="padding:10px;text-align:center;color:#aaa;font-size:12px">신청 내역 없음</div>';
+  } else {
+    var html='';
+    reqs.forEach(function(r){
+      var scls=r.status==='승인'?'approved':r.status==='반려'?'rejected':'pending';
+      var period=r.start_date===r.end_date?r.start_date:r.start_date+' ~ '+r.end_date;
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer" onclick="openLeaveModalEdit('+r.id+')">'
+        +'<span style="color:#444">'+period+'</span>'
+        +'<span style="font-size:11px;color:#888">'+r.days+'일</span>'
+        +'<span style="font-size:11px;color:#555">'+esc(r.leave_type)+'</span>'
+        +'<span class="lv-status '+scls+'" style="margin-left:auto">'+r.status+'</span></div>';
+    });
+    document.getElementById('lvMdReqList').innerHTML=html;
+  }
+  document.getElementById('lvSettleDate').value='';
+  document.getElementById('lvSettleResult').innerHTML='';
+  document.getElementById('lvSettleSection').style.display = 'block';
+  // flatpickr 초기화 (최초 1회)
+  if(!window._fpSettle){
+    window._fpSettle = flatpickr('#lvSettleDate', {
+      locale:'ko', dateFormat:'Y-m-d', disableMobile:true, allowInput:true, clickOpens:false,
+      parseDate:function(s){ if(/^\d{2}-/.test(s)) s='20'+s; return flatpickr.parseDate(s,'Y-m-d'); }
+    });
+    document.getElementById('lvSettleCalBtn').onclick = function(){ window._fpSettle.open(); };
+  }
+  document.getElementById('lvMemberDetail').classList.add('open');
+  document.getElementById('lvMemberDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function calcSettle(){
+  if(!lvSelectedMember){ alert('직원을 선택하세요'); return; }
+  var d=document.getElementById('lvSettleDate').value.trim();
+  if(!d){ alert('퇴직일을 입력하세요'); return; }
+  var res=await fetch('/api/hr/leave/settle?member_id='+lvSelectedMember+'&leave_date='+encodeURIComponent(d));
+  var data=await res.json();
+  if(data.error){ alert(data.error); return; }
+  var html='';
+  data.periods.forEach(function(p){
+    var bc=p.balance<0?'#dc2626':p.balance>0?'#15803d':'#555';
+    var bt=p.balance>0?'+'+p.balance+'일 지급':p.balance<0?p.balance+'일 반환':'정산없음';
+    html+='<div style="border:1px solid #e5e7eb;border-radius:5px;padding:8px;margin-bottom:5px;font-size:12px">'
+      +'<div style="font-weight:700;color:#444;margin-bottom:5px">'+p.label+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">'
+      +'<div><div style="font-size:10px;color:#888">근속월</div><div style="font-weight:700">'+p.months+'개월</div></div>'
+      +'<div><div style="font-size:10px;color:#888">실부여</div><div style="font-weight:700">'+p.entitled+'일</div></div>'
+      +'<div><div style="font-size:10px;color:#888;color:#d97706">사용</div><div style="font-weight:700;color:#d97706">'+p.used+'일</div></div>'
+      +'<div><div style="font-size:10px;color:#888">정산</div><div style="font-weight:700;color:'+bc+'">'+bt+'</div></div>'
+      +'</div></div>';
+  });
+  var lbc=data.last_balance<0?'#dc2626':data.last_balance>0?'#15803d':'#555';
+  html+='<div style="background:#1a3a5c;color:#fff;border-radius:5px;padding:10px 12px;margin-top:4px">'
+    +'<div style="font-size:11px;font-weight:700;margin-bottom:8px;opacity:.8">최종 정산 요약</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center">'
+    +'<div style="background:rgba(255,255,255,.1);border-radius:4px;padding:8px 4px">'
+      +'<div style="font-size:10px;opacity:.7;margin-bottom:3px">총 연차발생일</div>'
+      +'<div style="font-size:16px;font-weight:700">'+data.total_entitled+'일</div>'
+    +'</div>'
+    +'<div style="background:rgba(255,255,255,.1);border-radius:4px;padding:8px 4px">'
+      +'<div style="font-size:10px;opacity:.7;margin-bottom:3px">총 연차부여일</div>'
+      +'<div style="font-size:16px;font-weight:700">'+data.total_pre_given+'일</div>'
+    +'</div>'
+    +'<div style="background:rgba(255,255,255,.15);border-radius:4px;padding:8px 4px">'
+      +'<div style="font-size:10px;opacity:.7;margin-bottom:3px">당해년도 잔여일</div>'
+      +'<div style="font-size:16px;font-weight:700;color:'+(data.last_balance<0?'#fca5a5':data.last_balance>0?'#86efac':'#fff')+'">'+data.last_balance+'일</div>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+  document.getElementById('lvSettleResult').innerHTML=html;
+}
+
+async function loadLeaveRequests(){
+  var r=await fetch('/api/hr/leave/requests?year='+lvYear+'&month='+lvMonth);
+  lvRequests=await r.json();
+  renderLvCalendar();
+  renderLvReqList();
+}
+
+function lvChangeMonth(d){
+  lvMonth+=d;
+  if(lvMonth>12){lvMonth=1;lvYear++;}
+  if(lvMonth<1){lvMonth=12;lvYear--;}
+  loadLeaveRequests();
+}
+function lvGoToday(){
+  lvYear=new Date().getFullYear(); lvMonth=new Date().getMonth()+1;
+  loadLeaveRequests();
+}
+
+function renderLvCalendar(){
+  var title=lvYear+'년 '+lvMonth+'월';
+  document.getElementById('lvCalTitle').textContent=title;
+  var today=new Date(); today.setHours(0,0,0,0);
+  var first=new Date(lvYear,lvMonth-1,1);
+  var last=new Date(lvYear,lvMonth,0);
+  var startDay=(first.getDay()+6)%7; // 월요일=0
+  var filtered=lvRequests.filter(function(r){
+    if(r.status!=='승인') return false;
+    if(lvActiveDept!=='all' && String(r.dept_id)!==String(lvActiveDept)) return false;
+    return true;
+  });
+  var html='';
+  var d=new Date(first); d.setDate(d.getDate()-startDay);
+  for(var row=0;row<6;row++){
+    html+='<tr>';
+    for(var col=0;col<7;col++){
+      var isToday=d.getTime()===today.getTime();
+      var isOther=d.getMonth()!==lvMonth-1;
+      var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      var dayCls=(isToday?' today':'')+(isOther?' other-month':'');
+      var dateCls=col===6?' sun':col===5?' sat':'';
+      html+='<td class="'+dayCls.trim()+'">';
+      html+='<div class="lv-cal-date'+dateCls+'">'+d.getDate()+'</div>';
+      filtered.forEach(function(r){
+        if(ds>=r.start_date&&ds<=r.end_date){
+          var cls=r.status==='승인'?'approved':'pending';
+          var lbl=esc(r.name)+(r.leave_type?' ['+esc(r.leave_type)+']':'');
+          html+='<div class="lv-cal-item '+cls+'" title="'+lbl+' · '+r.status+'" onclick="openLeaveModalEdit('+r.id+')">'+lbl+'</div>';
+        }
+      });
+      html+='</td>';
+      d.setDate(d.getDate()+1);
+    }
+    html+='</tr>';
+    if(d>last&&col===6) break;
+  }
+  document.getElementById('lvCalBody').innerHTML=html;
+}
+
+function renderLvReqList(){
+  var list=lvRequests.filter(function(r){
+    if(lvSelectedMember && r.member_id!==lvSelectedMember) return false;
+    if(lvActiveDept!=='all' && String(r.dept_id)!==String(lvActiveDept)) return false;
+    return true;
+  });
+  list.sort(function(a,b){return a.start_date<b.start_date?1:-1;});
+  document.getElementById('lvReqCount').textContent=list.length+'건';
+  if(!list.length){
+    document.getElementById('lvReqBody').innerHTML='<div style="padding:16px;text-align:center;color:#aaa;font-size:12px">신청 내역 없음</div>';
+    return;
+  }
+  var html='';
+  list.forEach(function(r){
+    var scls=r.status==='승인'?'approved':r.status==='반려'?'rejected':'pending'; // 신청=pending
+    var period=r.start_date+' ~ '+r.end_date;
+    var ap1Cls=r.approver1_status==='승인'?'approved':r.approver1_status==='반려'?'rejected':'pending';
+    var ap2Cls=r.approver2_status==='승인'?'approved':r.approver2_status==='반려'?'rejected':'pending';
+    var ap1Cell=r.approver1_name?('<span class="lv-status '+ap1Cls+'">'+esc(r.approver1_name)+' · '+esc(r.approver1_status||'-')+'</span>'):'-';
+    var ap2Cell=r.approver2_name?('<span class="lv-status '+ap2Cls+'">'+esc(r.approver2_name)+' · '+esc(r.approver2_status||'-')+'</span>'):'-';
+    html+='<div class="lv-req-row" style="cursor:pointer" onclick="openLeaveModalEdit('+r.id+')">'
+      +'<span>'+esc(r.name)+'</span><span style="font-size:11px;color:#888">'+esc(r.dept_label)+'</span>'
+      +'<span>'+period+'</span><span>'+r.days+'일</span><span style="font-size:11px">'+esc(r.leave_type)+'</span>'
+      +'<span style="font-size:11px;color:#1a3a5c;font-weight:600">'+(r.approver1_name?esc(r.approver1_name)+' → ':'')+esc(r.approver2_name||'-')+'</span>'
+      +'<span style="font-size:11px;color:#666">'+esc(r.reason||'')+'</span>'
+      +'<span>'+ap1Cell+'</span>'
+      +'<span>'+ap2Cell+'</span>'
+      +'<span class="lv-status '+scls+'">'+r.status+'</span></div>';
+  });
+  document.getElementById('lvReqBody').innerHTML=html;
+}
+
+function openLeaveModal(memberId){
+  document.getElementById('lvReqId').value='';
+  document.getElementById('lvModalTitle').textContent='연차 신청';
+  document.getElementById('lvDelBtn').style.display='none';
+  document.getElementById('lvType').value='연차';
+  document.getElementById('lvStatus').value='신청';
+  if(fpStart) fpStart.clear(); else document.getElementById('lvStart').value='';
+  if(fpEnd) fpEnd.clear(); else document.getElementById('lvEnd').value='';
+  document.getElementById('lvDays').value='1';
+  document.getElementById('lvDaysBadge').textContent='1일';
+  document.getElementById('lvReason').value='';
+
+  var me = lvMembers.find(function(m){ return m.name===LV_MY_NAME; });
+  if(me) document.getElementById('lvMemberSel').value = me.id;
+  document.getElementById('lvMemberNameLabel').textContent = me ? (me.name+(me.rank?' ('+me.rank+')':'')) : (LV_MY_NAME||'');
+  lvSetMemberFieldsLock(!LV_CAN_WRITE);
+  lvUpdateApprover('신청','신청');
+  document.getElementById('lvModal').classList.add('open');
+}
+
+function lvSetMemberFieldsLock(locked){
+  var statusSel = document.getElementById('lvStatus');
+  if(locked){ statusSel.value='신청'; statusSel.disabled=true; }
+  else { statusSel.disabled=false; }
+}
+
+function openLeaveModalEdit(id){
+  var r=lvRequests.find(function(x){return x.id===id;});
+  if(!r) return;
+  // 일반 사용자는 본인 신청건만 열 수 있음
+  if(!LV_CAN_WRITE && r.name!==LV_MY_NAME) return;
+  document.getElementById('lvReqId').value=id;
+  document.getElementById('lvModalTitle').textContent='연차 수정';
+  document.getElementById('lvDelBtn').style.display= LV_CAN_WRITE ? '' : 'none';
+  document.getElementById('lvMemberSel').value=r.member_id;
+  document.getElementById('lvMemberNameLabel').textContent=r.name||'';
+  lvUpdateApprover(r.approver1_status||'신청', r.approver2_status||'신청');
+  document.getElementById('lvType').value=r.leave_type;
+  document.getElementById('lvStatus').value=r.status;
+  if(fpStart) fpStart.setDate(r.start_date); else document.getElementById('lvStart').value=r.start_date;
+  if(fpEnd) fpEnd.setDate(r.end_date); else document.getElementById('lvEnd').value=r.end_date;
+  document.getElementById('lvDays').value=r.days;
+  document.getElementById('lvDaysBadge').textContent=r.days+'일';
+  document.getElementById('lvReason').value=r.reason||'';
+  lvSetMemberFieldsLock(!LV_CAN_WRITE);
+  document.getElementById('lvModal').classList.add('open');
+}
+
+function closeLeaveModal(){
+  document.getElementById('lvModal').classList.remove('open');
+}
+
+function lvCalcDays(){
+  var s=document.getElementById('lvStart').value;
+  var e=document.getElementById('lvEnd').value||s;
+  if(!s){return;}
+  if(!document.getElementById('lvEnd').value) document.getElementById('lvEnd').value=s;
+  var sd=new Date(s), ed=new Date(e);
+  var days=0;
+  var cur=new Date(sd);
+  while(cur<=ed){
+    var dow=cur.getDay();
+    if(dow!==0&&dow!==6) days++;
+    cur.setDate(cur.getDate()+1);
+  }
+  var type=document.getElementById('lvType').value;
+  if(type==='반차(오전)'||type==='반차(오후)') days=days*0.5;
+  document.getElementById('lvDays').value=days||0.5;
+  document.getElementById('lvDaysBadge').textContent=(days||0.5)+'일';
+}
+
+async function saveLeaveReq(){
+  var rid=document.getElementById('lvReqId').value;
+  var body={
+    member_id:parseInt(document.getElementById('lvMemberSel').value),
+    leave_type:document.getElementById('lvType').value,
+    start_date:document.getElementById('lvStart').value,
+    end_date:document.getElementById('lvEnd').value||document.getElementById('lvStart').value,
+    days:parseFloat(document.getElementById('lvDays').value)||1,
+    reason:document.getElementById('lvReason').value.trim(),
+    status:document.getElementById('lvStatus').value
+  };
+  if(!body.start_date){alert('시작일을 입력하세요.');return;}
+  var url=rid?'/api/hr/leave/requests/'+rid:'/api/hr/leave/requests';
+  var method=rid?'PUT':'POST';
+  var r=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok){alert('저장 실패');return;}
+  closeLeaveModal();
+  loadLeaveMembers();
+}
+
+async function deleteLeaveReq(){
+  var rid=document.getElementById('lvReqId').value;
+  if(!rid||!confirm('이 신청을 삭제하시겠습니까?')) return;
+  await fetch('/api/hr/leave/requests/'+rid,{method:'DELETE'});
+  closeLeaveModal();
+  loadLeaveMembers();
+}
+var fpHireDate;
+window.addEventListener('load',function(){
+  var hireDateEl=document.getElementById('fHireDate');
+  if(hireDateEl&&typeof flatpickr!=='undefined'){
+    fpHireDate=flatpickr(hireDateEl,{locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+      parseDate:function(s){if(/^\d{2}-/.test(s))s='20'+s;return flatpickr.parseDate(s,'Y-m-d');},
+      onOpen:function(sel,ds,fp){var v=fp.input.value;if(v&&!sel.length)fp.setDate(v,false);}});
+  }
+});
+
+/* ── 조직도 순서 저장 ── */
+async function saveCurrentOrder(){
+  var items=[];
+  document.querySelectorAll('.oc-team-cards, .oc-dept-head-wrap, .oc-strategy-members').forEach(function(container){
+    container.querySelectorAll(':scope > .oc-card').forEach(function(card){
+      var id=parseInt(card.dataset.mid);
+      if(!isNaN(id)) items.push({id:id});
+    });
+  });
+  if(items.length===0){alert('저장할 카드가 없습니다.');return;}
+  var btn=document.getElementById('saveOrderBtn');
+  var orig=btn.textContent;
+  btn.textContent='저장 중...'; btn.disabled=true;
+  var r=await fetch('/api/org/members/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:items})});
+  btn.disabled=false;
+  if(r.ok){
+    btn.textContent='✓ 저장됨';
+    setTimeout(function(){btn.textContent=orig;},2000);
+  } else {
+    btn.textContent=orig;
+    alert('저장 실패');
+  }
+}
+
+/* ── 근태관리 ── */
+/* ── 근로조건 ── */
+var attCond = {workStart:'09:00',workEnd:'18:00',breakStart:'12:00',breakEnd:'13:00',otStart:'18:00',otEnd:'22:00',holStart:'09:00',holEnd:'18:00'};
+
+function attHHMMToMin(t){
+  if(!t) return NaN;
+  var s=String(t).trim();
+  // HH:MM:SS 형식 지원
+  var m=s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  return m ? parseInt(m[1])*60+parseInt(m[2]) : NaN;
+}
+function attMinToHHMM(min){
+  if(isNaN(min)||min<0) return '';
+  var h=Math.floor(min/60),m=min%60;
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+function attCondDailyCalc(){
+  var ws=attHHMMToMin(attCond.workStart),we=attHHMMToMin(attCond.workEnd);
+  var bs=attHHMMToMin(attCond.breakStart),be=attHHMMToMin(attCond.breakEnd);
+  var brk=Math.max(0,Math.min(be,we)-Math.max(bs,ws));
+  var d=we-ws-brk, h=Math.floor(d/60), m=d%60;
+  var el=document.getElementById('attCondDailyHours');
+  if(el) el.textContent=h+'시간'+(m>0?m+'분':'');
+}
+function attLoadCond(){
+  var s=localStorage.getItem('attWorkCond');
+  if(s){try{attCond=JSON.parse(s);}catch(e){}}
+  document.getElementById('attCondWorkStart').value=attCond.workStart;
+  document.getElementById('attCondWorkEnd').value=attCond.workEnd;
+  document.getElementById('attCondBreakStart').value=attCond.breakStart;
+  document.getElementById('attCondBreakEnd').value=attCond.breakEnd;
+  document.getElementById('attCondOTStart').value=attCond.otStart;
+  document.getElementById('attCondOTEnd').value=attCond.otEnd;
+  document.getElementById('attCondHolStart').value=attCond.holStart||attCond.workStart;
+  document.getElementById('attCondHolEnd').value=attCond.holEnd||attCond.workEnd;
+  attCondDailyCalc();
+}
+function attSaveCond(){
+  attCond={
+    workStart:document.getElementById('attCondWorkStart').value||'09:00',
+    workEnd:document.getElementById('attCondWorkEnd').value||'18:00',
+    breakStart:document.getElementById('attCondBreakStart').value||'12:00',
+    breakEnd:document.getElementById('attCondBreakEnd').value||'13:00',
+    otStart:document.getElementById('attCondOTStart').value||'18:00',
+    otEnd:document.getElementById('attCondOTEnd').value||'22:00',
+    holStart:document.getElementById('attCondHolStart').value||'09:00',
+    holEnd:document.getElementById('attCondHolEnd').value||'18:00'
+  };
+  localStorage.setItem('attWorkCond',JSON.stringify(attCond));
+  attCondDailyCalc();
+  if(attEmployees.length>0) attRecalcAll();
+}
+function attCalcRow(r){
+  var ws=attHHMMToMin(attCond.workStart),we=attHHMMToMin(attCond.workEnd);
+  var bs=attHHMMToMin(attCond.breakStart),be=attHHMMToMin(attCond.breakEnd);
+  var ots=attHHMMToMin(attCond.otStart),ote=attHHMMToMin(attCond.otEnd);
+  var ci=attHHMMToMin(r.checkin),co=attHHMMToMin(r.checkout);
+  if(isNaN(ci)||isNaN(co)||co<=0) return {workHours:'',overtime:0,holidayWork:0};
+  if(co<ci) co+=1440;
+  if(!isNaN(ote)&&!isNaN(ots)&&ote<ots) ote+=1440;
+
+  var isHol=r.is_weekend||r.is_holiday;
+  if(co<=ci) return {workHours:'00:00',overtime:0,holidayWork:0};
+
+  // 근무시간: 실제 출근~퇴근 기준
+  var brk=Math.max(0,Math.min(be,co)-Math.max(bs,ci));
+  var total=Math.max(0,co-ci-brk);
+
+  var ot=0, hw=0;
+  if(isHol){
+    // 휴일근로: holStart~holEnd 범위 내 근무
+    var hols=attHHMMToMin(attCond.holStart||attCond.workStart);
+    var hole=attHHMMToMin(attCond.holEnd||attCond.workEnd);
+    var ciH=isNaN(hols)?ci:Math.max(ci,hols);
+    var coH=isNaN(hole)?co:Math.min(co,hole);
+    if(coH>ciH){
+      var brkH=Math.max(0,Math.min(be,coH)-Math.max(bs,ciH));
+      hw=Math.max(0,coH-ciH-brkH);
+    }
+  } else {
+    // 연장근로: otStart~otEnd 범위 내 근무
+    var ciOT=isNaN(ots)?we:Math.max(ci,ots);
+    var coOT=isNaN(ote)?co:Math.min(co,ote);
+    if(coOT>ciOT){
+      var brkOT=Math.max(0,Math.min(be,coOT)-Math.max(bs,ciOT));
+      ot=Math.max(0,coOT-ciOT-brkOT);
+    }
+  }
+  return {workHours:attMinToHHMM(total),overtime:ot,holidayWork:hw};
+}
+function attRecalcAll(){
+  attEmployees.forEach(function(name){
+    (attData[name]||[]).forEach(function(r){
+      var c=attCalcRow(r);
+      r.work_hours=c.workHours;
+      r.overtime=c.overtime;
+      r.holiday_work=c.holidayWork;
+    });
+  });
+  attRender();
+}
+
+var attData = {};
+var attMonth = '';
+var attEmployees = [];
+var attHolidays = new Set(); // "6/15" 형식
+
+function attGetMonthYear(){
+  var m = attMonth.match(/(\d+)년\s*(\d+)월/);
+  return m ? {year:parseInt(m[1]), month:parseInt(m[2])} : null;
+}
+
+function attRenderCal(){
+  var my = attGetMonthYear();
+  var wrap = document.getElementById('attCalWrap');
+  var grid = document.getElementById('attCalGrid');
+  if(!my||!wrap||!grid) return;
+  wrap.style.display = 'flex';
+
+  var y=my.year, mo=my.month;
+  var firstDow = new Date(y, mo-1, 1).getDay();
+  var lastDate = new Date(y, mo, 0).getDate();
+  var dayLabels = ['일','월','화','수','목','금','토'];
+
+  var html = '<table style="border-collapse:collapse;font-size:13px;width:100%">';
+  html += '<tr>' + dayLabels.map(function(d,i){
+    return '<th style="padding:7px 0;text-align:center;color:'+(i===0?'#c00':i===6?'#1a3a5c':'#333')+';font-weight:700">'+d+'</th>';
+  }).join('') + '</tr><tr>';
+
+  for(var i=0;i<firstDow;i++) html += '<td></td>';
+  var col = firstDow;
+  for(var d=1;d<=lastDate;d++){
+    var key = mo+'/'+d;
+    var dow = (firstDow + d - 1) % 7;
+    var isWk = dow===0||dow===6;
+    var isHol = attHolidays.has(key);
+    var bg = isHol ? '#ffe0e0' : (isWk ? '#f5f5f5' : '#fff');
+    var color = (isHol||dow===0) ? '#c00' : (dow===6 ? '#1a3a5c' : '#222');
+    var fw = isHol ? '700' : 'normal';
+    html += '<td onclick="attToggleCal(\''+key+'\')" style="padding:8px 0;text-align:center;cursor:pointer;border:1px solid #e0e0e0;background:'+bg+';color:'+color+';font-weight:'+fw+'">'+d+'</td>';
+    col++;
+    if(col%7===0 && d<lastDate) html += '</tr><tr>';
+  }
+  while(col%7!==0){ html += '<td style="border:1px solid #e0e0e0"></td>'; col++; }
+  html += '</tr></table>';
+  grid.innerHTML = html;
+}
+
+function attRenderP1Summary(){
+  var name = document.getElementById('attEmpSel').value;
+  var el = document.getElementById('attP1Summary');
+  if(!el) return;
+  if(!name){ el.style.display='none'; return; }
+
+  var goData=[], exData=[];
+  document.querySelectorAll('#attGoOutBody .att-go-row').forEach(function(tr){
+    var emp=tr.querySelector('.att-emp-go');
+    if(!emp||emp.value!==name) return;
+    var ins=tr.querySelectorAll('input[type="text"]:not(.att-emp-go)');
+    var date=(ins[0]&&ins[0].value.trim())||'', hrs=(ins[1]&&ins[1].value.trim())||'';
+    if(date||hrs) goData.push([date,hrs]);
+  });
+  document.querySelectorAll('#attExtraBody .att-ex-row').forEach(function(tr){
+    var emp=tr.querySelector('.att-emp-ex');
+    if(!emp||emp.value!==name) return;
+    var ins=tr.querySelectorAll('input[type="text"]:not(.att-emp-ex)');
+    var date=(ins[0]&&ins[0].value.trim())||'', hrs=(ins[1]&&ins[1].value.trim())||'';
+    if(date||hrs) exData.push([date,hrs]);
+  });
+
+  if(!goData.length&&!exData.length){ el.style.display='none'; return; }
+
+  var S='border:1px solid #ccc;padding:1px';
+  var INP='width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box;background:#f9f9f9;color:#333';
+  var TH='border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700;font-size:11px';
+  var html='<div style="display:flex;gap:0">';
+
+  // 좌: 추가근로/조기출근
+  html+='<div style="flex:1;border-right:1px solid #ccc;padding-right:10px;margin-right:10px">';
+  html+='<div style="font-weight:700;font-size:12px;margin-bottom:5px;border-bottom:1px solid #ccc;padding-bottom:3px">추가근로/조기출근</div>';
+  if(exData.length){
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html+='<thead><tr style="background:#f0f0f0"><th style="'+TH+'">날짜</th><th style="'+TH+'">시간</th></tr></thead><tbody>';
+    exData.forEach(function(r){
+      html+='<tr><td style="'+S+'"><input type="text" value="'+r[0]+'" readonly style="'+INP+'"></td>'
+          +'<td style="'+S+'"><input type="text" value="'+r[1]+'" readonly style="'+INP+'"></td></tr>';
+    });
+    html+='</tbody></table>';
+  } else {
+    html+='<div style="font-size:11px;color:#aaa;padding:4px">내역 없음</div>';
+  }
+  html+='</div>';
+
+  // 우: 외출 내역
+  html+='<div style="flex:1">';
+  html+='<div style="font-weight:700;font-size:12px;margin-bottom:5px;border-bottom:1px solid #ccc;padding-bottom:3px">외출 내역</div>';
+  if(goData.length){
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html+='<thead><tr style="background:#f0f0f0"><th style="'+TH+'">날짜</th><th style="'+TH+'">외출시간</th></tr></thead><tbody>';
+    goData.forEach(function(r){
+      html+='<tr><td style="'+S+'"><input type="text" value="'+r[0]+'" readonly style="'+INP+'"></td>'
+          +'<td style="'+S+'"><input type="text" value="'+r[1]+'" readonly style="'+INP+'"></td></tr>';
+    });
+    html+='</tbody></table>';
+  } else {
+    html+='<div style="font-size:11px;color:#aaa;padding:4px">내역 없음</div>';
+  }
+  html+='</div>';
+
+  html+='</div>';
+  el.innerHTML=html;
+  el.style.display='block';
+}
+
+function attToggleCal(key){
+  if(attHolidays.has(key)) attHolidays.delete(key);
+  else attHolidays.add(key);
+  attEmployees.forEach(function(name){
+    (attData[name]||[]).forEach(function(r){
+      if(r.date.split('(')[0] === key) r.is_holiday = attHolidays.has(key);
+    });
+  });
+  attRenderCal();
+  attRecalcAll();
+}
+
+function attParseMin(str){
+  if(!str) return 0;
+  str = String(str).trim();
+  var m = str.match(/(\d+)\s*시간\s*(\d+)\s*분/);
+  if(m) return parseInt(m[1])*60+parseInt(m[2]);
+  m = str.match(/(\d+)\s*시간/);
+  if(m) return parseInt(m[1])*60;
+  m = str.match(/(\d+)\s*분/);
+  if(m) return parseInt(m[1]);
+  m = str.match(/^(\d+):(\d+)$/);
+  if(m) return parseInt(m[1])*60+parseInt(m[2]);
+  return 0;
+}
+function attMinToStr(min){
+  if(!min) return '';
+  var val = min / 60;
+  return (val % 1 === 0) ? val.toFixed(0) : val.toFixed(1);
+}
+
+function attCalcSummary(){
+  var name = document.getElementById('attEmpSel').value;
+  var records = attData[name]||[];
+  var wdOT=0, holOT=0, workDays=0;
+  records.forEach(function(r){
+    var ot = typeof r.overtime==='number' ? r.overtime : attParseMin(r.overtime);
+    var hw = typeof r.holiday_work==='number' ? r.holiday_work : 0;
+    wdOT+=ot; holOT+=hw;
+    if(r.checkin && r.checkin.trim() && r.checkout && r.checkout.trim()) workDays++;
+  });
+  var wStr=attMinToStr(wdOT)||'-', hStr=attMinToStr(holOT)||'-';
+  document.getElementById('attWeekdayOT').textContent = wStr;
+  document.getElementById('attHolidayOT').textContent = hStr;
+  var wdEl=document.getElementById('attWorkDays');
+  if(wdEl) wdEl.textContent = workDays ? workDays+'일' : '-';
+}
+
+async function attUpload(){
+  var f = document.getElementById('attFile').files[0];
+  if(!f){ alert('파일을 선택하세요.'); return; }
+  var fd = new FormData();
+  fd.append('file', f);
+  var res = await fetch('/api/hr/attendance/parse', {method:'POST', body:fd});
+  var d = await res.json();
+  if(!d.ok){ alert(d.error||'파싱 실패'); return; }
+  attData = d.data;
+  attMonth = d.month;
+  attEmployees = d.employees;
+  document.getElementById('attMonthLabel').textContent = attMonth;
+  var dl = document.getElementById('attEmpDatalist');
+  dl.innerHTML = attEmployees.map(n=>`<option value="${n}">`).join('');
+  var sel = document.getElementById('attEmpSel');
+  sel.value = attEmployees[0] || '';
+  document.getElementById('attEmpRow').style.display = 'flex';
+  attUpdateEmpSelects();
+  attHolidays = new Set();
+  attRenderCal();
+  attRecalcAll();
+}
+
+function attEmpInput(inp){
+  if(attEmployees.indexOf(inp.value) >= 0) attRender();
+}
+function attPrev(){
+  var sel=document.getElementById('attEmpSel');
+  var idx=attEmployees.indexOf(sel.value);
+  if(idx>0){sel.value=attEmployees[idx-1];attRender();}
+}
+function attNext(){
+  var sel=document.getElementById('attEmpSel');
+  var idx=attEmployees.indexOf(sel.value);
+  if(idx>=0&&idx<attEmployees.length-1){sel.value=attEmployees[idx+1];attRender();}
+}
+
+function attToggleHoliday(idx, chk){
+  var name=document.getElementById('attEmpSel').value;
+  if(attData[name]&&attData[name][idx]){
+    attData[name][idx].is_holiday = chk.checked;
+    var c=attCalcRow(attData[name][idx]);
+    attData[name][idx].work_hours=c.workHours;
+    attData[name][idx].overtime=c.overtime;
+    var tr = document.getElementById('attRow'+idx);
+    if(tr){
+      var isHol = attData[name][idx].is_weekend || chk.checked;
+      tr.style.background = isHol ? '#ffe0e0' : '';
+      var workTd=tr.querySelector('.att-work-td');
+      if(workTd) workTd.textContent=c.workHours;
+      var otInput=tr.querySelector('[data-field="overtime"]');
+      if(otInput) otInput.value=c.overtime>0?attMinToStr(c.overtime):'';
+    }
+    attCalcSummary();
+  }
+}
+
+function attRender(){
+  var name=document.getElementById('attEmpSel').value;
+  var records=attData[name]||[];
+  document.getElementById('attCapName').textContent=name;
+  document.getElementById('attCapMonth').textContent=attMonth;
+
+  var TD='border:1px solid #ccc;padding:4px 5px;text-align:center';
+  var html='';
+  records.forEach(function(r,idx){
+    var isHol=r.is_weekend||r.is_holiday;
+    var bg=isHol?'background:#ffe0e0':'';
+    var otVal=typeof r.overtime==='number'?(r.overtime>0?attMinToStr(r.overtime):''):r.overtime||'';
+    var hwVal=typeof r.holiday_work==='number'?(r.holiday_work>0?attMinToStr(r.holiday_work):''):'';
+    html+=`<tr id="attRow${idx}" style="${bg}">
+      <td style="${TD}">${r.date}</td>
+      <td style="${TD}">${r.checkin||''}</td>
+      <td style="${TD}">${r.checkout||''}</td>
+      <td class="att-work-td" style="${TD};white-space:nowrap">${r.work_hours||''}</td>
+      <td style="${TD}"><input type="text" data-idx="${idx}" data-field="overtime" value="${otVal}"
+        style="width:100%;font-size:11px;border:none;padding:1px 2px;text-align:center;background:transparent" onchange="attEdit(this);attCalcSummary()"></td>
+      <td class="att-hol-td" style="${TD};color:#c00;font-weight:${hwVal?'700':'normal'}">${hwVal}</td>
+    </tr>`;
+  });
+  document.getElementById('attTbody').innerHTML=html;
+  document.getElementById('attPagesWrap').style.display='flex';
+  attCalcSummary();
+  attRenderP1Summary();
+  attRenderStat();
+  attRenderYearlyStat();
+}
+
+var attOrgCache=null;
+async function attLoadOrg(){
+  if(attOrgCache) return attOrgCache;
+  try{ var r=await fetch('/api/org'); attOrgCache=await r.json(); }catch(e){ attOrgCache={departments:[]}; }
+  return attOrgCache;
+}
+
+function attStatToggle(di,prefix){
+  prefix=prefix||'';
+  var bodyId=prefix==='y'?'attYearStatBody':'attStatBody';
+  var key=prefix+di;
+  var rows=document.querySelectorAll('#'+bodyId+' [data-dept="'+key+'"]');
+  var arr=document.getElementById('attStatArr'+key);
+  var open=arr&&arr.getAttribute('data-open')==='1';
+  rows.forEach(function(r){ r.style.display=open?'none':''; });
+  if(arr){ arr.setAttribute('data-open',open?'0':'1'); arr.textContent=open?'▶':'▼'; }
+}
+
+function attBuildStatHtml(depts, empStats, primaryOf, prefix){
+  var TD  ='border:1px solid #ccc;padding:5px 8px;text-align:center;white-space:nowrap';
+  var TSUM='border:1px solid #ccc;padding:5px 8px;background:#efefef;font-weight:700;text-align:center;white-space:nowrap';
+  var DSUM='border:1px solid #ccc;padding:5px 8px;background:#fef6ee;font-weight:700;text-align:center;white-space:nowrap';
+  var THDR='border:1px solid #bbb;padding:6px 10px;font-weight:700;text-align:left;white-space:nowrap';
+  var THDT='border:1px solid #ddd;padding:4px 10px;font-size:11px;font-weight:700;text-align:left;color:#555;white-space:nowrap';
+  var html='';
+
+  depts.forEach(function(dept,di){
+    var key=prefix+di;
+    var directNames=[];
+    if(dept.head&&empStats[dept.head.name]) directNames.push(dept.head.name);
+    (dept.members||[]).forEach(function(m){
+      if(empStats[m.name]&&directNames.indexOf(m.name)<0) directNames.push(m.name);
+    });
+    var teamsData=(dept.teams||[]).map(function(t){
+      var mbs=(t.members||[]).filter(function(m){ return empStats[m.name]; }).map(function(m){ return m.name; });
+      return {label:t.label, members:mbs};
+    }).filter(function(t){ return t.members.length>0; });
+    if(!directNames.length&&!teamsData.length) return;
+
+    var deptWd=0,deptHol=0,deptDays=0;
+
+    // 부서 헤더 — 기본 접힘(▶)
+    html+=`<tr style="background:#dbeafe;cursor:pointer" onclick="attStatToggle(${di},'${prefix}')">
+      <td colspan="4" style="${THDR};color:#1a3a5c">
+        <span id="attStatArr${key}" data-open="0">▶</span>&nbsp;${dept.label}
+      </td>
+    </tr>`;
+
+    function memberRow(name, teamKey){
+      var p=primaryOf[name];
+      var isPrimary=p&&p.di===di&&p.team===teamKey;
+      var s=empStats[name];
+      if(isPrimary){
+        deptWd+=s.wdOT; deptHol+=s.holWork; deptDays+=s.workDays;
+        return {html:`<tr data-dept="${key}" style="display:none">
+          <td style="${TD}">${name}</td><td style="${TD}">${s.workDays}일</td>
+          <td style="${TD};color:${s.wdOT>0?'#1a3a5c':'#aaa'}">${attMinToStr(s.wdOT)||'-'}</td>
+          <td style="${TD};color:${s.holWork>0?'#c00':'#aaa'}">${attMinToStr(s.holWork)||'-'}</td>
+        </tr>`, wdOT:s.wdOT, holWork:s.holWork, workDays:s.workDays};
+      } else {
+        return {html:`<tr data-dept="${key}" style="display:none">
+          <td style="${TD};color:#bbb">${name} <span style="font-size:10px">(겸임)</span></td>
+          <td style="${TD};color:#bbb">-</td><td style="${TD};color:#bbb">-</td><td style="${TD};color:#bbb">-</td>
+        </tr>`, wdOT:0, holWork:0, workDays:0};
+      }
+    }
+
+    if(directNames.length>0){
+      html+=`<tr data-dept="${key}" style="display:none;background:#f0f4ff">
+        <td colspan="4" style="${THDT}">▸ 총괄</td>
+      </tr>`;
+      var gWd=0,gHol=0,gDays=0;
+      directNames.forEach(function(name){
+        var r=memberRow(name,'총괄'); html+=r.html; gWd+=r.wdOT; gHol+=r.holWork; gDays+=r.workDays;
+      });
+      html+=`<tr data-dept="${key}" style="display:none">
+        <td style="${TSUM}">총괄 계</td><td style="${TSUM}">${gDays}일</td>
+        <td style="${TSUM};color:#1a3a5c">${attMinToStr(gWd)||'-'}</td>
+        <td style="${TSUM};color:#c00">${attMinToStr(gHol)||'-'}</td>
+      </tr>`;
+    }
+
+    teamsData.forEach(function(team){
+      var tWd=0,tHol=0,tDays=0;
+      html+=`<tr data-dept="${key}" style="display:none;background:#f0f4ff">
+        <td colspan="4" style="${THDT}">▸ ${team.label}</td>
+      </tr>`;
+      team.members.forEach(function(name){
+        var r=memberRow(name,team.label); html+=r.html; tWd+=r.wdOT; tHol+=r.holWork; tDays+=r.workDays;
+      });
+      html+=`<tr data-dept="${key}" style="display:none">
+        <td style="${TSUM}">${team.label} 계</td><td style="${TSUM}">${tDays}일</td>
+        <td style="${TSUM};color:#1a3a5c">${attMinToStr(tWd)||'-'}</td>
+        <td style="${TSUM};color:#c00">${attMinToStr(tHol)||'-'}</td>
+      </tr>`;
+    });
+
+    html+=`<tr>
+      <td style="${DSUM}">${dept.label} 계</td><td style="${DSUM}">${deptDays}일</td>
+      <td style="${DSUM};color:#b34700">${attMinToStr(deptWd)||'-'}</td>
+      <td style="${DSUM};color:#c00">${attMinToStr(deptHol)||'-'}</td>
+    </tr>`;
+  });
+  return html||'<tr><td colspan="4" style="text-align:center;padding:20px;color:#999">데이터 없음</td></tr>';
+}
+
+async function attGetOrgAndPrimary(empStats){
+  var org=await attLoadOrg();
+  var depts=Array.isArray(org)?org:(org.departments||[]);
+  var primaryOf={};
+  depts.forEach(function(dept,di){
+    if(dept.head&&empStats[dept.head.name]&&!primaryOf[dept.head.name])
+      primaryOf[dept.head.name]={di:di,team:'총괄'};
+    (dept.members||[]).forEach(function(m){
+      if(empStats[m.name]&&!primaryOf[m.name]) primaryOf[m.name]={di:di,team:'총괄'};
+    });
+    (dept.teams||[]).forEach(function(t){
+      (t.members||[]).forEach(function(m){
+        if(empStats[m.name]&&!primaryOf[m.name]) primaryOf[m.name]={di:di,team:t.label};
+      });
+    });
+  });
+  return {depts,primaryOf};
+}
+
+async function attRenderStat(){
+  document.getElementById('attStatMonth').textContent=attMonth||'-';
+  var empStats={};
+  attEmployees.forEach(function(name){
+    var records=attData[name]||[], workDays=0,wdOT=0,holWork=0;
+    records.forEach(function(r){
+      if(r.checkin&&r.checkin.trim()&&r.checkout&&r.checkout.trim()) workDays++;
+      wdOT+=typeof r.overtime==='number'?r.overtime:0;
+      holWork+=typeof r.holiday_work==='number'?r.holiday_work:0;
+    });
+    empStats[name]={workDays,wdOT,holWork};
+  });
+  var o=await attGetOrgAndPrimary(empStats);
+  document.getElementById('attStatBody').innerHTML=attBuildStatHtml(o.depts,empStats,o.primaryOf,'m');
+}
+
+async function attRenderYearlyStat(){
+  var my=attGetMonthYear();
+  if(!my||!attMonth) return;
+  var year=my.year;
+  document.getElementById('attYearStatLabel').textContent=year+'년';
+
+  // 현재 로드된 월 합산
+  var yearStats={};
+  attEmployees.forEach(function(name){
+    if(!yearStats[name]) yearStats[name]={workDays:0,wdOT:0,holWork:0};
+    (attData[name]||[]).forEach(function(r){
+      if(r.checkin&&r.checkin.trim()&&r.checkout&&r.checkout.trim()) yearStats[name].workDays++;
+      yearStats[name].wdOT+=typeof r.overtime==='number'?r.overtime:0;
+      yearStats[name].holWork+=typeof r.holiday_work==='number'?r.holiday_work:0;
+    });
+  });
+
+  // 저장된 내역 중 같은 연도, 현재 month 제외, month별 최신만
+  try{
+    var listRes=await fetch('/api/att/list');
+    var items=await listRes.json();
+    var monthMap={};
+    (items||[]).forEach(function(item){
+      if(!item.month||item.month.indexOf(year+'년')<0) return;
+      if(item.month===attMonth) return;
+      if(!monthMap[item.month]||item.id>monthMap[item.month].id) monthMap[item.month]=item;
+    });
+    var months=Object.values(monthMap);
+    for(var i=0;i<months.length;i++){
+      var lr=await fetch('/api/att/load/'+months[i].id);
+      var ld=await lr.json();
+      var ldData=ld.data||{};
+      var ldEmps=ld.employees||Object.keys(ldData);
+      ldEmps.forEach(function(name){
+        if(!yearStats[name]) yearStats[name]={workDays:0,wdOT:0,holWork:0};
+        (ldData[name]||[]).forEach(function(r){
+          if(r.checkin&&r.checkin.trim()&&r.checkout&&r.checkout.trim()) yearStats[name].workDays++;
+          yearStats[name].wdOT+=typeof r.overtime==='number'?r.overtime:0;
+          yearStats[name].holWork+=typeof r.holiday_work==='number'?r.holiday_work:0;
+        });
+      });
+    }
+  }catch(e){}
+
+  var o=await attGetOrgAndPrimary(yearStats);
+  document.getElementById('attYearStatBody').innerHTML=attBuildStatHtml(o.depts,yearStats,o.primaryOf,'y');
+}
+
+function attEdit(input){
+  var name=document.getElementById('attEmpSel').value;
+  var idx=parseInt(input.dataset.idx), field=input.dataset.field;
+  if(attData[name]&&attData[name][idx]){
+    if(field==='overtime'){
+      attData[name][idx][field]=attParseMin(input.value);
+    } else {
+      attData[name][idx][field]=input.value;
+      if(field==='checkin'||field==='checkout'){
+        var c=attCalcRow(attData[name][idx]);
+        attData[name][idx].work_hours=c.workHours;
+        attData[name][idx].overtime=c.overtime;
+        attData[name][idx].holiday_work=c.holidayWork;
+        var tr=document.getElementById('attRow'+idx);
+        if(tr){
+          var workTd=tr.querySelector('.att-work-td');
+          if(workTd) workTd.textContent=c.workHours;
+          var otInput=tr.querySelector('[data-field="overtime"]');
+          if(otInput) otInput.value=c.overtime>0?attMinToStr(c.overtime):'';
+          var hwTd=tr.querySelector('.att-hol-td');
+          if(hwTd){ hwTd.textContent=c.holidayWork>0?attMinToStr(c.holidayWork):''; hwTd.style.fontWeight=c.holidayWork>0?'700':'normal'; }
+        }
+        attCalcSummary();
+      }
+    }
+  }
+}
+
+async function attCaptureEl(el, filename){
+  var inputs=[...el.querySelectorAll('input[type=text]')];
+  var savedInputs=inputs.map(function(inp){
+    var sp=document.createElement('span');
+    sp.textContent=inp.value;
+    sp.style.cssText='display:inline-block;min-width:'+(inp.offsetWidth||40)+'px;text-align:center;font-size:11px';
+    inp.parentNode.replaceChild(sp,inp);
+    return {sp,inp};
+  });
+  var checkboxes=[...el.querySelectorAll('input[type=checkbox]')];
+  var savedCbs=checkboxes.map(function(cb){
+    var sp=document.createElement('span');
+    sp.textContent=cb.checked?'●':'';
+    sp.style.cssText='display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;font-size:13px;color:#c00';
+    cb.parentNode.replaceChild(sp,cb);
+    return {sp,cb};
+  });
+  var hideBtns=[...el.querySelectorAll('.att-hide-btn')];
+  var savedHide=hideBtns.map(function(b){var d=b.style.display;b.style.display='none';return {b,d};});
+  try{
+    var canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#fff'});
+    await new Promise(function(resolve){
+      canvas.toBlob(async function(blob){
+        try{
+          await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+          alert('이미지가 클립보드에 복사되었습니다.\n카카오톡에서 Ctrl+V로 붙여넣기 하세요.');
+        }catch(e){
+          var a=document.createElement('a');
+          a.download=filename;
+          a.href=canvas.toDataURL('image/png');
+          a.click();
+          alert('클립보드 복사를 지원하지 않아 파일로 저장됩니다.');
+        }
+        resolve();
+      },'image/png');
+    });
+  }catch(e){ alert('이미지 생성 실패: '+e.message); }
+  savedInputs.forEach(function(s){ s.sp.parentNode.replaceChild(s.inp,s.sp); });
+  savedCbs.forEach(function(s){ s.sp.parentNode.replaceChild(s.cb,s.sp); });
+  savedHide.forEach(function(s){ s.b.style.display=s.d; });
+}
+
+async function attCopyPage2(){
+  var name=document.getElementById('attEmpSel').value;
+  await attCaptureEl(document.getElementById('attPage2'), '근로내역_'+name+'_'+attMonth+'.png');
+}
+
+function attUpdateEmpSelects(){ /* datalist 공유로 별도 업데이트 불필요 */ }
+function attGoOutAddRow(){
+  var tr=document.createElement('tr');
+  tr.className='att-go-row';
+  tr.innerHTML='<td style="border:1px solid #ccc;padding:1px"><input type="text" list="attEmpDatalist" class="att-emp-go" placeholder="이름..." autocomplete="off" style="width:100%;font-size:11px;border:none;padding:2px 3px;box-sizing:border-box"></td>'
+    +'<td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="6/1"></td>'
+    +'<td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="1시간 30분"></td>'
+    +'<td style="border:1px solid #ccc;padding:1px;text-align:center" class="att-hide-btn"><button onclick="this.closest(\'tr\').remove()" style="border:none;background:none;color:#d83b01;cursor:pointer;font-size:13px;padding:0;line-height:1">×</button></td>';
+  document.getElementById('attGoOutBody').appendChild(tr);
+}
+function attExtraAddRow(){
+  var tr=document.createElement('tr');
+  tr.className='att-ex-row';
+  tr.innerHTML='<td style="border:1px solid #ccc;padding:1px"><input type="text" list="attEmpDatalist" class="att-emp-ex" placeholder="이름..." autocomplete="off" style="width:100%;font-size:11px;border:none;padding:2px 3px;box-sizing:border-box"></td>'
+    +'<td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="6/1"></td>'
+    +'<td style="border:1px solid #ccc;padding:1px"><input type="text" style="width:100%;font-size:11px;border:none;padding:2px 3px;text-align:center;box-sizing:border-box" placeholder="2시간"></td>'
+    +'<td style="border:1px solid #ccc;padding:1px;text-align:center" class="att-hide-btn"><button onclick="this.closest(\'tr\').remove()" style="border:none;background:none;color:#d83b01;cursor:pointer;font-size:13px;padding:0;line-height:1">×</button></td>';
+  document.getElementById('attExtraBody').appendChild(tr);
+}
+
+// 하단 입력 시 선택된 직원 요약 자동 업데이트
+document.getElementById('attGoOutBody').addEventListener('input', attRenderP1Summary);
+document.getElementById('attExtraBody').addEventListener('input', attRenderP1Summary);
+document.getElementById('attGoOutBody').addEventListener('change', attRenderP1Summary);
+document.getElementById('attExtraBody').addEventListener('change', attRenderP1Summary);
+
+async function attSaveData(){
+  if(!attMonth||!Object.keys(attData).length){ alert('저장할 데이터가 없습니다.'); return; }
+  var goOut=[], extra=[];
+  document.querySelectorAll('#attGoOutBody .att-go-row').forEach(function(tr){
+    var ins=tr.querySelectorAll('input');
+    goOut.push([ins[0]?ins[0].value:'',ins[1]?ins[1].value:'',ins[2]?ins[2].value:'']);
+  });
+  document.querySelectorAll('#attExtraBody .att-ex-row').forEach(function(tr){
+    var ins=tr.querySelectorAll('input');
+    extra.push([ins[0]?ins[0].value:'',ins[1]?ins[1].value:'',ins[2]?ins[2].value:'']);
+  });
+  var obj={month:attMonth,title:attMonth,employees:attEmployees,data:attData,holidays:[...attHolidays],goOut:goOut,extra:extra,cond:attCond};
+  var btn=document.getElementById('attSaveBtn');
+  if(btn)btn.disabled=true;
+  try{
+    var res=await fetch('/api/att/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)});
+    var d=await res.json();
+    if(d.ok){
+      if(btn){btn.textContent='저장됨 ✓';setTimeout(function(){btn.textContent='저장';btn.disabled=false;},1500);}
+    }else{alert('저장 실패');if(btn)btn.disabled=false;}
+  }catch(e){alert('저장 오류: '+e.message);if(btn)btn.disabled=false;}
+}
+
+async function attLoadSavedData(){
+  var res=await fetch('/api/att/list');
+  var list=await res.json().catch(function(){return[];});
+  if(!list.length){alert('저장된 근태내역이 없습니다.');return;}
+  var listEl=document.getElementById('attLoadList');
+  listEl.innerHTML='';
+  list.forEach(function(item){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #eee';
+    row.innerHTML='<span style="flex:1;font-size:12px;color:#333">'+item.title+'</span>'
+      +'<span style="font-size:11px;color:#999">'+item.created_at+'</span>'
+      +'<button onclick="attApplySaved('+item.id+')" style="padding:3px 10px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer">불러오기</button>'
+      +'<button onclick="attDeleteSaved('+item.id+',this)" style="padding:3px 10px;background:#e85d04;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer">삭제</button>';
+    listEl.appendChild(row);
+  });
+  document.getElementById('attLoadModal').style.display='flex';
+}
+
+function attApplyObj(obj){
+  attMonth=obj.month;
+  attData=obj.data;
+  attEmployees=obj.employees||Object.keys(obj.data);
+  attHolidays=new Set(obj.holidays||[]);
+  if(obj.cond)attCond=obj.cond;
+  var dl=document.getElementById('attEmpDatalist');
+  dl.innerHTML='';
+  attEmployees.forEach(function(n){var o=document.createElement('option');o.value=n;dl.appendChild(o);});
+  document.getElementById('attMonthLabel').textContent=attMonth+' 근태현황';
+  var goBody=document.getElementById('attGoOutBody');
+  goBody.innerHTML='';
+  (obj.goOut||[]).forEach(function(row){
+    attGoOutAddRow();
+    var tr=goBody.lastChild,ins=tr.querySelectorAll('input');
+    if(ins[0])ins[0].value=row[0]||'';if(ins[1])ins[1].value=row[1]||'';if(ins[2])ins[2].value=row[2]||'';
+  });
+  if(!goBody.children.length)attGoOutAddRow();
+  var exBody=document.getElementById('attExtraBody');
+  exBody.innerHTML='';
+  (obj.extra||[]).forEach(function(row){
+    attExtraAddRow();
+    var tr=exBody.lastChild,ins=tr.querySelectorAll('input');
+    if(ins[0])ins[0].value=row[0]||'';if(ins[1])ins[1].value=row[1]||'';if(ins[2])ins[2].value=row[2]||'';
+  });
+  if(!exBody.children.length)attExtraAddRow();
+  document.getElementById('attEmpRow').style.display='flex';
+  document.getElementById('attPagesWrap').style.display='flex';
+  document.getElementById('attCalWrap').style.display='block';
+  attRenderCal();
+  if(attEmployees.length){document.getElementById('attEmpSel').value=attEmployees[0];attRender();}
+}
+
+async function attApplySaved(id){
+  if(!confirm('이 내역을 불러오시겠습니까?'))return;
+  var res=await fetch('/api/att/load/'+id);
+  if(!res.ok){alert('불러오기 실패');return;}
+  var obj=await res.json();
+  attApplyObj(obj);
+  document.getElementById('attLoadModal').style.display='none';
+}
+
+async function attDeleteSaved(id,btn){
+  if(!confirm('삭제하시겠습니까?'))return;
+  await fetch('/api/att/delete/'+id,{method:'DELETE'});
+  var row=btn.closest('div');
+  if(row)row.remove();
+  if(!document.getElementById('attLoadList').children.length){
+    document.getElementById('attLoadModal').style.display='none';
+  }
+}
+
+// 페이지 로드 시 저장된 근로조건 불러오기
+attLoadCond();
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</body>
+</html>

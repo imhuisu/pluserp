@@ -5,6 +5,9 @@
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>서식관리 - PLUSDOOR</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"맑은 고딕",Arial,sans-serif;background:#f0f2f5;padding:14px}
@@ -73,7 +76,10 @@ button:disabled{opacity:.5;cursor:default}
 
 /* ── 납품확인서 레이아웃 ── */
 .delivery-grid{display:grid;grid-template-columns:450px 1fr;gap:16px;align-items:start}
-@media(max-width:1000px){.delivery-grid{grid-template-columns:1fr}}
+@media(max-width:1000px){
+  .delivery-grid{grid-template-columns:1fr}
+  .delivery-grid > div{min-width:0}  /* 그리드 아이템이 210mm 이하로 줄어들 수 있게 */
+}
 
 /* 입력 폼 */
 .inp-form-row{display:grid;grid-template-columns:72px 1fr;align-items:start;margin-bottom:8px;gap:4px}
@@ -270,6 +276,27 @@ button:disabled{opacity:.5;cursor:default}
 
 .actions-row{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:10px}
 .toggle-arrow{font-size:12px;opacity:.8;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:2px 9px;border-radius:3px;cursor:pointer}
+
+/* 모바일 */
+@media(max-width:700px){
+  body{padding:8px!important}
+  .card-body{padding:10px}
+  .forms-header{gap:8px;margin:14px 0 10px}
+  .forms-header h3{font-size:14px}
+  .fsb{padding:7px 12px;font-size:12px}
+  .inp-form-row{grid-template-columns:60px 1fr}
+  .form-row{grid-template-columns:60px 1fr}
+  .item-tbl-wrap{overflow-x:auto}
+  .doc-actions{flex-wrap:wrap}
+  /* 미리보기: JS 실행 전 초기 스케일을 모바일에 맞게 설정 */
+  #docPreview{
+    transform:scale(0.44)!important;
+    transform-origin:top left!important;
+    margin-right:calc(-210mm * 0.56)!important;
+    margin-bottom:calc(-297mm * 0.56)!important;
+  }
+  .preview-outer{overflow:hidden;width:100%}
+}
 </style>
 </head>
 <body>
@@ -288,15 +315,16 @@ button:disabled{opacity:.5;cursor:default}
       </div>
       <div id="smtpBody" style="display:none">
         <div class="card-body">
+          {% if not is_admin %}<p style="font-size:12px;color:#e85d04;margin-bottom:8px;font-weight:700">읽기 전용 — 수정은 관리자만 가능합니다.</p>{% endif %}
           <p style="font-size:12px;color:#888;margin-bottom:10px">네이버 메일 → 환경설정 → POP3/IMAP 설정에서 SMTP 사용을 허용해주세요.</p>
-          <div class="form-row"><label>SMTP 서버</label><input id="cfg_host" value="smtp.naver.com"></div>
-          <div class="form-row"><label>포트</label><input id="cfg_port" type="number" value="465"></div>
-          <div class="form-row"><label>이메일</label><input id="cfg_user" type="email" placeholder="네이버 이메일 주소"></div>
-          <div class="form-row"><label>비밀번호</label><input id="cfg_pw" type="password" placeholder="이메일 비밀번호"></div>
-          <div class="form-row"><label>발신자명</label><input id="cfg_name" placeholder="예: PLUSDOOR"></div>
+          <div class="form-row"><label>SMTP 서버</label><input id="cfg_host" value="smtp.naver.com" {% if not is_admin %}disabled{% endif %}></div>
+          <div class="form-row"><label>포트</label><input id="cfg_port" type="number" value="465" {% if not is_admin %}disabled{% endif %}></div>
+          <div class="form-row"><label>이메일</label><input id="cfg_user" type="email" placeholder="네이버 이메일 주소" {% if not is_admin %}disabled{% endif %}></div>
+          <div class="form-row"><label>비밀번호</label><input id="cfg_pw" type="password" placeholder="이메일 비밀번호" {% if not is_admin %}disabled{% endif %}></div>
+          <div class="form-row"><label>발신자명</label><input id="cfg_name" placeholder="예: PLUSDOOR" {% if not is_admin %}disabled{% endif %}></div>
           <div class="actions-row">
             <span id="cfgMsg" style="flex:1;font-size:13px"></span>
-            <button class="primary" onclick="saveSettings()">저장</button>
+            {% if is_admin %}<button class="primary" onclick="saveSettings()">저장</button>{% endif %}
           </div>
         </div>
       </div>
@@ -406,7 +434,7 @@ button:disabled{opacity:.5;cursor:default}
           <div class="inp-form-row"><label>납품일자</label><input id="f_date" type="date" oninput="upd()"></div>
 
           <div style="font-weight:700;font-size:12px;color:#1a3a5c;margin:14px 0 6px">납품 내역</div>
-          <table class="item-tbl">
+          <div class="item-tbl-wrap"><table class="item-tbl">
             <thead><tr>
               <th style="width:50%">품명</th>
               <th style="width:33%">규격 (mm)</th>
@@ -414,7 +442,7 @@ button:disabled{opacity:.5;cursor:default}
               <th style="width:6%"></th>
             </tr></thead>
             <tbody id="itemsInput"></tbody>
-          </table>
+          </table></div>
           <button onclick="addRow()" style="font-size:12px;padding:5px 14px;color:#555">＋ 행 추가</button>
 
           <div class="doc-actions">
@@ -1178,6 +1206,37 @@ async function sendPDF(){
   }
   btn.disabled=false; btn.textContent='📤 발송';
 }
+window.addEventListener('load',function(){
+  if(typeof flatpickr==='undefined')return;
+  var el=document.getElementById('f_date');
+  if(el&&!el._flatpickr){
+    flatpickr(el,{locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+      parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');},
+      onChange:function(sel,ds){var el2=document.getElementById('f_date');if(el2){el2.dispatchEvent(new Event('input',{bubbles:true}));}}});
+  }
+});
+
+// ── A4 미리보기 모바일 스케일 자동 조정 ──
+(function(){
+  function fitDocPreview(){
+    var preview=document.getElementById('docPreview');
+    if(!preview)return;
+    var outer=preview.parentElement;
+    if(!outer)return;
+    var avail=outer.getBoundingClientRect().width;
+    if(!avail)return;
+    var docW=793; // 210mm ≈ 793px at 96dpi
+    var docH=1122; // 297mm ≈ 1122px
+    var maxScale=0.6;
+    var scale=Math.min(maxScale,avail/docW);
+    preview.style.transform='scale('+scale+')';
+    preview.style.marginRight=(-(docW*(1-scale)))+'px';
+    preview.style.marginBottom=(-(docH*(1-scale)))+'px';
+  }
+  window.addEventListener('resize',fitDocPreview);
+  window.addEventListener('load',fitDocPreview);
+  setTimeout(fitDocPreview,100);
+})();
 </script>
 </body>
 </html>

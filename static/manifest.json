@@ -1,0 +1,14 @@
+{
+  "name": "PLUSDOOR",
+  "short_name": "PLUSDOOR",
+  "description": "PLUSDOOR 관리 시스템",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a3a5c",
+  "theme_color": "#1a3a5c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {"src": "/static/img/logo.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/img/logo.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

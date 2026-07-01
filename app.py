@@ -1,4 +1,16 @@
 import sys, subprocess as _sp
+
+# Windows 콘솔 QuickEdit 모드 비활성화 (클릭 시 프로세스 멈춤 방지)
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        _k32 = ctypes.windll.kernel32
+        _h = _k32.GetStdHandle(-10)
+        _m = ctypes.c_ulong()
+        _k32.GetConsoleMode(_h, ctypes.byref(_m))
+        _k32.SetConsoleMode(_h, _m.value & ~0x0040)
+    except Exception:
+        pass
 try:
     from fpdf import FPDF as _fpdf_check
 except ImportError:
@@ -13,6 +25,15 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta
 import os
+from base64 import urlsafe_b64encode
+try:
+    from pywebpush import webpush, WebPushException
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives import serialization
+    PUSH_AVAILABLE = True
+except Exception:
+    PUSH_AVAILABLE = False
+    WebPushException = Exception
 import uuid
 import re
 import subprocess
@@ -22,11 +43,46 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image, ImageOps
 from openpyxl import load_workbook
+import xlrd
 
 APP_DIR = Path(__file__).resolve().parent
 DB_PATH = APP_DIR.parent / "plusdoor.db"
 UPLOAD_DIR = APP_DIR.parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+VEHICLE_DOCS_DIR = UPLOAD_DIR / "vehicle_docs"
+VEHICLE_DOCS_DIR.mkdir(exist_ok=True)
+EQUIPMENT_DOCS_DIR = UPLOAD_DIR / "equipment_docs"
+EQUIPMENT_DOCS_DIR.mkdir(exist_ok=True)
+CONSTRUCTION_DOCS_DIR = UPLOAD_DIR / "construction_docs"
+CONSTRUCTION_DOCS_DIR.mkdir(exist_ok=True)
+
+VAPID_KEYS_FILE = APP_DIR / "vapid_keys.json"
+VAPID_KEYS = {}
+
+def _init_vapid():
+    global VAPID_KEYS
+    if not PUSH_AVAILABLE:
+        return
+    if VAPID_KEYS_FILE.exists():
+        with open(VAPID_KEYS_FILE) as f:
+            VAPID_KEYS = json.load(f)
+        return
+    priv = ec.generate_private_key(ec.SECP256R1())
+    private_pem = priv.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.TraditionalOpenSSL,
+        serialization.NoEncryption()
+    ).decode()
+    pub_bytes = priv.public_key().public_bytes(
+        serialization.Encoding.X962,
+        serialization.PublicFormat.UncompressedPoint
+    )
+    public_key = urlsafe_b64encode(pub_bytes).rstrip(b'=').decode()
+    VAPID_KEYS = {"private_pem": private_pem, "public_key": public_key}
+    with open(VAPID_KEYS_FILE, 'w') as f:
+        json.dump(VAPID_KEYS, f, indent=2)
+
+_init_vapid()
 
 WORK_ORDER_TEMPLATE_DIR = APP_DIR / "work_order_templates"
 WORK_ORDER_DATA_DIR = APP_DIR / "work_order_data"
@@ -105,15 +161,53 @@ def reset_price_tables_if_old_schema(conn):
 
 PERMISSION_LABELS = {
     "price": "단가표",
-    "journal": "일지관리",
+    "journal_sales": "영업일지",
+    "journal_consult": "상담일지",
+    "journal_measure": "실측일지",
+    "journal_install": "시공일지",
     "work_order": "작업지시서",
     "production": "생산스케줄",
     "completed": "제작완료",
-    "as": "A/S관리",
+    "as": "A/S",
+    "cs_install": "시공",
     "calendar": "캘린더",
     "mail": "서식관리",
+    "ledger_vehicle": "차량관리대장",
+    "ledger_machine": "설비관리대장",
+    "hr_attendance": "근태관리",
+    "hr_leave": "휴가관리",
+    "hr_org": "조직도",
     "user_manage": "사용자관리",
 }
+# UI용 트리 구조 — 리프 키만 PERMISSION_LABELS에 있고, 부모는 UI 그룹핑 전용
+PERMISSION_TREE = [
+    {"key": "price",    "label": "단가표"},
+    {"label": "일지관리", "children": [
+        {"key": "journal_sales",   "label": "영업일지"},
+        {"key": "journal_consult", "label": "상담일지"},
+        {"key": "journal_measure", "label": "실측일지"},
+        {"key": "journal_install", "label": "시공일지"},
+    ]},
+    {"key": "work_order",  "label": "작업지시서"},
+    {"key": "production",  "label": "생산스케줄"},
+    {"key": "completed",   "label": "제작완료"},
+    {"label": "C/S관리", "children": [
+        {"key": "as",          "label": "A/S"},
+        {"key": "cs_install",  "label": "시공"},
+    ]},
+    {"key": "calendar",    "label": "캘린더"},
+    {"key": "mail",        "label": "서식관리"},
+    {"label": "대장관리", "children": [
+        {"key": "ledger_vehicle", "label": "차량관리대장"},
+        {"key": "ledger_machine", "label": "설비관리대장"},
+    ]},
+    {"label": "인사관리", "children": [
+        {"key": "hr_attendance", "label": "근태관리"},
+        {"key": "hr_leave",      "label": "휴가관리"},
+        {"key": "hr_org",        "label": "조직도"},
+    ]},
+    {"key": "user_manage", "label": "사용자관리"},
+]
 PERMISSION_LEVELS = {
     "none": "못봄",
     "read": "읽기전용",
@@ -125,12 +219,122 @@ MENU_ITEMS = [
     ("work_order", "작업지시서", "/work_order"),
     ("production", "생산스케줄", "/"),
     ("completed", "제작완료", "/completed"),
-    ("as", "A/S관리", "/as"),
+    ("as", "C/S관리", "/as"),
     ("calendar", "캘린더", "/calendar"),
     ("mail", "서식관리", "/mail"),
+    ("ledger", "대장관리", "/ledger"),
+    ("hr", "인사관리", "/hr"),
 ]
 ALL_PERMISSIONS = list(PERMISSION_LABELS.keys())
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+ORG_DATA = [
+    {
+        "id": "executive", "label": "경영진",
+        "members": [
+            {"rank": "회장",    "name": "윤병광", "phone": "010-5404-2600", "photo": "img_r003_c063.jpg"},
+            {"rank": "대표이사", "name": "윤영석", "phone": "010-3434-2602", "photo": "img_r010_c064.jpg"},
+            {"rank": "대표이사", "name": "남승희", "phone": "010-3434-5295", "photo": "img_r017_c064.jpg"},
+        ]
+    },
+    {
+        "id": "strategy", "label": "미래전략팀",
+        "members": [
+            {"rank": "차장", "team": "품질,생산,안전", "name": "윤성태", "phone": "010-4646-1081", "photo": "img_r026_c075.jpg"},
+            {"rank": "차장", "team": "인사관리",       "name": "임희수", "phone": "010-5121-0927", "photo": "img_r026_c085.jpg"},
+            {"rank": "과장", "team": "개발, 설계",     "name": "남승훈", "phone": "010-8815-5295", "photo": "img_r026_c095.jpg"},
+            {"rank": "과장", "team": "마케팅,품질",    "name": "임진묵", "phone": "010-5242-8343", "photo": "img_r025_c105.jpg"},
+        ]
+    },
+    {
+        "id": "management", "label": "경영관리부",
+        "head": {"rank": "이사", "name": "신서경", "phone": "010-9242-5383", "photo": "img_r036_c006.jpg"},
+        "teams": [
+            {"label": "생산관리팀", "members": [
+                {"rank": "과장", "name": "박평운", "phone": "010-3659-8335", "photo": "img_r044_c007.jpg"},
+                {"rank": "대리", "name": "강준상", "phone": "010-3075-1073", "photo": "img_r051_c006.jpg"},
+                {"rank": "사원", "name": "김용성", "phone": "010-8253-3070", "photo": "img_r058_c007.jpg"},
+            ]},
+            {"label": "판매관리팀", "members": [
+                {"rank": "대리", "name": "김미혜", "phone": "010-8842-4424", "photo": "img_r067_c002.jpg"},
+                {"rank": "사원", "name": "차선아", "phone": "010-4562-7471", "photo": "img_r074_c002.jpg"},
+            ]},
+            {"label": "영업관리팀", "members": [
+                {"rank": "대리", "name": "김준홍", "phone": "010-3131-7378", "photo": "img_r067_c012.jpg"},
+                {"rank": "과장", "name": "고은영", "phone": "010-7359-0307", "photo": "img_r073_c012.jpg"},
+                {"rank": "주임", "name": "신지원", "phone": "010-2798-0091", "photo": "img_r081_c012.jpg"},
+            ]},
+        ]
+    },
+    {
+        "id": "sales", "label": "영업부",
+        "head": {"rank": "과장", "name": "이세영", "phone": "010-3896-1678", "photo": "img_r036_c037.jpg"},
+        "teams": [
+            {"label": "영업1팀", "members": [
+                {"rank": "과장", "name": "이세영",  "phone": "010-3896-1678", "photo": "img_r045_c023.jpg"},
+                {"rank": "대리", "name": "임원산",  "phone": "010-4178-2188", "photo": "img_r052_c023.jpg"},
+            ]},
+            {"label": "영업3팀", "members": [
+                {"rank": "대리", "name": "김영진",  "phone": "010-2380-1853", "photo": "img_r045_c043.jpg"},
+                {"rank": "대리", "name": "이원희",  "phone": "010-5747-8784", "photo": "img_r052_c042.jpg"},
+            ]},
+            {"label": "영업4팀", "members": [
+                {"rank": "대리", "name": "정욱기",  "phone": "010-9101-7782", "photo": "img_r045_c052.jpg"},
+            ]},
+        ]
+    },
+    {
+        "id": "production", "label": "생산부",
+        "head": {"rank": "공장장", "name": "임명택", "phone": "010-6434-4478", "photo": "img_r036_c089.jpg"},
+        "teams": [
+            {"label": "도어팀", "members": [
+                {"rank": "이사", "name": "최준식", "phone": "010-8849-2090", "photo": "img_r045_c063.jpg"},
+                {"rank": "주임", "name": "류승만", "phone": "010-9486-9843", "photo": "img_r051_c064.jpg"},
+                {"rank": "사원", "name": "김동율", "phone": "010-7418-7942", "photo": "img_r059_c064.jpg"},
+                {"rank": "사원", "name": "이창재", "phone": "010-4634-5644", "photo": "img_r066_c063.jpg"},
+                {"rank": "사원", "name": "이훈",   "phone": "010-2573-5627", "photo": "img_r073_c064.jpg"},
+                {"rank": "사원", "name": "민승찬", "phone": "010-8144-7947", "photo": "img_r080_c064.jpg"},
+            ]},
+            {"label": "폴딩·시스템팀", "members": [
+                {"rank": "대리", "name": "박준영", "phone": "010-2414-1824", "photo": "img_r045_c073.jpg"},
+                {"rank": "주임", "name": "이종준", "phone": "010-2863-2803", "photo": "img_r052_c074.jpg"},
+                {"rank": "이사", "name": "박규석", "phone": "010-2286-1285", "photo": "img_r044_c085.jpg"},
+                {"rank": "과장", "name": "박종덕", "phone": "010-8147-5825", "photo": "img_r052_c084.jpg"},
+                {"rank": "주임", "name": "이영돈", "phone": "010-5462-4278", "photo": "img_r059_c084.jpg"},
+                {"rank": "사원", "name": "김시현", "phone": "010-8837-0438", "photo": "img_r045_c094.jpg"},
+                {"rank": "사원", "name": "양성열", "phone": "010-2316-9378", "photo": "img_r052_c094.jpg"},
+                {"rank": "주임", "name": "김범식", "phone": "010-2334-6711", "photo": "img_r065_c084.jpg"},
+                {"rank": "사원", "name": "박성준", "phone": "010-6343-0949", "photo": "img_r066_c074.jpg"},
+                {"rank": "사원", "name": "최민수", "phone": "010-4172-4236", "photo": "img_r073_c074.jpg"},
+                {"rank": "사원", "name": "이환인", "phone": "010-4798-6879", "photo": None},
+            ]},
+            {"label": "중문·방충망팀", "members": [
+                {"rank": "대리", "name": "윤소라", "phone": "010-2365-1771", "photo": "img_r045_c106.jpg"},
+                {"rank": "사원", "name": "이선근", "phone": "010-9336-2888", "photo": "img_r051_c106.jpg"},
+            ]},
+        ]
+    },
+    {
+        "id": "cs", "label": "C/S관리부",
+        "head": {"rank": "대리", "name": "홍대권", "phone": "010-9632-6515", "photo": "img_r036_c121.jpg"},
+        "teams": [
+            {"label": "C/S팀", "members": [
+                {"rank": "과장", "name": "정종식", "phone": "010-9748-1123", "photo": None},
+                {"rank": "과장", "name": "이정석", "phone": "010-9980-3164", "photo": "img_r052_c116.jpg"},
+                {"rank": "대리", "name": "황기연", "phone": "010-5852-0382", "photo": "img_r059_c116.jpg"},
+                {"rank": "대리", "name": "노왕우", "phone": "010-6487-0929", "photo": "img_r065_c117.jpg"},
+                {"rank": "대리", "name": "이문상", "phone": "010-5479-6253", "photo": "img_r073_c117.jpg"},
+            ]},
+            {"label": "시공팀", "members": [
+                {"rank": "과장", "name": "김진학", "phone": "010-3922-9155", "photo": "img_r045_c127.jpg"},
+                {"rank": "대리", "name": "오병래", "phone": "010-3412-3927", "photo": "img_r052_c127.jpg"},
+                {"rank": "주임", "name": "남상규", "phone": "010-4611-9782", "photo": "img_r059_c128.jpg"},
+                {"rank": "주임", "name": "김현우", "phone": "010-3757-2523", "photo": "img_r066_c127.jpg"},
+                {"rank": "사원", "name": "이선용", "phone": "010-9426-0816", "photo": "img_r073_c128.jpg"},
+            ]},
+        ]
+    },
+]
 
 
 def blank_permission_map():
@@ -230,6 +434,42 @@ def require_write_perm(perm):
     return deco
 
 
+def send_push_notifications(user_ids, title, body, url="/as"):
+    if not PUSH_AVAILABLE or not user_ids or not VAPID_KEYS.get("private_pem"):
+        return
+    try:
+        conn = get_conn()
+        ph = ",".join("?" * len(user_ids))
+        subs = conn.execute(
+            f"SELECT * FROM push_subscriptions WHERE user_id IN ({ph})", user_ids
+        ).fetchall()
+        conn.close()
+        dead = []
+        for sub in subs:
+            try:
+                webpush(
+                    subscription_info={
+                        "endpoint": sub["endpoint"],
+                        "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}
+                    },
+                    data=json.dumps({"title": title, "body": body, "url": url}),
+                    vapid_private_key=VAPID_KEYS["private_pem"],
+                    vapid_claims={"sub": "mailto:info@plusdoor.com"}
+                )
+            except WebPushException as e:
+                if e.response and e.response.status_code in (404, 410):
+                    dead.append(sub["id"])
+            except Exception:
+                pass
+        if dead:
+            conn2 = get_conn()
+            conn2.execute(f"DELETE FROM push_subscriptions WHERE id IN ({','.join('?'*len(dead))})", dead)
+            conn2.commit()
+            conn2.close()
+    except Exception:
+        pass
+
+
 def render_top_menu(active_key=""):
     css = (
         '<style id="pd-topbar">'
@@ -245,10 +485,15 @@ def render_top_menu(active_key=""):
             'white-space:nowrap!important;margin-right:6px!important;display:inline-block!important}'
         '.pd-bar .sep{width:1px!important;height:22px!important;'
             'background:rgba(255,255,255,.2)!important;margin:0 2px!important;flex-shrink:0!important}'
+        '.pd-bar .pd-nav{display:flex!important;align-items:center!important;'
+            'gap:4px!important;flex:1!important;overflow-x:auto!important;overflow-y:hidden!important;'
+            'scrollbar-width:none!important}'
+        '.pd-bar .pd-nav::-webkit-scrollbar{display:none!important}'
         '.pd-bar .nb{padding:5px 11px!important;border:1px solid rgba(255,255,255,.25)!important;'
             'background:transparent!important;color:rgba(255,255,255,.75)!important;'
             'cursor:pointer!important;border-radius:4px!important;font-size:12px!important;'
-            'font-weight:600!important;white-space:nowrap!important}'
+            'font-weight:600!important;white-space:nowrap!important;'
+            'text-decoration:none!important;display:inline-flex!important;align-items:center!important}'
         '.pd-bar .nb:hover{background:rgba(255,255,255,.18)!important;color:#fff!important}'
         '.pd-bar .nb.on{background:#fff!important;color:#1a3a5c!important;'
             'font-weight:700!important;border-color:#fff!important}'
@@ -262,32 +507,85 @@ def render_top_menu(active_key=""):
             'padding:1px 5px!important;font-size:10px!important;font-weight:700!important;'
             'min-width:18px!important;text-align:center!important;pointer-events:none!important}'
         '.pd-bar .ml{margin-left:auto!important;display:flex!important;'
-            'align-items:center!important;gap:8px!important}'
+            'align-items:center!important;gap:8px!important;flex-shrink:0!important}'
         '.pd-bar .un{font-size:12px!important;color:rgba(255,255,255,.65)!important;'
             'white-space:nowrap!important}'
         '.pd-bar .lo{padding:4px 10px!important;border:1px solid rgba(255,255,255,.2)!important;'
             'background:transparent!important;color:rgba(255,255,255,.55)!important;'
             'cursor:pointer!important;border-radius:4px!important;font-size:11px!important}'
         '.pd-bar .lo:hover{color:#fff!important}'
+        '@media(max-width:767px){'
+            '.pd-bar{height:auto!important;flex-wrap:wrap!important;padding:4px 10px 0!important}'
+            '.pd-bar .pd-nav{display:none!important}'
+            '.pd-bar .sep.nav-sep{display:none!important}'
+            '.pd-bar .un{display:none!important}'
+            '.pd-menu-btn{display:flex!important;order:10!important;width:100%!important;'
+                'justify-content:center!important;margin:4px 0 6px!important;'
+                'border-radius:8px!important;padding:8px!important;font-size:13px!important}'
+        '}'
+        '.pd-menu-btn{display:none;align-items:center;gap:6px;padding:5px 12px;'
+            'border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;'
+            'cursor:pointer;border-radius:6px;font-size:13px;font-weight:700;flex-shrink:0}'
+        '.pd-menu-btn:active{background:rgba(255,255,255,.15)}'
+        '.pd-nav-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);'
+            'z-index:999999;align-items:flex-start;justify-content:stretch}'
+        '.pd-nav-sheet-bg.open{display:flex}'
+        '.pd-nav-sheet{background:#fff;width:100%;border-radius:0 0 16px 16px;'
+            'box-shadow:0 6px 24px rgba(0,0,0,.22);max-height:80vh;overflow-y:auto}'
+        '.pd-nav-sheet-hd{display:flex;align-items:center;justify-content:space-between;'
+            'padding:12px 18px 8px;border-bottom:1px solid #eee}'
+        '.pd-nav-sheet-hd span{font-size:15px;font-weight:800;color:#1a3a5c}'
+        '.pd-nav-sheet-hd button{background:none;border:none;font-size:22px;cursor:pointer;'
+            'color:#888;line-height:1;padding:0 2px}'
+        '.pd-nav-sheet-body{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:8px}'
+        '.pd-si{display:flex;align-items:center;padding:14px 16px;border-radius:10px;'
+            'font-size:14px;font-weight:700;color:#1a3a5c;cursor:pointer;'
+            'text-decoration:none!important;width:100%;text-align:left;gap:6px}'
+        '.pd-si:active{background:#f0f4ff}'
+        '.pd-si.on{color:#e85d04}'
+        '.pd-nav-sheet-logout{margin:6px 8px 8px;padding:13px;border-radius:10px;'
+            'background:#fee2e2;color:#991b1b;font-size:13px;font-weight:700;'
+            'border:none;cursor:pointer;width:calc(100% - 16px)}'
         '</style>'
     )
     parts = [css, '<div class="pd-bar">',
              '<span class="logo">PLUSDOOR</span>',
-             '<span class="sep"></span>']
+             '<span class="sep"></span>',
+             '<div class="pd-nav">']
+    JOURNAL_KEYS = ["journal_sales", "journal_consult", "journal_measure", "journal_install"]
+    LEDGER_KEYS  = ["ledger_vehicle", "ledger_machine"]
+    HR_KEYS      = ["hr_attendance", "hr_leave", "hr_org"]
+    CS_KEYS      = ["as", "cs_install"]
+    sheet_items = []
     for key, label, href in MENU_ITEMS:
-        if user_has_perm(key):
-            cls = "nb on" if key == active_key else "nb"
-            parts.append(
-                f'<button class="{cls}" onclick="location.href=\'{href}\'">{label}</button>'
-            )
+        if key == "journal":
+            visible = any(user_has_perm(k) for k in JOURNAL_KEYS)
+        elif key == "ledger":
+            visible = any(user_has_perm(k) for k in LEDGER_KEYS)
+        elif key == "hr":
+            visible = any(user_has_perm(k) for k in HR_KEYS)
+        elif key == "as":
+            visible = any(user_has_perm(k) for k in CS_KEYS)
+        else:
+            visible = user_has_perm(key)
+        if visible:
+            if key == active_key:
+                parts.append(f'<a class="nb on" href="{href}">{label}</a>')
+                sheet_items.append(f'<a class="pd-si on" href="{href}" onclick="pdCloseNavSheet()">{label}</a>')
+            else:
+                parts.append(f'<a class="nb" href="{href}">{label}</a>')
+                sheet_items.append(f'<a class="pd-si" href="{href}">{label}</a>')
     if user_has_perm("user_manage"):
-        cls = "nb on" if active_key == "user_manage" else "nb"
-        parts.append(
-            f'<button class="{cls}" onclick="location.href=\'/users\'">'
-            '사용자관리</button>'
-        )
+        if active_key == "user_manage":
+            parts.append('<a class="nb on" href="/users">사용자관리</a>')
+            sheet_items.append('<a class="pd-si on" href="/users" onclick="pdCloseNavSheet()">사용자관리</a>')
+        else:
+            parts.append('<a class="nb" href="/users">사용자관리</a>')
+            sheet_items.append('<a class="pd-si" href="/users">사용자관리</a>')
+    parts.append('</div>')
+    parts.append('<button class="pd-menu-btn" onclick="pdOpenNavSheet()">&#9776; 메뉴</button>')
     user_name = session.get("name") or session.get("username") or ""
-    parts.append('<span class="sep"></span>')
+    parts.append('<span class="sep nav-sep"></span>')
     parts.append(
         '<button class="nr" id="checkRequestTopBtn"' +
         ' onclick="if(window.showCheckRequestInbox){showCheckRequestInbox()}' +
@@ -302,6 +600,26 @@ def render_top_menu(active_key=""):
         '<button class="lo" onclick="location.href=\'/logout\'">\ub85c\uadf8\uc544\uc6c3</button>'
     )
     parts.append('</div></div>')
+    sheet_body = ''.join(sheet_items)
+    parts.append(f'''<div class="pd-nav-sheet-bg" id="pdNavSheetBg" onclick="if(event.target===this)pdCloseNavSheet()">
+  <div class="pd-nav-sheet">
+    <div class="pd-nav-sheet-hd"><span>&#9776; 메뉴</span><button onclick="pdCloseNavSheet()">&#10005;</button></div>
+    <div class="pd-nav-sheet-body">{sheet_body}</div>
+    <button class="pd-nav-sheet-logout" onclick="location.href='/logout'">로그아웃</button>
+  </div>
+</div>
+<script id="pd-nav-sheet-js">
+function pdOpenNavSheet(){{
+  var bar=document.querySelector('.pd-bar');
+  var bg=document.getElementById('pdNavSheetBg');
+  if(bar)bg.style.paddingTop=bar.getBoundingClientRect().bottom+'px';
+  bg.classList.add('open');
+  document.body.style.overflow='hidden';
+}}
+function pdCloseNavSheet(){{document.getElementById('pdNavSheetBg').classList.remove('open');document.body.style.overflow='';}}
+window.addEventListener('resize',function(){{if(window.innerWidth>767)pdCloseNavSheet();}});
+window.addEventListener('orientationchange',function(){{setTimeout(function(){{if(window.innerWidth>767)pdCloseNavSheet();}},150);}});
+</script>''')
     parts.append('''<div id="pdCheckInboxModal" onclick="if(event.target===this)pdHideCheckInbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999999;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:10px;width:min(600px,98vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden">
     <div style="background:#1a3a5c;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
@@ -361,7 +679,18 @@ def render_top_menu(active_key=""):
         var who=mode==="inbox"?"발신: "+esc(req.from_user_name||""):"→ "+esc(req.to_user_name||req.to_group||"");
         var statusBadge=isNew?"<span style=\'background:#e85d04;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px\'>미확인</span>":"<span style=\'background:#16a34a;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin-left:4px\'>완료</span>";
         var doneInfo=req.status==="확인완료"?"<div style=\'font-size:11px;color:#16a34a;margin-top:4px\'>&#10003; 확인완료: "+esc(req.completed_by||"")+" ("+esc((req.completed_at||"").slice(0,16))+")</div>":"";
-        var completeBtn=(isNew&&mode==="inbox")?"<div style=\'text-align:right;margin-top:8px\'><button onclick=\'pdCompleteCheckReq("+req.id+")\' style=\'background:#1a3a5c;color:#fff;border:none;border-radius:4px;padding:5px 16px;font-size:12px;font-weight:700;cursor:pointer\'>확인완료</button></div>":"";
+        var isLeave=req.source_type==="leave"&&req.leave_request_id;
+        var completeBtn="";
+        if(isNew&&mode==="inbox"){
+          if(isLeave){
+            completeBtn="<div style=\'display:flex;gap:8px;justify-content:flex-end;margin-top:8px\'>"
+              +"<button onclick=\'pdApproveLeave("+req.leave_request_id+",&#39;승인&#39;)\' style=\'background:#16a34a;color:#fff;border:none;border-radius:4px;padding:5px 18px;font-size:12px;font-weight:700;cursor:pointer\'>승인</button>"
+              +"<button onclick=\'pdApproveLeave("+req.leave_request_id+",&#39;반려&#39;)\' style=\'background:#dc2626;color:#fff;border:none;border-radius:4px;padding:5px 18px;font-size:12px;font-weight:700;cursor:pointer\'>반려</button>"
+              +"</div>";
+          } else {
+            completeBtn="<div style=\'text-align:right;margin-top:8px\'><button onclick=\'pdCompleteCheckReq("+req.id+")\' style=\'background:#1a3a5c;color:#fff;border:none;border-radius:4px;padding:5px 16px;font-size:12px;font-weight:700;cursor:pointer\'>확인완료</button></div>";
+          }
+        }
         return "<div style=\'border:1px solid "+(isNew?"#f4a86a":"#e0e0e0")+";border-radius:6px;padding:10px 14px;margin-bottom:8px;background:"+(isNew?"#fff8f0":"#fafafa")+"\'>"
           +"<div style=\'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px\'>"
           +"<span style=\'font-weight:700;font-size:13px;color:#1a3a5c\'>"+who+statusBadge+"</span>"
@@ -378,6 +707,17 @@ def render_top_menu(active_key=""):
   window.pdCompleteCheckReq=async function(id){
     try{
       await fetch("/api/check_requests/"+id+"/complete",{method:"PUT"});
+      pdLoadCheckInbox(currentMode);
+      updateBadge();
+    }catch(e){alert("처리 실패");}
+  };
+  window.pdApproveLeave=async function(leaveId,action){
+    if(!confirm(action==="승인"?"승인하시겠습니까?":"반려하시겠습니까?"))return;
+    try{
+      var r=await fetch("/api/hr/leave/requests/"+leaveId+"/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:action})});
+      var d=await r.json();
+      if(!r.ok||d.error){alert(d.error||"처리 실패");return;}
+      alert(action+"되었습니다.");
       pdLoadCheckInbox(currentMode);
       updateBadge();
     }catch(e){alert("처리 실패");}
@@ -405,6 +745,48 @@ def render_top_menu(active_key=""):
   }
   new MutationObserver(sync).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['style','class']});
 })();</script>''')
+    parts.append('<script id="pd-nav-scroll"></script>')
+    parts.append('''<script id="pd-push-sub">(function(){
+  async function initPush(){
+    if(!('PushManager' in window)||!('serviceWorker' in navigator))return;
+    var reg=await navigator.serviceWorker.ready;
+    var existing=await reg.pushManager.getSubscription();
+    if(existing)return;
+    var perm=Notification.permission;
+    if(perm==='denied')return;
+    if(perm==='default')perm=await Notification.requestPermission();
+    if(perm!=='granted')return;
+    try{
+      var r=await fetch('/api/push/vapid-public-key');
+      var d=await r.json();
+      function toUint8(b64){
+        var pad='='.repeat((4-b64.length%4)%4);
+        var raw=atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/'));
+        var arr=new Uint8Array(raw.length);
+        for(var i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);
+        return arr;
+      }
+      var sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:toUint8(d.public_key)});
+      await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)});
+    }catch(e){}
+  }
+  if('serviceWorker' in navigator){navigator.serviceWorker.ready.then(function(){setTimeout(initPush,2000);});}
+})();</script>''')
+    parts.append('''<script id="pd-pwa">(function(){
+  if(!document.querySelector('link[rel="manifest"]')){
+    var ml=document.createElement('link');ml.rel='manifest';ml.href='/static/manifest.json';document.head.appendChild(ml);}
+  [['mobile-web-app-capable','yes'],['apple-mobile-web-app-capable','yes'],
+   ['apple-mobile-web-app-status-bar-style','black-translucent'],
+   ['apple-mobile-web-app-title','PLUSDOOR'],['theme-color','#1a3a5c']
+  ].forEach(function(a){
+    if(!document.querySelector('meta[name="'+a[0]+'"]')){
+      var m=document.createElement('meta');m.name=a[0];m.content=a[1];document.head.appendChild(m);}
+  });
+  if(!document.querySelector('link[rel="apple-touch-icon"]')){
+    var ai=document.createElement('link');ai.rel='apple-touch-icon';ai.href='/static/img/logo.png';document.head.appendChild(ai);}
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});}
+})();</script>''')
     return ''.join(parts)
 
 
@@ -416,6 +798,7 @@ def inject_auth_helpers():
         "has_write_perm": user_can_write,
         "permission_labels": PERMISSION_LABELS,
         "permission_levels": PERMISSION_LEVELS,
+        "permission_tree": PERMISSION_TREE,
     }
 
 
@@ -424,7 +807,6 @@ def page_permission_for_path(path):
         return "production"
     return {
         "/price": "price",
-        "/journal": "journal",
         "/work_order": "work_order",
         "/completed": "completed",
         "/as": "as",
@@ -442,8 +824,7 @@ def api_permission_for_path(path):
         return "user_manage"
     if path.startswith("/api/price"):
         return "price"
-    if path.startswith("/api/journal") or path.startswith("/api/journals"):
-        return "journal"
+
     if path.startswith("/api/work_orders"):
         return "work_order"
     if path.startswith("/api/calendar_events") or path.startswith("/api/delivery_people"):
@@ -461,7 +842,7 @@ def api_permission_for_path(path):
 
 @app.before_request
 def enforce_login_and_timeout():
-    public_paths = ["/login", "/api/login", "/static/", "/.well-known/"]
+    public_paths = ["/login", "/api/login", "/api/change_password", "/static/", "/.well-known/"]
     if request.path.startswith(tuple(public_paths)):
         return None
 
@@ -1125,8 +1506,291 @@ def init_db():
     _docs_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "documents", "납품확인서")
     _os.makedirs(_docs_dir, exist_ok=True)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS vehicle_ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company TEXT DEFAULT '',
+            vehicle_type TEXT DEFAULT '',
+            unit_no TEXT DEFAULT '',
+            vehicle_no TEXT DEFAULT '',
+            hipass_digits TEXT DEFAULT '',
+            fuel_type TEXT DEFAULT '',
+            reg_date TEXT DEFAULT '',
+            owner TEXT DEFAULT '',
+            manager TEXT DEFAULT '',
+            hipass_card TEXT DEFAULT '',
+            vehicle_class TEXT DEFAULT '',
+            mileage_json TEXT DEFAULT '[]',
+            engine_oil TEXT DEFAULT '',
+            tire TEXT DEFAULT '',
+            repair TEXT DEFAULT '',
+            urea TEXT DEFAULT '',
+            violation TEXT DEFAULT '',
+            car_insurance TEXT DEFAULT '',
+            driver_insurance TEXT DEFAULT '',
+            inspection TEXT DEFAULT '',
+            tax TEXT DEFAULT '',
+            memo TEXT DEFAULT '',
+            driver_age TEXT DEFAULT '',
+            photo TEXT DEFAULT '',
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+    for _col, _ddl in [
+        ("vehicle_class",    "ALTER TABLE vehicle_ledger ADD COLUMN vehicle_class TEXT DEFAULT ''"),
+        ("mileage_json",     "ALTER TABLE vehicle_ledger ADD COLUMN mileage_json TEXT DEFAULT '[]'"),
+        ("engine_oil",       "ALTER TABLE vehicle_ledger ADD COLUMN engine_oil TEXT DEFAULT ''"),
+        ("tire",             "ALTER TABLE vehicle_ledger ADD COLUMN tire TEXT DEFAULT ''"),
+        ("repair",           "ALTER TABLE vehicle_ledger ADD COLUMN repair TEXT DEFAULT ''"),
+        ("urea",             "ALTER TABLE vehicle_ledger ADD COLUMN urea TEXT DEFAULT ''"),
+        ("violation",        "ALTER TABLE vehicle_ledger ADD COLUMN violation TEXT DEFAULT ''"),
+        ("car_insurance",    "ALTER TABLE vehicle_ledger ADD COLUMN car_insurance TEXT DEFAULT ''"),
+        ("driver_insurance", "ALTER TABLE vehicle_ledger ADD COLUMN driver_insurance TEXT DEFAULT ''"),
+        ("inspection",       "ALTER TABLE vehicle_ledger ADD COLUMN inspection TEXT DEFAULT ''"),
+        ("tax",              "ALTER TABLE vehicle_ledger ADD COLUMN tax TEXT DEFAULT ''"),
+        ("status",           "ALTER TABLE vehicle_ledger ADD COLUMN status TEXT DEFAULT '운행'"),
+        ("driver_age",       "ALTER TABLE vehicle_ledger ADD COLUMN driver_age TEXT DEFAULT ''"),
+    ]:
+        if not column_exists(conn, "vehicle_ledger", _col):
+            conn.execute(_ddl)
+    # 기존 데이터 중 차량번호에 매각/판매 포함된 것은 status='매각'으로 자동 분류
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS equipment_ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company TEXT DEFAULT '',
+            name TEXT DEFAULT '',
+            manage_no TEXT DEFAULT '',
+            mfg_no TEXT DEFAULT '',
+            type TEXT DEFAULT '',
+            grade TEXT DEFAULT '',
+            category TEXT DEFAULT '',
+            maker TEXT DEFAULT '',
+            mfg_date TEXT DEFAULT '',
+            voltage TEXT DEFAULT '',
+            supplier TEXT DEFAULT '',
+            install_date TEXT DEFAULT '',
+            location TEXT DEFAULT '',
+            parts_json TEXT DEFAULT '[]',
+            repair_json TEXT DEFAULT '[]',
+            memo TEXT DEFAULT '',
+            photo TEXT DEFAULT '',
+            maker_contact TEXT DEFAULT '',
+            maker_note TEXT DEFAULT '',
+            supplier_contact TEXT DEFAULT '',
+            supplier_note TEXT DEFAULT '',
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+
+    for _col, _ddl in [
+        ("maker_contact",    "ALTER TABLE equipment_ledger ADD COLUMN maker_contact TEXT DEFAULT ''"),
+        ("maker_note",       "ALTER TABLE equipment_ledger ADD COLUMN maker_note TEXT DEFAULT ''"),
+        ("supplier_contact", "ALTER TABLE equipment_ledger ADD COLUMN supplier_contact TEXT DEFAULT ''"),
+        ("supplier_note",    "ALTER TABLE equipment_ledger ADD COLUMN supplier_note TEXT DEFAULT ''"),
+    ]:
+        if not column_exists(conn, "equipment_ledger", _col):
+            conn.execute(_ddl)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS vehicle_docs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER,
+            filename TEXT DEFAULT '',
+            original_name TEXT DEFAULT '',
+            uploaded_at TEXT DEFAULT ''
+        )
+    """)
+
+    conn.execute("""
+        UPDATE vehicle_ledger SET status='매각'
+        WHERE (status IS NULL OR status='운행')
+          AND (vehicle_no LIKE '%매각%' OR vehicle_no LIKE '%판매%'
+               OR hipass_card LIKE '%매각%')
+    """)
+
+    # journal/ledger 권한 분리 마이그레이션
+    users = conn.execute("SELECT id, permissions FROM users").fetchall()
+    for u in users:
+        try:
+            perms = json.loads(u["permissions"] or "{}")
+        except Exception:
+            perms = {}
+        changed = False
+        if "journal" in perms:
+            level = perms.pop("journal")
+            for k in ["journal_sales", "journal_consult", "journal_measure", "journal_install"]:
+                perms.setdefault(k, level)
+            changed = True
+        if "ledger" in perms:
+            level = perms.pop("ledger")
+            perms.setdefault("ledger_vehicle", level)
+            perms.setdefault("ledger_machine", level)
+            changed = True
+        if changed:
+            conn.execute("UPDATE users SET permissions=? WHERE id=?",
+                         (json.dumps(perms, ensure_ascii=False), u["id"]))
+
+    # 조직도 테이블
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS org_departments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT NOT NULL,
+            dept_type TEXT DEFAULT 'regular',
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS org_teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dept_id INTEGER NOT NULL,
+            label TEXT NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS org_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dept_id INTEGER NOT NULL,
+            team_id INTEGER,
+            name TEXT NOT NULL DEFAULT '',
+            rank TEXT DEFAULT '',
+            phone TEXT DEFAULT '',
+            team_tag TEXT DEFAULT '',
+            photo TEXT DEFAULT '',
+            is_head INTEGER DEFAULT 0,
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+    if not column_exists(conn, "org_members", "hire_date"):
+        conn.execute("ALTER TABLE org_members ADD COLUMN hire_date TEXT DEFAULT ''")
+    if not column_exists(conn, "org_members", "is_team_leader"):
+        conn.execute("ALTER TABLE org_members ADD COLUMN is_team_leader INTEGER DEFAULT 0")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS hr_leave_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            member_id INTEGER NOT NULL,
+            leave_type TEXT DEFAULT '연차',
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            days REAL DEFAULT 1,
+            reason TEXT DEFAULT '',
+            status TEXT DEFAULT '대기',
+            applied_by TEXT DEFAULT '',
+            processed_at TEXT DEFAULT '',
+            processed_by TEXT DEFAULT '',
+            memo TEXT DEFAULT '',
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+
+    for col, default in [
+        ("approver1_name",   "''"), ("approver1_status", "'신청'"),
+        ("approver2_name",   "''"), ("approver2_status", "'신청'"),
+    ]:
+        if not column_exists(conn, "hr_leave_requests", col):
+            conn.execute(f"ALTER TABLE hr_leave_requests ADD COLUMN {col} TEXT DEFAULT {default}")
+
+    if not column_exists(conn, "check_requests", "leave_request_id"):
+        conn.execute("ALTER TABLE check_requests ADD COLUMN leave_request_id INTEGER")
+
+    if not conn.execute("SELECT id FROM org_departments LIMIT 1").fetchone():
+        _migrate_org_from_const(conn)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            endpoint TEXT NOT NULL,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            created_at TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_push_endpoint ON push_subscriptions(endpoint)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS construction_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT DEFAULT '실측',
+            status TEXT DEFAULT '예정',
+            company TEXT DEFAULT '',
+            scheduled_date TEXT DEFAULT '',
+            customer TEXT DEFAULT '',
+            address TEXT DEFAULT '',
+            manager TEXT DEFAULT '',
+            content TEXT DEFAULT '',
+            memo TEXT DEFAULT '',
+            created_by TEXT DEFAULT '',
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS construction_docs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT DEFAULT '',
+            filename TEXT DEFAULT '',
+            original_name TEXT DEFAULT '',
+            uploaded_by TEXT DEFAULT '',
+            created_at TEXT DEFAULT ''
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS att_saved (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT DEFAULT '',
+            month TEXT DEFAULT '',
+            data TEXT DEFAULT '',
+            created_at TEXT DEFAULT ''
+        )
+    """)
+
     conn.commit()
     conn.close()
+
+
+def _migrate_org_from_const(conn):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for i, dept in enumerate(ORG_DATA):
+        dept_type = "special" if "members" in dept and "teams" not in dept else "regular"
+        conn.execute(
+            "INSERT INTO org_departments (label, dept_type, sort_order, created_at, updated_at) VALUES (?,?,?,?,?)",
+            (dept["label"], dept_type, i * 10, now, now)
+        )
+        dept_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        if dept.get("head"):
+            h = dept["head"]
+            conn.execute(
+                "INSERT INTO org_members (dept_id, team_id, name, rank, phone, photo, is_head, sort_order, created_at, updated_at) VALUES (?,NULL,?,?,?,?,1,0,?,?)",
+                (dept_id, h["name"], h["rank"], h.get("phone", ""), h.get("photo", ""), now, now)
+            )
+        for j, m in enumerate(dept.get("members", [])):
+            conn.execute(
+                "INSERT INTO org_members (dept_id, team_id, name, rank, phone, team_tag, photo, is_head, sort_order, created_at, updated_at) VALUES (?,NULL,?,?,?,?,?,0,?,?,?)",
+                (dept_id, m["name"], m["rank"], m.get("phone", ""), m.get("team", ""), m.get("photo", ""), j * 10, now, now)
+            )
+        for j, team in enumerate(dept.get("teams", [])):
+            conn.execute(
+                "INSERT INTO org_teams (dept_id, label, sort_order, created_at, updated_at) VALUES (?,?,?,?,?)",
+                (dept_id, team["label"], j * 10, now, now)
+            )
+            team_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            for k, m in enumerate(team.get("members", [])):
+                conn.execute(
+                    "INSERT INTO org_members (dept_id, team_id, name, rank, phone, photo, is_head, sort_order, created_at, updated_at) VALUES (?,?,?,?,?,?,0,?,?,?)",
+                    (dept_id, team_id, m["name"], m["rank"], m.get("phone", ""), m.get("photo", ""), k * 10, now, now)
+                )
+
 
 def upsert_calendar_event(conn, schedule_id, data):
     delivery_type = data.get("delivery_type") or "납품"
@@ -1469,7 +2133,8 @@ def mail_page():
             stamp_b64 = _b64.b64encode(f.read()).decode()
     except Exception:
         pass
-    return render_template("mail.html", stamp_b64=stamp_b64)
+    return render_template("mail.html", stamp_b64=stamp_b64,
+                           is_admin=session.get("role") == "관리자")
 
 
 @app.route("/mail/send")
@@ -1685,6 +2350,8 @@ def get_mail_settings():
 
 @app.route("/api/mail/settings", methods=["POST"])
 def save_mail_settings():
+    if session.get("role") != "관리자":
+        return jsonify({"ok": False, "error": "관리자 권한이 필요합니다."}), 403
     data = request.json or {}
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_conn()
@@ -1883,6 +2550,1178 @@ def download_reg_file(filename):
     return send_from_directory(reg_dir, safe_name, as_attachment=True)
 
 
+@app.route("/ledger")
+def ledger_page():
+    if not session.get("user_id"):
+        return redirect(url_for("login_page", next="/ledger"))
+    if not (user_has_perm("ledger_vehicle") or user_has_perm("ledger_machine")):
+        return "권한이 없습니다.", 403
+    return render_template("ledger.html")
+
+
+@app.route("/hr")
+def hr_page():
+    if not session.get("user_id"):
+        return redirect(url_for("login_page", next="/hr"))
+    if not any(user_has_perm(k) for k in ["hr_attendance", "hr_leave", "hr_org"]):
+        return "권한이 없습니다.", 403
+    my_name = session.get("name", "")
+    lv_scope = {"type": "member"}
+    if session.get("role") == "관리자":
+        lv_scope = {"type": "admin"}
+    else:
+        conn = get_conn()
+        head_row = conn.execute(
+            "SELECT dept_id FROM org_members WHERE name=? AND is_head=1 LIMIT 1", (my_name,)
+        ).fetchone()
+        if head_row:
+            lv_scope = {"type": "dept_head", "dept_id": head_row["dept_id"]}
+        else:
+            leader_rows = conn.execute(
+                "SELECT team_id FROM org_members WHERE name=? AND is_team_leader=1", (my_name,)
+            ).fetchall()
+            if leader_rows:
+                lv_scope = {"type": "team_leader", "team_ids": [r["team_id"] for r in leader_rows]}
+        conn.close()
+    return render_template("hr.html",
+        current_user_name=my_name,
+        current_user_role=session.get("role", "일반"),
+        lv_can_write=user_can_write("hr_leave"),
+        lv_user_scope=lv_scope,
+    )
+
+
+@app.route("/api/org")
+@require_perm("hr_org")
+def api_org():
+    conn = get_conn()
+    depts = conn.execute("SELECT * FROM org_departments ORDER BY sort_order, id").fetchall()
+    result = []
+    for d in depts:
+        dept = dict(d)
+        head = conn.execute("SELECT * FROM org_members WHERE dept_id=? AND is_head=1 ORDER BY sort_order LIMIT 1", (d["id"],)).fetchone()
+        dept["head"] = dict(head) if head else None
+        direct = conn.execute("SELECT * FROM org_members WHERE dept_id=? AND team_id IS NULL AND is_head=0 ORDER BY sort_order", (d["id"],)).fetchall()
+        dept["members"] = [dict(m) for m in direct]
+        teams = conn.execute("SELECT * FROM org_teams WHERE dept_id=? ORDER BY sort_order, id", (d["id"],)).fetchall()
+        dept["teams"] = []
+        for t in teams:
+            team = dict(t)
+            members = conn.execute("SELECT * FROM org_members WHERE team_id=? ORDER BY is_team_leader DESC, sort_order", (t["id"],)).fetchall()
+            team["members"] = [dict(m) for m in members]
+            dept["teams"].append(team)
+        result.append(dept)
+    conn.close()
+    return jsonify(result)
+
+
+@app.route("/api/org/departments", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_add_dept():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO org_departments (label, dept_type, sort_order, created_at, updated_at) VALUES (?,?,?,?,?)",
+        (data.get("label", "새부서"), data.get("dept_type", "regular"), data.get("sort_order", 990), now, now)
+    )
+    new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit(); conn.close()
+    return jsonify({"id": new_id})
+
+
+@app.route("/api/org/departments/<int:did>", methods=["PUT"])
+@require_write_perm("hr_org")
+def api_org_update_dept(did):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("UPDATE org_departments SET label=?, updated_at=? WHERE id=?", (data.get("label", ""), now, did))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/departments/<int:did>", methods=["DELETE"])
+@require_write_perm("hr_org")
+def api_org_delete_dept(did):
+    conn = get_conn()
+    conn.execute("DELETE FROM org_members WHERE dept_id=?", (did,))
+    conn.execute("DELETE FROM org_teams WHERE dept_id=?", (did,))
+    conn.execute("DELETE FROM org_departments WHERE id=?", (did,))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/teams", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_add_team():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO org_teams (dept_id, label, sort_order, created_at, updated_at) VALUES (?,?,?,?,?)",
+        (data["dept_id"], data.get("label", "새팀"), data.get("sort_order", 990), now, now)
+    )
+    new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit(); conn.close()
+    return jsonify({"id": new_id})
+
+
+@app.route("/api/org/teams/<int:tid>", methods=["PUT"])
+@require_write_perm("hr_org")
+def api_org_update_team(tid):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("UPDATE org_teams SET label=?, sort_order=?, updated_at=? WHERE id=?",
+                 (data.get("label", ""), data.get("sort_order", 0), now, tid))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/teams/<int:tid>", methods=["DELETE"])
+@require_write_perm("hr_org")
+def api_org_delete_team(tid):
+    conn = get_conn()
+    conn.execute("UPDATE org_members SET team_id=NULL WHERE team_id=?", (tid,))
+    conn.execute("DELETE FROM org_teams WHERE id=?", (tid,))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/members", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_add_member():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    name = data.get("name", "")
+    # 동명인 기존 행에서 정보 자동 복사 (rank/phone/hire_date/photo)
+    existing = conn.execute(
+        "SELECT rank, phone, hire_date, photo FROM org_members WHERE name=? LIMIT 1", (name,)
+    ).fetchone()
+    rank      = data.get("rank")     or (existing["rank"]      if existing else "")
+    phone     = data.get("phone")    or (existing["phone"]     if existing else "")
+    hire_date = data.get("hire_date")or (existing["hire_date"] if existing else "")
+    photo     = data.get("photo")    or (existing["photo"]     if existing else "")
+    conn.execute(
+        "INSERT INTO org_members (dept_id, team_id, name, rank, phone, team_tag, photo, hire_date, is_head, is_team_leader, sort_order, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (data["dept_id"], data.get("team_id") or None, name, rank,
+         phone, data.get("team_tag", ""), photo, hire_date,
+         1 if data.get("is_head") else 0,
+         1 if data.get("is_team_leader") else 0, data.get("sort_order", 0), now, now)
+    )
+    new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit(); conn.close()
+    return jsonify({"id": new_id})
+
+
+@app.route("/api/org/members/<int:mid>", methods=["PUT"])
+@require_write_perm("hr_org")
+def api_org_update_member(mid):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute(
+        "UPDATE org_members SET dept_id=?, team_id=?, name=?, rank=?, phone=?, team_tag=?, hire_date=?, is_head=?, is_team_leader=?, sort_order=?, updated_at=? WHERE id=?",
+        (data["dept_id"], data.get("team_id") or None, data.get("name", ""), data.get("rank", ""),
+         data.get("phone", ""), data.get("team_tag", ""), data.get("hire_date", ""),
+         1 if data.get("is_head") else 0, 1 if data.get("is_team_leader") else 0,
+         data.get("sort_order", 0), now, mid)
+    )
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/members/<int:mid>", methods=["DELETE"])
+@require_write_perm("hr_org")
+def api_org_delete_member(mid):
+    conn = get_conn()
+    conn.execute("DELETE FROM org_members WHERE id=?", (mid,))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/members/<int:mid>/photo", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_member_photo(mid):
+    if "photo" not in request.files:
+        return jsonify({"error": "no file"}), 400
+    f = request.files["photo"]
+    ext = os.path.splitext(f.filename)[1].lower() or ".jpg"
+    fname = f"member_{mid}{ext}"
+    photo_dir = APP_DIR / "static" / "org_photos"
+    photo_dir.mkdir(exist_ok=True)
+    f.save(photo_dir / fname)
+    try:
+        img = Image.open(photo_dir / fname)
+        img = ImageOps.exif_transpose(img)
+        img.thumbnail((300, 300))
+        img.save(photo_dir / fname)
+    except Exception:
+        pass
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("UPDATE org_members SET photo=?, updated_at=? WHERE id=?", (fname, now, mid))
+    conn.commit(); conn.close()
+    return jsonify({"photo": fname})
+
+
+@app.route("/api/org/members/<int:mid>/move", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_move_member(mid):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute(
+        "UPDATE org_members SET dept_id=?, team_id=?, sort_order=?, is_head=?, updated_at=? WHERE id=?",
+        (data.get("dept_id"), data.get("team_id"), data.get("sort_order", 0),
+         1 if data.get("is_head") else 0, now, mid)
+    )
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/departments/reorder", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_reorder_depts():
+    ids = (request.json or {}).get("ids", [])
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    for i, did in enumerate(ids):
+        conn.execute("UPDATE org_departments SET sort_order=?, updated_at=? WHERE id=?", (i * 10, now, did))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/org/members/reorder", methods=["POST"])
+@require_write_perm("hr_org")
+def api_org_reorder_members():
+    items = (request.json or {}).get("items", [])
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    for i, item in enumerate(items):
+        conn.execute("UPDATE org_members SET sort_order=?, updated_at=? WHERE id=?",
+                     (i * 10, now, item["id"]))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+# ── 휴가관리 API ──
+
+def _current_fiscal_year():
+    """현재 회계연도 (3/1 기준: 3월 이상이면 올해, 1~2월이면 작년)"""
+    from datetime import date
+    today = date.today()
+    return today.year if today.month >= 3 else today.year - 1
+
+def _fiscal_year_range(fy):
+    """회계연도 날짜 범위 문자열 반환: ('{fy}-03-01', '{fy+1}-02-28 or 29')"""
+    import calendar
+    last_day = calendar.monthrange(fy + 1, 2)[1]
+    return f"{fy}-03-01", f"{fy + 1}-02-{last_day:02d}"
+
+def _calc_leave_entitlement(hire_date_str, fy=None):
+    """회사 규정: 3/1 회계연도 기준
+    - 입사 후 첫 3/1 이전 (첫 부분 회계연도): 11일 선지급
+    - 첫 3/1 이후: 15일 (3년차부터 2년마다 +1일, 최대 25일)
+    """
+    if not hire_date_str:
+        return 0
+    try:
+        from datetime import date
+        hire = date.fromisoformat(hire_date_str[:10])
+        if fy is None:
+            fy = _current_fiscal_year()
+        fy_start = date(fy, 3, 1)
+        # 입사 후 첫 정식 회계연도 시작일 (입사 월이 3월 이상이면 다음해 3/1, 1~2월이면 당해 3/1)
+        first_full_fy = date(hire.year + 1, 3, 1) if hire.month >= 3 else date(hire.year, 3, 1)
+        if fy_start < first_full_fy:
+            # 첫 부분 회계연도: 11일 선지급
+            return 11
+        else:
+            # 정식 회계연도 몇 번째인지 (0-indexed)
+            full_years = fy_start.year - first_full_fy.year
+            return min(15 + max(full_years - 1, 0) // 2, 25)
+    except Exception:
+        return 0
+
+
+def _get_approver_pairs(conn):
+    """부서별 1차(팀장)/2차(총괄) 결재자 쌍 반환.
+    {dept_id: {"ap1": name|None, "ap1_role": str, "ap2": name, "ap2_role": str}}
+    - 미래전략: ap1=None, ap2=대표이사
+    - 일반: ap1=is_team_leader, ap2=is_head
+    """
+    ceo = conn.execute("""
+        SELECT m.name FROM org_members m
+        JOIN org_departments d ON m.dept_id = d.id
+        WHERE d.dept_type='special' AND d.label='경영진'
+        AND (m.is_head=1 OR m.rank='대표이사')
+        ORDER BY m.is_head DESC, m.id ASC
+        LIMIT 1
+    """).fetchone()
+    ceo_name = ceo["name"] if ceo else ""
+
+    # team_id → 팀장 이름 (팀별 1차 결재)
+    team_leaders_by_team = {}
+    for r in conn.execute("SELECT team_id, name FROM org_members WHERE is_team_leader=1 AND team_id IS NOT NULL"):
+        team_leaders_by_team[r["team_id"]] = r["name"]
+    # dept_id → 총괄 이름 (부서별 2차 결재)
+    heads = {}
+    for r in conn.execute("SELECT dept_id, name FROM org_members WHERE is_head=1"):
+        heads[r["dept_id"]] = r["name"]
+
+    depts = conn.execute("SELECT id, label FROM org_departments").fetchall()
+    dept_is_strategy = {d["id"]: ("미래전략" in (d["label"] or "")) for d in depts}
+
+    # team_id → {ap1, ap1_role, ap2, ap2_role}
+    teams = conn.execute("SELECT id, dept_id FROM org_teams").fetchall()
+    result = {}
+    for t in teams:
+        dept_id = t["dept_id"]
+        if dept_is_strategy.get(dept_id):
+            result[t["id"]] = {"ap1": None, "ap1_role": "", "ap2": ceo_name, "ap2_role": "대표이사"}
+        else:
+            result[t["id"]] = {
+                "ap1": team_leaders_by_team.get(t["id"]),
+                "ap1_role": "팀장",
+                "ap2": heads.get(dept_id, "-"),
+                "ap2_role": "총괄",
+            }
+    # dept_id 기반 fallback (팀 없이 부서 직속인 경우)
+    dept_result = {}
+    for d in depts:
+        if dept_is_strategy.get(d["id"]):
+            dept_result[d["id"]] = {"ap1": None, "ap1_role": "", "ap2": ceo_name, "ap2_role": "대표이사"}
+        else:
+            dept_result[d["id"]] = {"ap1": None, "ap1_role": "", "ap2": heads.get(d["id"], "-"), "ap2_role": "총괄"}
+    return result, dept_result
+
+
+@app.route("/api/hr/leave/members")
+@require_perm("hr_leave")
+def api_hr_leave_members():
+    conn = get_conn()
+    # 이름 중복 제거: 같은 이름은 첫 번째 행(MIN id)만 사용
+    members = conn.execute("""
+        SELECT m.id, m.name, m.rank, m.hire_date, m.phone, m.dept_id, m.team_id, m.is_head,
+               d.label as dept_label, t.label as team_label
+        FROM org_members m
+        LEFT JOIN org_departments d ON m.dept_id = d.id
+        LEFT JOIN org_teams t ON m.team_id = t.id
+        WHERE d.label != '경영진'
+          AND m.id = (SELECT MIN(m2.id) FROM org_members m2 WHERE m2.name = m.name)
+        ORDER BY d.sort_order, m.is_head DESC, m.sort_order
+    """).fetchall()
+    fy = _current_fiscal_year()
+    fy_start, fy_end = _fiscal_year_range(fy)
+    team_pairs, dept_pairs = _get_approver_pairs(conn)
+    result = []
+    for m in members:
+        mid = m["id"]
+        # 사용 연차: 현재 회계연도(3/1~익년2/28) 내 승인된 일수 합산
+        used = conn.execute("""
+            SELECT COALESCE(SUM(r.days), 0) as total FROM hr_leave_requests r
+            JOIN org_members om ON r.member_id = om.id
+            WHERE om.name=? AND r.status='승인'
+              AND r.start_date >= ? AND r.start_date <= ?
+        """, (m["name"], fy_start, fy_end)).fetchone()["total"]
+        entitled = _calc_leave_entitlement(m["hire_date"], fy)
+        pair = (team_pairs.get(m["team_id"]) if m["team_id"] else None) or dept_pairs.get(m["dept_id"], {})
+        ap1 = pair.get("ap1")
+        if ap1 == m["name"]:
+            ap1 = None
+        result.append({
+            "id": mid, "name": m["name"], "rank": m["rank"],
+            "hire_date": m["hire_date"], "phone": m["phone"],
+            "dept_id": m["dept_id"], "team_id": m["team_id"],
+            "dept_label": m["dept_label"] or "", "team_label": m["team_label"] or "", "is_head": m["is_head"],
+            "entitled": entitled, "used": float(used),
+            "remaining": round(entitled - float(used), 1),
+            "approver1_name": ap1 or "",
+            "approver1_role": pair.get("ap1_role", "팀장") if ap1 else "",
+            "approver2_name": pair.get("ap2", "-"),
+            "approver2_role": pair.get("ap2_role", "총괄"),
+        })
+    conn.close()
+    return jsonify(result)
+
+
+@app.route("/api/hr/leave/settle")
+@require_perm("hr_leave")
+def api_hr_leave_settle():
+    mid = request.args.get("member_id", type=int)
+    leave_date_str = request.args.get("leave_date", "")
+    if not mid or not leave_date_str:
+        return jsonify({"error": "missing params"}), 400
+
+    conn = get_conn()
+    m = conn.execute(
+        "SELECT m.*, d.label as dept_label FROM org_members m "
+        "LEFT JOIN org_departments d ON m.dept_id=d.id WHERE m.id=?", (mid,)
+    ).fetchone()
+    if not m:
+        conn.close()
+        return jsonify({"error": "직원을 찾을 수 없습니다"}), 404
+
+    hire_date_str = m["hire_date"]
+    if not hire_date_str:
+        conn.close()
+        return jsonify({"error": "입사일이 입력되지 않은 직원입니다"}), 400
+
+    try:
+        from datetime import date
+        import calendar as cal_mod
+        hire = date.fromisoformat(hire_date_str[:10])
+        leave = date.fromisoformat(leave_date_str[:10])
+    except Exception:
+        conn.close()
+        return jsonify({"error": "날짜 형식 오류"}), 400
+
+    if leave < hire:
+        conn.close()
+        return jsonify({"error": "퇴직일이 입사일보다 빠릅니다"}), 400
+
+    from datetime import timedelta
+
+    def full_months(start, end):
+        n = (end.year - start.year) * 12 + (end.month - start.month)
+        if end.day < start.day:
+            n -= 1
+        return max(n, 0)
+
+    def add_years(d, y):
+        try:
+            return date(d.year + y, d.month, d.day)
+        except ValueError:
+            return date(d.year + y, d.month, d.day - 1)
+
+    def yearly_days(n):
+        return min(15 + (n - 1) // 2, 25)
+
+    def used_in(name, s, e):
+        row = conn.execute("""
+            SELECT COALESCE(SUM(r.days),0) as t FROM hr_leave_requests r
+            JOIN org_members om ON r.member_id=om.id
+            WHERE om.name=? AND r.status='승인'
+              AND r.start_date>=? AND r.start_date<=?
+        """, (name, str(s), str(e))).fetchone()
+        return float(row["t"])
+
+    # 입사일 기준 (근로기준법 제60조)
+    one_year = add_years(hire, 1)
+    periods = []
+
+    if leave < one_year:
+        # 1년 미만 퇴직: 월차만
+        months = full_months(hire, leave)
+        entitled = min(months, 11)
+        used = used_in(m["name"], hire, leave)
+        periods.append({
+            "label": f"{hire.strftime('%Y.%m.%d')}~{leave.strftime('%Y.%m.%d')} (1년 미만 월차)",
+            "months": months, "entitled": entitled,
+            "pre_given": 11, "used": used,
+            "balance": round(entitled - used, 1)
+        })
+    else:
+        # 1년 미만 월차 기간
+        p_end = one_year - timedelta(days=1)
+        months = full_months(hire, p_end)
+        entitled = min(months, 11)
+        used = used_in(m["name"], hire, p_end)
+        periods.append({
+            "label": f"{hire.strftime('%Y.%m.%d')}~{p_end.strftime('%Y.%m.%d')} (1년 미만 월차)",
+            "months": months, "entitled": entitled,
+            "pre_given": 11, "used": used,
+            "balance": round(entitled - used, 1)
+        })
+        # 1주년마다 연차 발생
+        n = 1
+        p_start = one_year
+        while p_start <= leave:
+            yd = yearly_days(n)
+            next_start = add_years(one_year, n)
+            p_end = next_start - timedelta(days=1)
+            actual_end = min(leave, p_end)
+            used = used_in(m["name"], p_start, actual_end)
+            if leave <= p_end:
+                # 만근일에 연차 이미 발생 → 비례 없이 전체 부여
+                m_in_year = full_months(p_start, leave)
+                actual_entitled = yd
+                label = f"{p_start.strftime('%Y.%m.%d')}~{leave.strftime('%Y.%m.%d')} ({n}년 만근 후, 퇴직 정산)"
+            else:
+                m_in_year = 12
+                actual_entitled = yd
+                label = f"{p_start.strftime('%Y.%m.%d')}~{p_end.strftime('%Y.%m.%d')} ({n}년 만근 후)"
+            periods.append({
+                "label": label,
+                "months": m_in_year, "entitled": actual_entitled,
+                "pre_given": yd, "used": used,
+                "balance": round(actual_entitled - used, 1)
+            })
+            if leave <= p_end:
+                break
+            p_start = next_start
+            n += 1
+
+    conn.close()
+    total_entitled = sum(p["entitled"] for p in periods)
+    total_pre_given = sum(p["pre_given"] for p in periods)
+    total_used = round(sum(p["used"] for p in periods), 1)
+    last_balance = round(periods[-1]["balance"], 1) if periods else 0
+    return jsonify({
+        "name": m["name"], "hire_date": hire_date_str, "leave_date": leave_date_str,
+        "periods": periods,
+        "total_entitled": total_entitled, "total_pre_given": total_pre_given,
+        "total_used": total_used, "total_balance": round(total_entitled - total_used, 1),
+        "last_balance": last_balance
+    })
+
+
+@app.route("/api/hr/leave/requests")
+@require_perm("hr_leave")
+def api_hr_leave_list():
+    year = request.args.get("year", str(datetime.now().year))
+    month = request.args.get("month", "")
+    conn = get_conn()
+    if month:
+        ym = f"{year}-{month.zfill(2)}"
+        rows = conn.execute("""
+            SELECT r.*, m.name, m.rank, m.dept_id, d.label as dept_label
+            FROM hr_leave_requests r
+            JOIN org_members m ON r.member_id = m.id
+            LEFT JOIN org_departments d ON m.dept_id = d.id
+            WHERE (substr(r.start_date,1,7)=? OR substr(r.end_date,1,7)=?)
+            ORDER BY r.start_date
+        """, (ym, ym)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT r.*, m.name, m.rank, m.dept_id, d.label as dept_label
+            FROM hr_leave_requests r
+            JOIN org_members m ON r.member_id = m.id
+            LEFT JOIN org_departments d ON m.dept_id = d.id
+            WHERE substr(r.start_date,1,4)=?
+            ORDER BY r.start_date
+        """, (year,)).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        result.append(d)
+    conn.close()
+    return jsonify(result)
+
+
+@app.route("/api/hr/leave/requests", methods=["POST"])
+@require_perm("hr_leave")
+def api_hr_leave_create():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    is_admin = user_can_write("hr_leave")
+    my_name = session.get("name", "")
+    # 일반 사용자: member_id를 본인 이름으로 강제, status는 신청으로 고정
+    member_id = data.get("member_id")
+    if not is_admin:
+        me = conn.execute("SELECT id FROM org_members WHERE name=? LIMIT 1", (my_name,)).fetchone()
+        if not me:
+            conn.close(); return jsonify({"error": "조직도에 등록된 직원 정보가 없습니다."}), 403
+        member_id = me["id"]
+    status = data.get("status", "신청") if is_admin else "신청"
+    # 결재자 자동 세팅
+    m_row = conn.execute("SELECT dept_id, team_id, name FROM org_members WHERE id=? LIMIT 1", (member_id,)).fetchone()
+    team_pairs, dept_pairs = _get_approver_pairs(conn)
+    pair = (team_pairs.get(m_row["team_id"]) if m_row and m_row["team_id"] else None) \
+           or dept_pairs.get(m_row["dept_id"] if m_row else 0, {})
+    ap1 = pair.get("ap1") or ""
+    if ap1 == (m_row["name"] if m_row else ""):
+        ap1 = ""
+    ap2 = pair.get("ap2") or ""
+    conn.execute("""
+        INSERT INTO hr_leave_requests
+        (member_id, leave_type, start_date, end_date, days, reason, status,
+         approver1_name, approver1_status, approver2_name, approver2_status,
+         applied_by, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (member_id, data.get("leave_type", "연차"),
+          data["start_date"], data["end_date"], data.get("days", 1),
+          data.get("reason", ""), status,
+          ap1, "신청", ap2, "신청",
+          my_name, now, now))
+    new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    # 1차 결재자(없으면 2차)에게 확인요청 알림 생성
+    first_ap = ap1 or ap2
+    if first_ap:
+        ap_user = conn.execute("SELECT id FROM users WHERE name=? LIMIT 1", (first_ap,)).fetchone()
+        msg = f"[연차신청] {my_name} / {data.get('leave_type','연차')} {data['start_date']}~{data['end_date']} ({data.get('days',1)}일)"
+        conn.execute("""
+            INSERT INTO check_requests
+            (from_user_name, to_user_id, to_user_name, message, status, source_type, leave_request_id, created_at)
+            VALUES (?,?,?,?,'미확인','leave',?,?)
+        """, (my_name, ap_user["id"] if ap_user else None, first_ap, msg, new_id, now))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True, "id": new_id})
+
+
+@app.route("/api/hr/leave/requests/<int:rid>/approve", methods=["POST"])
+@require_login
+def api_hr_leave_approve(rid):
+    data = request.json or {}
+    action = data.get("action")  # "승인" or "반려"
+    if action not in ("승인", "반려"):
+        return jsonify({"error": "잘못된 요청"}), 400
+    my_name = session.get("name", "")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    req = conn.execute("SELECT * FROM hr_leave_requests WHERE id=?", (rid,)).fetchone()
+    if not req:
+        conn.close(); return jsonify({"error": "신청 없음"}), 404
+
+    # 결재 순서 판단 (ap1이 없으면 ap1 단계는 건너뜀)
+    ap1_done = (not req["approver1_name"]) or req["approver1_status"] in ("", "승인")
+    is_ap1 = req["approver1_name"] == my_name and req["approver1_status"] == "신청"
+    is_ap2 = req["approver2_name"] == my_name and ap1_done and req["approver2_status"] == "신청"
+    # 관리자는 어느 단계든 처리 가능
+    if user_can_write("hr_leave"):
+        is_ap1 = is_ap1 or (req["approver1_name"] and req["approver1_status"] == "신청")
+        is_ap2 = is_ap2 or (req["approver2_status"] == "신청" and ap1_done)
+
+    if not is_ap1 and not is_ap2:
+        conn.close(); return jsonify({"error": "결재 권한 없음"}), 403
+
+    if action == "반려":
+        if is_ap1:
+            conn.execute("UPDATE hr_leave_requests SET approver1_status='반려', status='반려', processed_at=?, processed_by=?, updated_at=? WHERE id=?",
+                         (now, my_name, now, rid))
+        else:
+            conn.execute("UPDATE hr_leave_requests SET approver2_status='반려', status='반려', processed_at=?, processed_by=?, updated_at=? WHERE id=?",
+                         (now, my_name, now, rid))
+    else:  # 승인
+        if is_ap1:
+            conn.execute("UPDATE hr_leave_requests SET approver1_status='승인', updated_at=? WHERE id=?", (now, rid))
+            # 2차 결재자에게 알림
+            ap2_name = req["approver2_name"]
+            if ap2_name:
+                ap2_user = conn.execute("SELECT id FROM users WHERE name=? LIMIT 1", (ap2_name,)).fetchone()
+                m_name = conn.execute("SELECT om.name FROM hr_leave_requests r JOIN org_members om ON r.member_id=om.id WHERE r.id=? LIMIT 1", (rid,)).fetchone()
+                msg = f"[연차신청 1차승인] {m_name['name'] if m_name else ''} / {req['leave_type']} {req['start_date']}~{req['end_date']} ({req['days']}일) - 2차 결재 요청"
+                conn.execute("""
+                    INSERT INTO check_requests
+                    (from_user_name, to_user_id, to_user_name, message, status, source_type, leave_request_id, created_at)
+                    VALUES (?,?,?,?,'미확인','leave',?,?)
+                """, (my_name, ap2_user["id"] if ap2_user else None, ap2_name, msg, rid, now))
+        else:  # 2차 승인 → 최종 승인
+            conn.execute("UPDATE hr_leave_requests SET approver2_status='승인', status='승인', processed_at=?, processed_by=?, updated_at=? WHERE id=?",
+                         (now, my_name, now, rid))
+    # 1차 승인이면 현재 결재자 것만 완료, 반려/2차승인이면 남은 것 전부 완료
+    if action == "승인" and is_ap1:
+        conn.execute("UPDATE check_requests SET status='확인완료', completed_at=?, completed_by=? WHERE leave_request_id=? AND status='미확인' AND to_user_id=?",
+                     (now, my_name, rid, session.get("user_id")))
+    else:
+        conn.execute("UPDATE check_requests SET status='확인완료', completed_at=?, completed_by=? WHERE leave_request_id=? AND status='미확인'",
+                     (now, my_name, rid))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/hr/leave/requests/<int:rid>", methods=["PUT"])
+@require_perm("hr_leave")
+def api_hr_leave_update(rid):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    is_admin = user_can_write("hr_leave")
+    my_name = session.get("name", "")
+    # 일반 사용자: 본인 신청건만, status 변경 불가
+    if not is_admin:
+        row = conn.execute("SELECT m.name FROM hr_leave_requests r JOIN org_members m ON r.member_id=m.id WHERE r.id=?", (rid,)).fetchone()
+        if not row or row["name"] != my_name:
+            conn.close(); return jsonify({"error": "권한 없음"}), 403
+    fields, vals = [], []
+    for f in ["leave_type", "start_date", "end_date", "days", "reason", "memo"]:
+        if f in data:
+            fields.append(f"{f}=?"); vals.append(data[f])
+    if is_admin:
+        if "status" in data:
+            fields += ["status=?", "processed_at=?", "processed_by=?"]
+            vals += [data["status"], now, my_name]
+        for f in ["approver1_status", "approver2_status"]:
+            if f in data:
+                fields.append(f"{f}=?"); vals.append(data[f])
+    fields.append("updated_at=?"); vals.append(now); vals.append(rid)
+    conn.execute(f"UPDATE hr_leave_requests SET {','.join(fields)} WHERE id=?", vals)
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/hr/leave/requests/<int:rid>", methods=["DELETE"])
+@require_perm("hr_leave")
+def api_hr_leave_delete(rid):
+    conn = get_conn()
+    is_admin = user_can_write("hr_leave")
+    my_name = session.get("name", "")
+    if not is_admin:
+        row = conn.execute("SELECT m.name, r.status FROM hr_leave_requests r JOIN org_members m ON r.member_id=m.id WHERE r.id=?", (rid,)).fetchone()
+        if not row or row["name"] != my_name or row["status"] == "승인":
+            conn.close(); return jsonify({"error": "권한 없음"}), 403
+    conn.execute("DELETE FROM hr_leave_requests WHERE id=?", (rid,))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
+
+
+# ── 근태관리: 엑셀 업로드 파싱 ──────────────────────────────────────────────
+@app.route("/api/hr/attendance/parse", methods=["POST"])
+@require_perm("hr_attendance")
+def api_hr_attendance_parse():
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"ok": False, "error": "파일 없음"}), 400
+
+    fname = f.filename.lower()
+    tmp = APP_DIR / "static" / "tmp_attendance"
+    tmp.mkdir(exist_ok=True)
+    tmp_path = tmp / f.filename
+    f.save(str(tmp_path))
+
+    try:
+        if fname.endswith(".xls"):
+            wb = xlrd.open_workbook(str(tmp_path))
+            ws = wb.sheet_by_index(0)
+            rows = [[ws.cell_value(r, c) for c in range(ws.ncols)] for r in range(ws.nrows)]
+        else:
+            wb2 = load_workbook(str(tmp_path), data_only=True)
+            ws2 = wb2.active
+            rows = [[cell.value for cell in row] for row in ws2.iter_rows()]
+    finally:
+        try: tmp_path.unlink()
+        except: pass
+
+    # 헤더 행 찾기 (번호, 사용자ID, 이름, 근무일자...)
+    header_idx = None
+    for i, row in enumerate(rows):
+        if row and str(row[0]).strip() == "번호":
+            header_idx = i
+            break
+
+    if header_idx is None:
+        return jsonify({"ok": False, "error": "파일 형식이 맞지 않습니다."}), 400
+
+    # 연도/월 추출 (첫 번째 날짜 행에서)
+    month_str = ""
+    for row in rows[header_idx+2:]:
+        date_val = str(row[3]).strip() if len(row) > 3 else ""
+        if date_val and "/" in date_val:
+            parts = date_val.split("/")
+            if len(parts) >= 2:
+                month_str = f"{parts[0]}년 {int(parts[1])}월"
+            break
+
+    # 직원별 데이터 수집
+    employees = {}
+    WEEKDAY_KO = ["월", "화", "수", "목", "금", "토", "일"]
+
+    for row in rows[header_idx+2:]:
+        if not row or not row[2]:
+            continue
+        name = str(row[2]).strip()
+        if not name:
+            continue
+        date_str = str(row[3]).strip() if len(row) > 3 else ""
+        if not date_str or "/" not in date_str:
+            continue
+
+        def _to_hhmm(val):
+            """xlrd float / datetime.time / 문자열 → HH:MM"""
+            if val is None or val == "":
+                return ""
+            import datetime as _dt
+            if isinstance(val, _dt.time):
+                return f"{val.hour:02d}:{val.minute:02d}"
+            if isinstance(val, _dt.datetime):
+                return f"{val.hour:02d}:{val.minute:02d}"
+            if isinstance(val, float) and 0 <= val < 2:
+                total_min = round(val * 24 * 60)
+                h, m = divmod(total_min, 60)
+                return f"{h:02d}:{m:02d}"
+            s = str(val).strip()
+            # "HH:MM:SS" → "HH:MM"
+            import re as _re
+            mm = _re.match(r'^(\d{1,2}:\d{2}):\d{2}$', s)
+            if mm:
+                return mm.group(1)
+            return s
+
+        day_type   = str(row[4]).strip() if len(row) > 4 else ""
+        checkin    = _to_hhmm(row[5]) if len(row) > 5 else ""
+        checkout   = _to_hhmm(row[6]) if len(row) > 6 else ""
+        go_out     = _to_hhmm(row[7]) if len(row) > 7 else ""
+        return_in  = _to_hhmm(row[8]) if len(row) > 8 else ""
+        overtime_d = row[12] if len(row) > 12 else 0
+
+        # 근무시간 계산 (출퇴근 기반)
+        work_str = ""
+        try:
+            from datetime import datetime as dt
+            ci = dt.strptime(checkin, "%H:%M")
+            co = dt.strptime(checkout, "%H:%M")
+            diff = co - ci
+            total_min = int(diff.total_seconds() / 60)
+            if total_min > 0:
+                h, m = divmod(total_min, 60)
+                work_str = f"{h}시간 {m}분"
+        except:
+            pass
+
+        # 연장근로 시간 변환
+        ot_str = ""
+        try:
+            ot_min = int(float(overtime_d) * 24 * 60)
+            if ot_min > 0:
+                h, m = divmod(ot_min, 60)
+                ot_str = f"{h}시간 {m}분"
+        except:
+            pass
+
+        # 날짜에서 요일 추출
+        try:
+            d = datetime.strptime(date_str, "%Y/%m/%d")
+            day_ko = WEEKDAY_KO[d.weekday()]
+            date_fmt = f"{d.month}/{d.day}({day_ko})"
+            is_weekend = d.weekday() >= 5
+        except:
+            date_fmt = date_str
+            is_weekend = "토요" in day_type or "일요" in day_type
+
+        if name not in employees:
+            employees[name] = []
+
+        employees[name].append({
+            "date": date_fmt,
+            "day_type": day_type,
+            "checkin": checkin,
+            "checkout": checkout,
+            "go_out": go_out,
+            "return_in": return_in,
+            "work_hours": work_str,
+            "overtime": ot_str,
+            "is_weekend": is_weekend,
+        })
+
+    return jsonify({
+        "ok": True,
+        "month": month_str,
+        "employees": sorted(employees.keys()),
+        "data": employees,
+    })
+
+
+@app.route("/api/ledger/vehicles", methods=["GET"])
+@require_perm("ledger_vehicle")
+def list_vehicles():
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT * FROM vehicle_ledger
+        ORDER BY
+            CASE WHEN unit_no IS NULL OR TRIM(unit_no)='' THEN 1 ELSE 0 END,
+            CAST(REPLACE(REPLACE(TRIM(unit_no),'호',''),' ','') AS INTEGER),
+            company,
+            vehicle_type
+    """).fetchall()
+    conn.close()
+    return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/ledger/vehicles", methods=["POST"])
+@require_write_perm("ledger_vehicle")
+def create_vehicle():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    cur = conn.execute("""
+        INSERT INTO vehicle_ledger
+            (company, vehicle_type, unit_no, vehicle_no, hipass_digits, fuel_type,
+             reg_date, owner, manager, hipass_card, vehicle_class, mileage_json,
+             engine_oil, tire, repair, urea, violation, car_insurance, driver_insurance,
+             inspection, tax, memo, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        data.get("company", "플러스도어"),
+        data.get("vehicle_type", ""),
+        data.get("unit_no", ""),
+        data.get("vehicle_no", ""),
+        data.get("hipass_digits", ""),
+        data.get("fuel_type", ""),
+        data.get("reg_date", ""),
+        data.get("owner", ""),
+        data.get("manager", ""),
+        data.get("hipass_card", ""),
+        data.get("vehicle_class", ""),
+        data.get("mileage_json", "[]"),
+        data.get("engine_oil", ""),
+        data.get("tire", ""),
+        data.get("repair", ""),
+        data.get("urea", ""),
+        data.get("violation", ""),
+        data.get("car_insurance", ""),
+        data.get("driver_insurance", ""),
+        data.get("inspection", ""),
+        data.get("tax", ""),
+        data.get("memo", ""),
+        now, now
+    ))
+    new_id = cur.lastrowid
+    conn.commit()
+    row = conn.execute("SELECT * FROM vehicle_ledger WHERE id=?", (new_id,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "row": row_to_dict(row)})
+
+
+@app.route("/api/ledger/vehicles/<int:vid>", methods=["PUT"])
+@require_write_perm("ledger_vehicle")
+def update_vehicle(vid):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("""
+        UPDATE vehicle_ledger SET
+            company=?, vehicle_type=?, unit_no=?, vehicle_no=?, hipass_digits=?,
+            fuel_type=?, reg_date=?, owner=?, manager=?, hipass_card=?,
+            vehicle_class=?, mileage_json=?, engine_oil=?, tire=?, repair=?,
+            urea=?, violation=?, car_insurance=?, driver_insurance=?,
+            inspection=?, tax=?, memo=?, driver_age=?, updated_at=?
+        WHERE id=?
+    """, (
+        data.get("company", "플러스도어"),
+        data.get("vehicle_type", ""),
+        data.get("unit_no", ""),
+        data.get("vehicle_no", ""),
+        data.get("hipass_digits", ""),
+        data.get("fuel_type", ""),
+        data.get("reg_date", ""),
+        data.get("owner", ""),
+        data.get("manager", ""),
+        data.get("hipass_card", ""),
+        data.get("vehicle_class", ""),
+        data.get("mileage_json", "[]"),
+        data.get("engine_oil", ""),
+        data.get("tire", ""),
+        data.get("repair", ""),
+        data.get("urea", ""),
+        data.get("violation", ""),
+        data.get("car_insurance", ""),
+        data.get("driver_insurance", ""),
+        data.get("inspection", ""),
+        data.get("tax", ""),
+        data.get("memo", ""),
+        data.get("driver_age", ""),
+        now, vid
+    ))
+    conn.commit()
+    row = conn.execute("SELECT * FROM vehicle_ledger WHERE id=?", (vid,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "row": row_to_dict(row)})
+
+
+@app.route("/api/ledger/vehicles/<int:vid>/status", methods=["PUT"])
+@require_write_perm("ledger_vehicle")
+def update_vehicle_status(vid):
+    data = request.json or {}
+    status = data.get("status", "운행")
+    if status not in ("운행", "매각"):
+        return jsonify({"ok": False, "error": "유효하지 않은 상태입니다."})
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("UPDATE vehicle_ledger SET status=?, updated_at=? WHERE id=?", (status, now, vid))
+    conn.commit()
+    row = conn.execute("SELECT * FROM vehicle_ledger WHERE id=?", (vid,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "row": row_to_dict(row)})
+
+
+@app.route("/api/ledger/vehicles/<int:vid>", methods=["DELETE"])
+@require_write_perm("ledger_vehicle")
+def delete_vehicle(vid):
+    conn = get_conn()
+    conn.execute("DELETE FROM vehicle_ledger WHERE id=?", (vid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+# ── 설비관리대장 ──────────────────────────────────────────────────────────────
+
+@app.route("/api/ledger/equipment", methods=["GET"])
+@require_perm("ledger_machine")
+def list_equipment():
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM equipment_ledger ORDER BY company, manage_no, name").fetchall()
+    conn.close()
+    return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/ledger/equipment", methods=["POST"])
+@require_write_perm("ledger_machine")
+def create_equipment():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    cur = conn.execute("""
+        INSERT INTO equipment_ledger
+            (company, name, manage_no, mfg_no, type, grade, category,
+             maker, mfg_date, voltage, supplier, install_date, location,
+             parts_json, repair_json, memo,
+             maker_contact, maker_note, supplier_contact, supplier_note,
+             created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        data.get("company","플러스도어"), data.get("name",""), data.get("manage_no",""),
+        data.get("mfg_no",""), data.get("type",""), data.get("grade",""), data.get("category",""),
+        data.get("maker",""), data.get("mfg_date",""), data.get("voltage",""),
+        data.get("supplier",""), data.get("install_date",""), data.get("location",""),
+        data.get("parts_json","[]"), data.get("repair_json","[]"), data.get("memo",""),
+        data.get("maker_contact",""), data.get("maker_note",""),
+        data.get("supplier_contact",""), data.get("supplier_note",""),
+        now, now
+    ))
+    new_id = cur.lastrowid
+    conn.commit()
+    row = conn.execute("SELECT * FROM equipment_ledger WHERE id=?", (new_id,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "row": row_to_dict(row)})
+
+
+@app.route("/api/ledger/equipment/<int:eid>", methods=["PUT"])
+@require_write_perm("ledger_machine")
+def update_equipment(eid):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    existing = conn.execute("SELECT * FROM equipment_ledger WHERE id=?", (eid,)).fetchone()
+    ex = row_to_dict(existing) if existing else {}
+    conn.execute("""
+        UPDATE equipment_ledger SET
+            company=?, name=?, manage_no=?, mfg_no=?, type=?, grade=?, category=?,
+            maker=?, mfg_date=?, voltage=?, supplier=?, install_date=?, location=?,
+            parts_json=?, repair_json=?, memo=?,
+            maker_contact=?, maker_note=?, supplier_contact=?, supplier_note=?,
+            updated_at=?
+        WHERE id=?
+    """, (
+        data.get("company", ex.get("company","")), data.get("name", ex.get("name","")),
+        data.get("manage_no", ex.get("manage_no","")), data.get("mfg_no", ex.get("mfg_no","")),
+        data.get("type", ex.get("type","")), data.get("grade", ex.get("grade","")),
+        data.get("category", ex.get("category","")), data.get("maker", ex.get("maker","")),
+        data.get("mfg_date", ex.get("mfg_date","")), data.get("voltage", ex.get("voltage","")),
+        data.get("supplier", ex.get("supplier","")), data.get("install_date", ex.get("install_date","")),
+        data.get("location", ex.get("location","")),
+        data.get("parts_json", ex.get("parts_json","[]")),
+        data.get("repair_json", ex.get("repair_json","[]")),
+        data.get("memo", ex.get("memo","")),
+        data.get("maker_contact", ex.get("maker_contact","")),
+        data.get("maker_note", ex.get("maker_note","")),
+        data.get("supplier_contact", ex.get("supplier_contact","")),
+        data.get("supplier_note", ex.get("supplier_note","")),
+        now, eid
+    ))
+    conn.commit()
+    row = conn.execute("SELECT * FROM equipment_ledger WHERE id=?", (eid,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "row": row_to_dict(row)})
+
+
+@app.route("/api/ledger/equipment/<int:eid>", methods=["DELETE"])
+@require_write_perm("ledger_machine")
+def delete_equipment(eid):
+    conn = get_conn()
+    conn.execute("DELETE FROM equipment_ledger WHERE id=?", (eid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/ledger/equipment/<int:eid>/photo", methods=["POST"])
+@require_write_perm("ledger_machine")
+def upload_equipment_photo(eid):
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "파일이 없습니다."}), 400
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".heic", ".heif"}:
+        return jsonify({"ok": False, "error": "지원하지 않는 파일 형식입니다."}), 400
+    safe_name = f"eq_{eid}_{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
+    save_path = EQUIPMENT_DOCS_DIR / safe_name
+    try:
+        save_resized_photo(f, save_path, target_bytes=2*1024*1024, max_side=2400)
+    except Exception:
+        f.stream.seek(0)
+        f.save(str(save_path))
+    conn = get_conn()
+    conn.execute("UPDATE equipment_ledger SET photo=?, updated_at=? WHERE id=?",
+                 (safe_name, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), eid))
+    conn.commit()
+    row = conn.execute("SELECT * FROM equipment_ledger WHERE id=?", (eid,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "row": row_to_dict(row)})
+
+
+@app.route("/api/ledger/vehicles/<int:vid>/docs", methods=["GET"])
+@require_perm("ledger_vehicle")
+def list_vehicle_docs(vid):
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM vehicle_docs WHERE vehicle_id=? ORDER BY id DESC", (vid,)).fetchall()
+    conn.close()
+    return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/ledger/vehicles/<int:vid>/docs", methods=["POST"])
+@require_write_perm("ledger_vehicle")
+def upload_vehicle_doc(vid):
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "파일이 없습니다."}), 400
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".pdf"}:
+        return jsonify({"ok": False, "error": "지원하지 않는 파일 형식입니다."}), 400
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    safe_name = f"vehicle_{vid}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}{ext}"
+    save_path = VEHICLE_DOCS_DIR / safe_name
+    if ext in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}:
+        try:
+            save_resized_photo(f, save_path, target_bytes=2*1024*1024, max_side=2400)
+        except Exception:
+            f.stream.seek(0)
+            f.save(str(save_path))
+    else:
+        f.save(str(save_path))
+    conn = get_conn()
+    cur = conn.execute(
+        "INSERT INTO vehicle_docs(vehicle_id, filename, original_name, uploaded_at) VALUES (?,?,?,?)",
+        (vid, f"vehicle_docs/{safe_name}", f.filename, now)
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM vehicle_docs WHERE id=?", (cur.lastrowid,)).fetchone()
+    conn.close()
+    return jsonify({"ok": True, "doc": row_to_dict(row)})
+
+
+@app.route("/api/ledger/vehicles/<int:vid>/docs/<int:doc_id>", methods=["DELETE"])
+@require_write_perm("ledger_vehicle")
+def delete_vehicle_doc(vid, doc_id):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM vehicle_docs WHERE id=? AND vehicle_id=?", (doc_id, vid)).fetchone()
+    if row:
+        try:
+            p = UPLOAD_DIR / row["filename"]
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+        conn.execute("DELETE FROM vehicle_docs WHERE id=?", (doc_id,))
+        conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/mail/pdf/<path:filename>")
 @require_perm("mail")
 def serve_delivery_pdf(filename):
@@ -1898,8 +3737,11 @@ def price_page():
     return render_template("price.html")
 
 @app.route("/journal")
-@require_perm("journal")
 def journal_page():
+    if not session.get("user_id"):
+        return redirect(url_for("login_page", next="/journal"))
+    if not any(user_has_perm(k) for k in ["journal_sales", "journal_consult", "journal_measure", "journal_install"]):
+        return "권한이 없습니다.", 403
     return render_template("journal.html")
 
 @app.route("/work_order")
@@ -1945,7 +3787,7 @@ def list_regions():
 
 
 @app.route("/api/journal/regions", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def journal_list_regions():
     conn = get_conn()
     rows = conn.execute("SELECT name FROM regions ORDER BY name").fetchall()
@@ -3028,7 +4870,7 @@ _SALES_SELECT = """
 """
 
 @app.route("/api/sales/customers", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_customers_list():
     q         = request.args.get("q",         "").strip()
     status    = request.args.get("status",    "").strip()
@@ -3086,7 +4928,7 @@ def sales_customers_list():
     return jsonify(rows)
 
 @app.route("/api/sales/customers", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_customers_create():
     data = request.json or {}
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3121,7 +4963,7 @@ def sales_customers_create():
     return jsonify({"ok": True, "id": cid})
 
 @app.route("/api/sales/customers/<int:cid>", methods=["PUT"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_customers_update(cid):
     data = request.json or {}
     new_name = (data.get("customer") or "").strip()
@@ -3154,7 +4996,7 @@ def sales_customers_update(cid):
 # ── 영업일지 리드 API ─────────────────────────────────────────────────────
 
 @app.route("/api/sales/leads", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_leads_list():
     q         = request.args.get("q",         "").strip()
     status    = request.args.get("status",    "").strip()
@@ -3206,7 +5048,7 @@ def sales_leads_list():
 
 
 @app.route("/api/sales/leads", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_leads_create():
     data = request.json or {}
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3229,7 +5071,7 @@ def sales_leads_create():
 
 
 @app.route("/api/sales/leads/<int:lid>", methods=["PUT"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_leads_update(lid):
     data = request.json or {}
     fields = [
@@ -3255,7 +5097,7 @@ def sales_leads_update(lid):
 
 
 @app.route("/api/sales/leads/<int:lid>", methods=["DELETE"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_leads_delete(lid):
     conn = get_conn()
     conn.execute("DELETE FROM sales_visits WHERE lead_id=?", (lid,))
@@ -3266,7 +5108,7 @@ def sales_leads_delete(lid):
 
 
 @app.route("/api/sales/leads/<int:lid>/visits", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_lead_visits_list(lid):
     conn = get_conn()
     rows = conn.execute(
@@ -3277,7 +5119,7 @@ def sales_lead_visits_list(lid):
 
 
 @app.route("/api/sales/leads/<int:lid>/visits", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_lead_visits_create(lid):
     data = request.json or {}
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3293,7 +5135,7 @@ def sales_lead_visits_create(lid):
 
 
 @app.route("/api/sales/leads/<int:lid>/orders", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_lead_orders(lid):
     conn = get_conn()
     lead = conn.execute("SELECT linked_customer_id FROM sales_leads WHERE id=?", (lid,)).fetchone()
@@ -3313,7 +5155,7 @@ def sales_lead_orders(lid):
 
 
 @app.route("/api/sales/leads/<int:lid>/link", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_lead_link(lid):
     data = request.json or {}
     customer_name = (data.get("customer_name") or "").strip()
@@ -3352,7 +5194,7 @@ def sales_lead_link(lid):
 
 
 @app.route("/api/sales/leads/<int:lid>/unlink", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_lead_unlink(lid):
     conn = get_conn()
     conn.execute("UPDATE sales_leads SET linked_customer_id=NULL WHERE id=?", (lid,))
@@ -3362,7 +5204,7 @@ def sales_lead_unlink(lid):
 
 
 @app.route("/api/sales/leads/bulk_status", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_leads_bulk_status():
     data = request.json or {}
     ids    = [int(i) for i in (data.get("ids") or []) if str(i).isdigit()]
@@ -3383,13 +5225,22 @@ JOURNAL_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads"
 os.makedirs(JOURNAL_UPLOAD_DIR, exist_ok=True)
 ALLOWED_PHOTO_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
 
+def _journal_photo_perm(etype):
+    perm = "journal_consult" if etype == "consult" else "journal_sales"
+    if not user_has_perm(perm):
+        return False
+    return True
+
 @app.route("/api/journal/photos", methods=["GET"])
-@require_perm("journal")
 def journal_photos_list():
+    if not session.get("user_id"):
+        return jsonify({"error": "로그인 필요"}), 401
     etype = request.args.get("entity_type","").strip()
     eid   = request.args.get("entity_id","").strip()
     if not etype or not eid:
         return jsonify([])
+    if not _journal_photo_perm(etype):
+        return jsonify({"error": "권한 없음"}), 403
     conn = get_conn()
     rows = conn.execute(
         "SELECT * FROM journal_photos WHERE entity_type=? AND entity_id=? ORDER BY id ASC",
@@ -3400,12 +5251,15 @@ def journal_photos_list():
 
 
 @app.route("/api/journal/photos", methods=["POST"])
-@require_perm("journal")
 def journal_photos_upload():
+    if not session.get("user_id"):
+        return jsonify({"ok": False, "error": "로그인 필요"}), 401
     etype = request.form.get("entity_type","").strip()
     eid   = request.form.get("entity_id","").strip()
     if not etype or not eid:
         return jsonify({"ok": False, "error": "entity_type, entity_id 필수"}), 400
+    if not _journal_photo_perm(etype):
+        return jsonify({"ok": False, "error": "권한 없음"}), 403
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_conn()
     saved = []
@@ -3428,10 +5282,18 @@ def journal_photos_upload():
 
 
 @app.route("/api/journal/photos/<int:pid>", methods=["DELETE"])
-@require_perm("journal")
 def journal_photos_delete(pid):
+    if not session.get("user_id"):
+        return jsonify({"ok": False, "error": "로그인 필요"}), 401
     conn = get_conn()
-    row = conn.execute("SELECT filename FROM journal_photos WHERE id=?", (pid,)).fetchone()
+    row_check = conn.execute("SELECT entity_type, filename FROM journal_photos WHERE id=?", (pid,)).fetchone()
+    if not row_check:
+        conn.close()
+        return jsonify({"ok": True})
+    if not _journal_photo_perm(row_check["entity_type"]):
+        conn.close()
+        return jsonify({"ok": False, "error": "권한 없음"}), 403
+    row = row_check
     if row:
         fpath = os.path.join(JOURNAL_UPLOAD_DIR, row["filename"])
         if os.path.exists(fpath):
@@ -3443,7 +5305,7 @@ def journal_photos_delete(pid):
 
 
 @app.route("/api/sales/customers/bulk_status", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_customers_bulk_status():
     data   = request.json or {}
     ids    = data.get("ids", [])
@@ -3465,7 +5327,7 @@ def sales_customers_bulk_status():
     return jsonify({"ok": True, "updated": updated})
 
 @app.route("/api/sales/customers/<int:cid>", methods=["DELETE"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_customers_delete(cid):
     conn = get_conn()
     conn.execute("DELETE FROM sales_visits WHERE customer_id=?", (cid,))
@@ -3482,7 +5344,7 @@ def sales_customers_delete(cid):
     return jsonify({"ok": True})
 
 @app.route("/api/sales/customers/<int:cid>/visits", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_visits_list(cid):
     conn = get_conn()
     rows = [dict(r) for r in conn.execute(
@@ -3492,7 +5354,7 @@ def sales_visits_list(cid):
     return jsonify(rows)
 
 @app.route("/api/sales/customers/<int:cid>/visits", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_visits_create(cid):
     data = request.json or {}
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3506,7 +5368,7 @@ def sales_visits_create(cid):
     return jsonify({"ok": True, "id": cur.lastrowid})
 
 @app.route("/api/sales/visits/<int:vid>", methods=["PUT"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_visits_update(vid):
     data = request.json or {}
     conn = get_conn()
@@ -3518,7 +5380,7 @@ def sales_visits_update(vid):
     return jsonify({"ok": True})
 
 @app.route("/api/sales/visits/<int:vid>", methods=["DELETE"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_visits_delete(vid):
     conn = get_conn()
     conn.execute("DELETE FROM sales_visits WHERE id=?", (vid,))
@@ -3527,7 +5389,7 @@ def sales_visits_delete(vid):
     return jsonify({"ok": True})
 
 @app.route("/api/sales/customers/<int:cid>/orders", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_sales")
 def sales_customer_orders(cid):
     conn = get_conn()
     c = conn.execute("SELECT name FROM customers WHERE id=?", (cid,)).fetchone()
@@ -3549,7 +5411,7 @@ def sales_customer_orders(cid):
 # ═══════════════════════════════════════════
 
 @app.route("/api/consult/clients", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_clients_list():
     q         = request.args.get("q","").strip()
     writer    = request.args.get("writer","").strip()
@@ -3606,7 +5468,7 @@ def consult_clients_list():
 
 
 @app.route("/api/consult/clients", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_clients_create():
     data = request.json or {}
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3628,7 +5490,7 @@ def consult_clients_create():
 
 
 @app.route("/api/consult/clients/<int:cid>", methods=["PUT"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_clients_update(cid):
     data   = request.json or {}
     conn   = get_conn()
@@ -3651,7 +5513,7 @@ def consult_clients_update(cid):
 
 
 @app.route("/api/consult/clients/<int:cid>", methods=["DELETE"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_clients_delete(cid):
     conn = get_conn()
     conn.execute("DELETE FROM consult_visits WHERE client_id=?", (cid,))
@@ -3662,7 +5524,7 @@ def consult_clients_delete(cid):
 
 
 @app.route("/api/consult/clients/<int:cid>/visits", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_visits_list(cid):
     conn = get_conn()
     rows = [dict(r) for r in conn.execute(
@@ -3673,7 +5535,7 @@ def consult_visits_list(cid):
 
 
 @app.route("/api/consult/clients/<int:cid>/visits", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_visits_create(cid):
     data = request.json or {}
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3689,7 +5551,7 @@ def consult_visits_create(cid):
 
 
 @app.route("/api/consult/visits/<int:vid>", methods=["PUT"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_visits_update(vid):
     data = request.json or {}
     conn = get_conn()
@@ -3703,7 +5565,7 @@ def consult_visits_update(vid):
     return jsonify({"ok": True})
 
 @app.route("/api/consult/visits/<int:vid>", methods=["DELETE"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_visits_delete(vid):
     conn = get_conn()
     conn.execute("DELETE FROM consult_visits WHERE id=?", (vid,))
@@ -3713,7 +5575,7 @@ def consult_visits_delete(vid):
 
 
 @app.route("/api/consult/clients/<int:cid>/orders", methods=["GET"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_client_orders(cid):
     conn = get_conn()
     c = conn.execute("""
@@ -3740,7 +5602,7 @@ def consult_client_orders(cid):
 
 
 @app.route("/api/consult/clients/<int:cid>/link", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_client_link(cid):
     data = request.json or {}
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3776,7 +5638,7 @@ def consult_client_link(cid):
 
 
 @app.route("/api/consult/clients/<int:cid>/unlink", methods=["POST"])
-@require_perm("journal")
+@require_perm("journal_consult")
 def consult_client_unlink(cid):
     conn = get_conn()
     conn.execute("UPDATE consult_clients SET linked_customer_id=NULL WHERE id=?", (cid,))
@@ -3820,21 +5682,168 @@ def api_login():
     next_url = data.get("next") or "/"
     return jsonify({"ok": True, "next": next_url})
 
+@app.route("/api/change_password", methods=["POST"])
+def api_change_password():
+    data = request.json or {}
+    username = (data.get("username") or "").strip()
+    current_pw = data.get("current_password") or ""
+    new_pw = data.get("new_password") or ""
+    if not username or not current_pw or not new_pw:
+        return jsonify({"ok": False, "error": "모든 항목을 입력하세요."}), 400
+    if len(new_pw) < 4:
+        return jsonify({"ok": False, "error": "새 비밀번호는 4자 이상이어야 합니다."}), 400
+    conn = get_conn()
+    user = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+    if not user or not check_password_hash(user["password_hash"] or "", current_pw):
+        conn.close()
+        return jsonify({"ok": False, "error": "아이디 또는 현재 비밀번호가 맞지 않습니다."}), 401
+    if int(user["active"] or 0) != 1:
+        conn.close()
+        return jsonify({"ok": False, "error": "사용중지된 아이디입니다."}), 403
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn.execute("UPDATE users SET password_hash=?, updated_at=? WHERE id=?",
+                 (generate_password_hash(new_pw), now, user["id"]))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login_page"))
 
+@app.route("/sw.js")
+def service_worker():
+    resp = send_from_directory("static", "sw.js")
+    resp.headers["Content-Type"] = "application/javascript"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
+@app.route("/api/push/vapid-public-key")
+@require_login
+def api_push_vapid_key():
+    return jsonify({"public_key": VAPID_KEYS.get("public_key", "")})
+
+@app.route("/api/push/subscribe", methods=["POST"])
+@require_login
+def api_push_subscribe():
+    data = request.json or {}
+    endpoint = data.get("endpoint", "")
+    keys = data.get("keys", {})
+    p256dh = keys.get("p256dh", "")
+    auth = keys.get("auth", "")
+    if not endpoint or not p256dh or not auth:
+        return jsonify({"ok": False}), 400
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("""
+        INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth
+    """, (session.get("user_id"), endpoint, p256dh, auth, now))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/push/unsubscribe", methods=["POST"])
+@require_login
+def api_push_unsubscribe():
+    data = request.json or {}
+    endpoint = data.get("endpoint", "")
+    conn = get_conn()
+    conn.execute("DELETE FROM push_subscriptions WHERE endpoint=?", (endpoint,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
 @app.route("/users")
 @require_perm("user_manage")
 def users_page():
-    return render_template("users.html", permission_labels=PERMISSION_LABELS, permission_levels=PERMISSION_LEVELS, all_permissions=ALL_PERMISSIONS)
+    return render_template("users.html", permission_labels=PERMISSION_LABELS, permission_levels=PERMISSION_LEVELS, all_permissions=ALL_PERMISSIONS, permission_tree=PERMISSION_TREE)
+
+@app.route("/api/org/unregistered")
+@require_write_perm("user_manage")
+def api_org_unregistered():
+    conn = get_conn()
+    members = conn.execute("""
+        SELECT m.id, m.name, m.rank, d.label as dept_label
+        FROM org_members m
+        LEFT JOIN org_departments d ON m.dept_id = d.id
+        ORDER BY d.sort_order, m.sort_order
+    """).fetchall()
+    existing_names = {r[0] for r in conn.execute("SELECT name FROM users WHERE name IS NOT NULL").fetchall()}
+    conn.close()
+    # 이름 중복 제거(겸직) + 미등록자만
+    seen = set()
+    result = []
+    for m in members:
+        if m["name"] and m["name"] not in existing_names and m["name"] not in seen:
+            seen.add(m["name"])
+            result.append({"id": m["id"], "name": m["name"], "rank": m["rank"], "dept_label": m["dept_label"] or ""})
+    return jsonify(result)
+
+
+def korean_to_eng(text):
+    CHO  = ['r','R','s','e','E','f','a','q','Q','t','T','d','w','W','c','z','x','v','g']
+    JUNG = ['k','o','i','O','j','p','u','P','h','hk','ho','hl','y','n','nj','np','nl','b','m','ml','l']
+    JONG = ['','r','R','rt','s','sw','sg','e','f','fr','fa','fq','ft','fx','fv','fg','a','q','qt','t','T','d','w','c','z','x','v','g']
+    result = []
+    for ch in text:
+        code = ord(ch)
+        if 0xAC00 <= code <= 0xD7A3:
+            code -= 0xAC00
+            result.append(CHO[code // (21*28)] + JUNG[(code % (21*28)) // 28] + JONG[code % 28])
+        else:
+            result.append(ch)
+    return ''.join(result)
+
+
+@app.route("/api/users/bulk_from_org", methods=["POST"])
+@require_write_perm("user_manage")
+def api_users_bulk_from_org():
+    data = request.json or {}
+    members = data.get("members", [])  # [{name, rank, dept_label, user_group}]
+    conn = get_conn()
+    groups = {g["group_name"]: g for g in [dict(r) for r in conn.execute("SELECT * FROM check_groups").fetchall()]}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ok, skipped = 0, 0
+    for m in members:
+        name = (m.get("name") or "").strip()
+        if not name:
+            continue
+        username = name
+        password = korean_to_eng(name) + "1234"
+        user_group = m.get("user_group") or ""
+        g = groups.get(user_group, {})
+        perms = permissions_to_db(g.get("permissions") or {}, "일반")
+        try:
+            conn.execute("""
+                INSERT INTO users(username, password_hash, name, user_group, role, permissions, active, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            """, (username, generate_password_hash(password), name, user_group, "일반", perms, 1, now, now))
+            ok += 1
+        except Exception:
+            skipped += 1
+    conn.commit(); conn.close()
+    return jsonify({"ok": True, "registered": ok, "skipped": skipped})
+
 
 @app.route("/api/users", methods=["GET"])
 @require_perm("user_manage")
 def api_users_list():
     conn = get_conn()
-    rows = conn.execute("SELECT id, username, name, COALESCE(user_group,'') AS user_group, role, permissions, active, last_login, created_at, updated_at FROM users ORDER BY active DESC, username ASC").fetchall()
+    rows = conn.execute("""
+        SELECT u.id, u.username, u.name, COALESCE(u.user_group,'') AS user_group,
+               u.role, u.permissions, u.active, u.last_login, u.created_at, u.updated_at,
+               COALESCE(d.label,'') AS dept_label,
+               COALESCE(m.rank,'') AS rank,
+               COALESCE(m.phone,'') AS phone,
+               COALESCE(m.hire_date,'') AS hire_date
+        FROM users u
+        LEFT JOIN org_members m ON m.name = u.name
+        LEFT JOIN org_departments d ON d.id = m.dept_id
+        ORDER BY u.active DESC, u.username ASC
+    """).fetchall()
     conn.close()
     return jsonify([row_to_dict(r) for r in rows])
 
@@ -3870,18 +5879,25 @@ def api_users_create():
 @require_perm("user_manage")
 def api_users_update(user_id):
     data = request.json or {}
+    password = data.get("password") or ""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    # 비밀번호만 변경하는 경우
+    if password and len(data) == 1:
+        conn.execute("UPDATE users SET password_hash=?, updated_at=? WHERE id=?",
+                     (generate_password_hash(password), now, user_id))
+        conn.commit(); conn.close()
+        return jsonify({"ok": True})
     username = (data.get("username") or "").strip()
     name = (data.get("name") or username).strip()
     role = (data.get("role") or "일반").strip()
     user_group = (data.get("user_group") or "사무실").strip()
     permissions = data.get("permissions") or {}
     active = 1 if int(data.get("active", 1) or 0) else 0
-    password = data.get("password") or ""
     if not username:
+        conn.close()
         return jsonify({"ok": False, "error": "아이디를 입력하세요."}), 400
     perm_text = permissions_to_db(permissions, role)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    conn = get_conn()
     try:
         if password:
             conn.execute("""
@@ -3964,8 +5980,11 @@ def api_check_groups_update(group_id):
         conn.close()
         return jsonify({"ok": False, "error": "그룹을 찾을 수 없습니다."}), 404
     old_name = old["group_name"]
+    import json as _json
+    permissions = data.get("permissions", None)
+    perms_str = _json.dumps(permissions, ensure_ascii=False) if permissions is not None else (old["permissions"] or "")
     try:
-        conn.execute("UPDATE check_groups SET group_name=?, memo=?, sort_order=?, active=?, updated_at=? WHERE id=?", (name, memo, sort_order, active, now, group_id))
+        conn.execute("UPDATE check_groups SET group_name=?, memo=?, sort_order=?, active=?, permissions=?, updated_at=? WHERE id=?", (name, memo, sort_order, active, perms_str, now, group_id))
         if name != old_name:
             conn.execute("UPDATE users SET user_group=? WHERE user_group=?", (name, old_name))
             conn.execute("UPDATE check_requests SET to_group=? WHERE to_group=?", (name, old_name))
@@ -4932,6 +6951,46 @@ def api_as_create():
                 VALUES (?,?,?,?,?)
             """, (item_id, "receipt", filename, original, now))
 
+    # C/S관리부 직원들에게 A/S 접수 확인요청 자동 발송
+    try:
+        dept = conn.execute(
+            "SELECT id FROM org_departments WHERE label LIKE '%C/S%' ORDER BY id LIMIT 1"
+        ).fetchone()
+        if dept:
+            members = conn.execute(
+                "SELECT DISTINCT name FROM org_members WHERE dept_id=?", (dept["id"],)
+            ).fetchall()
+            member_names = [m["name"] for m in members if m["name"]]
+            if member_names:
+                ph = ",".join("?" * len(member_names))
+                targets = conn.execute(
+                    f"SELECT id, name FROM users WHERE name IN ({ph}) AND active=1",
+                    member_names
+                ).fetchall()
+                msg = f"[A/S 접수] {values['customer']}"
+                if values.get("product_group"):
+                    msg += f" - {values['product_group']}"
+                if values.get("model"):
+                    msg += f" ({values['model']})"
+                from_id = session.get("user_id") or 0
+                from_name = session.get("name") or session.get("username") or ""
+                target_ids = []
+                for t in targets:
+                    conn.execute("""
+                        INSERT INTO check_requests(
+                            schedule_id, as_id, source_type,
+                            from_user_id, from_user_name,
+                            to_user_id, to_user_name, to_group,
+                            message, status, created_at
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                    """, (None, item_id, "as", from_id, from_name,
+                          t["id"], t["name"], "", msg, "미확인", now))
+                    target_ids.append(t["id"])
+                if target_ids:
+                    send_push_notifications(target_ids, "A/S 접수", msg, "/as")
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
     return jsonify({"ok": True, "id": item_id})
@@ -5120,6 +7179,125 @@ def api_as_check_requests_create_v14():
     return jsonify({"ok": True})
 
 
+
+@app.route("/api/construction", methods=["GET"])
+@require_login
+def api_construction_list():
+    ctype = request.args.get("type", "")
+    status = request.args.get("status", "")
+    conn = get_conn()
+    sql = "SELECT * FROM construction_items WHERE 1=1"
+    params = []
+    if ctype:
+        sql += " AND type=?"
+        params.append(ctype)
+    if status:
+        sql += " AND status=?"
+        params.append(status)
+    sql += " ORDER BY scheduled_date DESC, id DESC"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return jsonify([row_to_dict(r) for r in rows])
+
+@app.route("/api/construction", methods=["POST"])
+@require_login
+def api_construction_create():
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    cur = conn.execute("""
+        INSERT INTO construction_items
+            (type, status, company, scheduled_date, customer, address, manager, content, memo, created_by, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        data.get("type", "실측"), data.get("status", "예정"),
+        data.get("company", ""), data.get("scheduled_date", ""),
+        data.get("customer", ""), data.get("address", ""),
+        data.get("manager", ""), data.get("content", ""),
+        data.get("memo", ""),
+        session.get("name") or session.get("username") or "", now, now
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True, "id": cur.lastrowid})
+
+@app.route("/api/construction/<int:item_id>", methods=["PUT"])
+@require_login
+def api_construction_update(item_id):
+    data = request.json or {}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("""
+        UPDATE construction_items SET
+            type=?, status=?, company=?, scheduled_date=?, customer=?, address=?,
+            manager=?, content=?, memo=?, updated_at=?
+        WHERE id=?
+    """, (
+        data.get("type", "실측"), data.get("status", "예정"),
+        data.get("company", ""), data.get("scheduled_date", ""),
+        data.get("customer", ""), data.get("address", ""),
+        data.get("manager", ""), data.get("content", ""),
+        data.get("memo", ""), now, item_id
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/construction/<int:item_id>", methods=["DELETE"])
+@require_login
+def api_construction_delete(item_id):
+    conn = get_conn()
+    conn.execute("DELETE FROM construction_items WHERE id=?", (item_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/construction/docs", methods=["GET"])
+@require_login
+def api_construction_docs_list():
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM construction_docs ORDER BY id DESC").fetchall()
+    conn.close()
+    return jsonify([row_to_dict(r) for r in rows])
+
+@app.route("/api/construction/docs", methods=["POST"])
+@require_login
+def api_construction_docs_upload():
+    f = request.files.get("file")
+    title = (request.form.get("title") or "").strip()
+    if not f:
+        return jsonify({"ok": False, "error": "파일 없음"}), 400
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ext = Path(f.filename).suffix.lower()
+    fname = f"{uuid.uuid4().hex}{ext}"
+    f.save(CONSTRUCTION_DOCS_DIR / fname)
+    conn = get_conn()
+    conn.execute("""
+        INSERT INTO construction_docs (title, filename, original_name, uploaded_by, created_at)
+        VALUES (?,?,?,?,?)
+    """, (title or f.filename, fname, f.filename, session.get("name") or "", now))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/construction/docs/<int:doc_id>", methods=["DELETE"])
+@require_login
+def api_construction_docs_delete(doc_id):
+    conn = get_conn()
+    row = conn.execute("SELECT filename FROM construction_docs WHERE id=?", (doc_id,)).fetchone()
+    if row:
+        p = CONSTRUCTION_DOCS_DIR / row["filename"]
+        if p.exists():
+            p.unlink()
+        conn.execute("DELETE FROM construction_docs WHERE id=?", (doc_id,))
+        conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/construction_docs/<path:filename>")
+@require_login
+def construction_doc_file(filename):
+    return send_from_directory(CONSTRUCTION_DOCS_DIR, filename)
 
 @app.route("/api/as/videos", methods=["GET"])
 def api_as_videos():
@@ -5664,6 +7842,53 @@ def regen_generate_xml_api():
         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
+@app.route("/api/att/save", methods=["POST"])
+@require_login
+def att_save():
+    body = request.json or {}
+    month = body.get("month", "")
+    title = body.get("title") or month
+    data = json.dumps(body, ensure_ascii=False)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_conn()
+    conn.execute("INSERT INTO att_saved (title, month, data, created_at) VALUES (?,?,?,?)",
+                 (title, month, data, now))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/att/list", methods=["GET"])
+@require_login
+def att_list():
+    conn = get_conn()
+    rows = conn.execute("SELECT id, title, month, created_at FROM att_saved ORDER BY id DESC").fetchall()
+    conn.close()
+    return jsonify([{"id": r[0], "title": r[1], "month": r[2], "created_at": r[3]} for r in rows])
+
+
+@app.route("/api/att/load/<int:rid>", methods=["GET"])
+@require_login
+def att_load(rid):
+    conn = get_conn()
+    row = conn.execute("SELECT data FROM att_saved WHERE id=?", (rid,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"error": "not found"}), 404
+    return jsonify(json.loads(row[0]))
+
+
+@app.route("/api/att/delete/<int:rid>", methods=["DELETE"])
+@require_login
+def att_delete(rid):
+    conn = get_conn()
+    conn.execute("DELETE FROM att_saved WHERE id=?", (rid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)

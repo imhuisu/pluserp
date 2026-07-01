@@ -2,3 +2,7 @@ flask
 Pillow
 fpdf2
 Werkzeug
+waitress
+xlrd
+openpyxl
+reportlab

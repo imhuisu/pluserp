@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>A/S관리</title>
+<title>C/S관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:"맑은 고딕",Arial,sans-serif;margin:0;}
@@ -550,9 +553,92 @@ tbody tr:hover td{background:#f0f5ff!important;}
   #asMobileForceV24{ display:block!important; margin-top:10px!important; }
 }
 </style>
+
+<style id="as-mobile-popup-fix">
+/* 제품정보 4칸 그리드 - 반응형 */
+.product-info-grid{display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:6px;margin-top:4px}
+@media(max-width:700px){.product-info-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:400px){.product-info-grid{grid-template-columns:1fr}}
+
+/* 모달 박스 너비 - 모바일에서 패딩 포함해 화면 안에 들어오게 */
+@media(max-width:700px){
+  .modal{padding:10px!important}
+  .box{width:calc(100vw - 20px)!important;padding:10px 12px!important;max-height:92vh!important}
+  /* 폼 안 date-wrap 너비 제한 해제 - 모바일에서 다른 필드와 동일 폭 */
+  .form-grid .date-wrap,.form-grid .plusdoor-date-wrap{max-width:100%!important;width:100%!important}
+  /* 상세 라벨 행 넘침 방지 */
+  .detail-row{grid-template-columns:90px 1fr!important}
+  /* 섹션 타이틀 폰트 조정 */
+  .section-title{font-size:13px!important;padding:5px 7px!important}
+  /* 버튼 줄바꿈 허용 */
+  .actions{flex-wrap:wrap!important}
+}
+</style>
+<style id="cs-outer-style">
+.cs-outer-tabs{display:flex;gap:0;border-bottom:3px solid #1a3a5c;margin:8px 12px 0;flex-shrink:0}
+.cs-outer-tab{padding:8px 24px;font-size:14px;font-weight:700;border:none;background:#f0f2f5;color:#555;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid #ccc;border-bottom:none;margin-bottom:-3px}
+.cs-outer-tab.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+.cs-outer-tab:hover:not(.on){background:#e0e6ef}
+.cs-section{display:none}
+.cs-section.show{display:block}
+/* 시공관리 */
+.con-wrap{padding:10px 12px}
+.con-sub-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid #1a3a5c}
+.con-sub-tab{padding:6px 18px;font-size:13px;font-weight:600;border:1px solid #ccc;border-bottom:none;background:#f0f2f5;color:#555;cursor:pointer;border-radius:5px 5px 0 0;margin-bottom:-2px}
+.con-sub-tab.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+.con-sub-tab:hover:not(.on){background:#e0e6ef}
+.con-section{display:none}
+.con-section.show{display:block}
+.con-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.con-toolbar button{padding:6px 14px;font-size:12px;font-weight:700;border-radius:5px;cursor:pointer}
+.con-btn-primary{background:#1a3a5c;color:#fff;border:none}
+.con-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.con-filter-btn{padding:4px 12px;font-size:12px;font-weight:700;border-radius:10px;border:1px solid #c5d5f0;background:#fff;color:#1a3a5c;cursor:pointer}
+.con-filter-btn.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+.con-list{display:flex;flex-direction:column;gap:6px}
+.con-card{background:#fff;border:1px solid #dde2e8;border-radius:8px;padding:12px 14px;cursor:pointer;transition:box-shadow .15s}
+.con-card:hover{box-shadow:0 2px 10px rgba(26,58,92,.12)}
+.con-card-row1{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.con-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.con-badge.예정{background:#dbeafe;color:#1d4ed8}
+.con-badge.완료{background:#dcfce7;color:#166534}
+.con-badge.취소{background:#fee2e2;color:#991b1b}
+.con-customer{font-size:14px;font-weight:700;color:#1a3a5c}
+.con-date{font-size:12px;color:#666;margin-left:auto;flex-shrink:0}
+.con-card-row2{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#555}
+.con-empty{text-align:center;padding:40px;color:#aaa;font-size:14px}
+/* 시공 모달 */
+.con-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px}
+.con-modal-bg.open{display:flex}
+.con-modal{background:#fff;border-radius:10px;width:min(500px,98vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.con-modal-hd{background:#1a3a5c;color:#fff;padding:12px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;border-radius:10px 10px 0 0}
+.con-modal-body{padding:16px;display:flex;flex-direction:column;gap:10px}
+.con-modal-ft{padding:12px 16px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-end}
+.con-field{display:flex;flex-direction:column;gap:3px}
+.con-field label{font-size:11px;font-weight:700;color:#555}
+.con-field input,.con-field select,.con-field textarea{padding:7px 9px;border:1px solid #ddd;border-radius:5px;font-size:13px;width:100%}
+.con-field textarea{resize:vertical;min-height:60px}
+.con-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 관련자료 */
+.doc-list{display:flex;flex-direction:column;gap:6px}
+.doc-item{background:#fff;border:1px solid #dde2e8;border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.doc-icon{font-size:20px;flex-shrink:0}
+.doc-name{flex:1;font-size:13px;font-weight:600;color:#1a3a5c;word-break:break-all}
+.doc-sub{font-size:11px;color:#888}
+.doc-btn-del{background:#fff0ee;color:#d83b01;border:1px solid #f5c5bb;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0}
+@media(max-width:700px){
+  .con-field-row{grid-template-columns:1fr}
+  .con-card-row2{flex-direction:column;gap:4px}
+}
+</style>
 </head>
 <body>
 {{ top_menu("as")|safe }}
+<div class="cs-outer-tabs">
+  <button class="cs-outer-tab on" id="csTabAS" onclick="switchCSTab('as')">A/S관리</button>
+  <button class="cs-outer-tab" id="csTabConstruction" onclick="switchCSTab('construction')">시공관리</button>
+</div>
+<div id="csSecAS" class="cs-section show">
 <div class="current-page">현재 화면: A/S관리</div>
 
 <div class="panel">
@@ -709,7 +795,7 @@ tbody tr:hover td{background:#f0f5ff!important;}
     <div class="wide"><label>접수내용</label><textarea id="request_content"></textarea></div>
     <div class="wide">
       <label>제품정보</label>
-      <div style="display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:6px;margin-top:4px">
+      <div class="product-info-grid">
         <div><label>모델명</label><input id="model" placeholder="예: N-3000"></div>
         <div><label>상세정보</label><input id="detail_content" placeholder="색상, 크기, 옵션 등"></div>
         <div><label>수량</label><input id="qty" placeholder="예: 2"></div>
@@ -736,6 +822,7 @@ tbody tr:hover td{background:#f0f5ff!important;}
   <input type="hidden" id="region_group">
 
   <input type="hidden" id="scheduled_date">
+  <input type="hidden" id="completed_by">
   <div class="section-title">예정 / 완료 / 보류</div>
   <div class="form-grid grid2">
     <div><label>담당자 <span style="font-size:10px;color:#9ca3af;font-weight:400">(완료 처리 시 자동입력)</span></label><input id="assigned_to"></div>
@@ -945,7 +1032,7 @@ function fillEdit(d){asId.value=d.id;FIELDS.forEach(id=>{const el=document.getEl
   if(d._autoDate){const cdEl=document.getElementById("completed_date");if(cdEl&&!cdEl.value)cdEl.value=d._autoDate;}
   if(d._autoAssigned){const atEl=document.getElementById("assigned_to");if(atEl&&!atEl.value)atEl.value=d._autoAssigned;
     const cbEl=document.getElementById("completed_by");if(cbEl&&!cbEl.value)cbEl.value=d._autoAssigned;}if(!status.value)status.value="접수";modeText.textContent="#"+d.id;deleteBtn.style.display="inline-block";receipt_photos.value="";completion_photos.value="";clearPasted()}
-async function saveAs(){normalizeAllDates();const fd=new FormData();FIELDS.forEach(id=>fd.append(id,document.getElementById(id).value||""));[...receipt_photos.files,...receiptPasteFiles].forEach(f=>fd.append("receipt_photos",f));[...completion_photos.files,...completionPasteFiles].forEach(f=>fd.append("completion_photos",f));const id=asId.value;const res=await fetch(id?"/api/as/"+id:"/api/as",{method:"POST",body:fd});const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok){alert(data.error||"저장 실패");return}alert("저장되었습니다.");hideModal("editModal");await loadAll();if(id)openDetail(id)}
+async function saveAs(){normalizeAllDates();const fd=new FormData();FIELDS.forEach(id=>{const el=document.getElementById(id);fd.append(id,el?el.value||"":"")});[...receipt_photos.files,...receiptPasteFiles].forEach(f=>fd.append("receipt_photos",f));[...completion_photos.files,...completionPasteFiles].forEach(f=>fd.append("completion_photos",f));const id=asId.value;const res=await fetch(id?"/api/as/"+id:"/api/as",{method:"POST",body:fd});const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok){alert(data.error||"저장 실패");return}alert("저장되었습니다.");hideModal("editModal");await loadAll();if(id)openDetail(id)}
 async function openDetail(id){const res=await fetch("/api/as/"+id);const d=await res.json();if(!res.ok){alert(d.error||"조회 실패");return}currentDetail=d;detailId.textContent="#"+d.id;companyCallBtn.href="tel:"+phoneOnly(d.company_phone);consumerCallBtn.href="tel:"+phoneOnly(d.consumer_phone);detailContent.innerHTML=[["상태",d.status],["접수일",d.receipt_date],["요청일",d.request_date],["접수자",d.receiver],["거래처",d.customer],["업체번호",d.company_phone],["소비자번호",d.consumer_phone],["지역",d.region],["상세주소",d.address],["제품군",d.product_group],["접수내용",d.request_content],["비고",d.memo],["담당자",d.assigned_to],["필요물품",d.needed_parts],["결함원인",d.defect_cause],["처리내용",d.process_content],["제품개선사항",d.improvement],["완료일",d.completed_date],["보류사유",d.hold_reason]].map(([k,v])=>`<div class="detail-row"><b>${k}</b><span>${fmt(v)}</span></div>`).join("");renderPhotos("receiptPhotoList",d.receipt_photos||[]);renderPhotos("completionPhotoList",d.completion_photos||[]);detailModal.style.display="flex"}
 function renderPhotos(target,photos){document.getElementById(target).innerHTML=photos.length?photos.map(p=>`<div class="photo-item"><a href="/uploads/${encodeURIComponent(p.filename).replaceAll("%2F","/")}" target="_blank"><img src="/uploads/${encodeURIComponent(p.filename).replaceAll("%2F","/")}"></a><div class="small">${fmt(p.original_name)}</div>{% if has_write_perm('as') %}<button class="danger" onclick="deletePhoto(${p.id})">삭제</button>{% endif %}</div>`).join(""):`<div class="small">사진 없음</div>`}
 function copyAddress(){if(!currentDetail)return;navigator.clipboard.writeText(currentDetail.address||"").then(()=>alert("주소가 복사되었습니다."))}
@@ -1488,6 +1575,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     btn.onclick=function(e){
       e.preventDefault();
       e.stopPropagation();
+      if(inp._flatpickr){inp._flatpickr.open();return;}
       plusdoorOpenCalendarV15(inp,btn);
     };
   };
@@ -1518,6 +1606,22 @@ document.addEventListener("DOMContentLoaded",()=>{
   };
   window.closeCalendar=function(){window.plusdoorCloseCalendarV15();};
   window.moveCalendarMonth=function(delta){window.plusdoorMoveCalendarV15(delta);};
+})();
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  function _initFP(){
+    document.querySelectorAll('.date-wrap input,.plusdoor-date-wrap input').forEach(function(inp){
+      if(inp._flatpickr||inp.dataset.fpDone||inp.type==='hidden')return;
+      inp.dataset.fpDone='1';
+      flatpickr(inp,_fpOpts);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(_initFP,300);});
+  setInterval(_initFP,1800);
 })();
 </script>
 
@@ -3103,6 +3207,310 @@ document.addEventListener("DOMContentLoaded",()=>{
     panel.dataset.canWrite = hasAddBtn ? '1' : '0';
   });
 })();
+</script>
+</div><!-- /csSecAS -->
+
+<div id="csSecConstruction" class="cs-section">
+<div class="con-wrap">
+  <div class="con-sub-tabs">
+    <button class="con-sub-tab on" id="conTab_measure" onclick="switchConTab('measure')">실측일정</button>
+    <button class="con-sub-tab" id="conTab_install" onclick="switchConTab('install')">시공일정</button>
+    <button class="con-sub-tab" id="conTab_done" onclick="switchConTab('done')">시공완료</button>
+    <button class="con-sub-tab" id="conTab_docs" onclick="switchConTab('docs')">관련자료</button>
+  </div>
+
+  <!-- 실측일정 -->
+  <div id="conSec_measure" class="con-section show">
+    <div class="con-toolbar">
+      <span style="font-size:13px;font-weight:700">실측일정</span>
+      <button class="con-btn-primary" onclick="openConModal(null,'실측')">+ 추가</button>
+    </div>
+    <div class="con-filter" id="conMeasureFilter">
+      <button class="con-filter-btn on" onclick="setConFilter('measure','')">전체</button>
+      <button class="con-filter-btn" onclick="setConFilter('measure','예정')">예정</button>
+      <button class="con-filter-btn" onclick="setConFilter('measure','완료')">완료</button>
+    </div>
+    <div class="con-list" id="conMeasureList"></div>
+  </div>
+
+  <!-- 시공일정 -->
+  <div id="conSec_install" class="con-section">
+    <div class="con-toolbar">
+      <span style="font-size:13px;font-weight:700">시공일정</span>
+      <button class="con-btn-primary" onclick="openConModal(null,'시공')">+ 추가</button>
+    </div>
+    <div class="con-filter" id="conInstallFilter">
+      <button class="con-filter-btn on" onclick="setConFilter('install','')">전체</button>
+      <button class="con-filter-btn" onclick="setConFilter('install','예정')">예정</button>
+      <button class="con-filter-btn" onclick="setConFilter('install','완료')">완료</button>
+    </div>
+    <div class="con-list" id="conInstallList"></div>
+  </div>
+
+  <!-- 시공완료 -->
+  <div id="conSec_done" class="con-section">
+    <div class="con-toolbar">
+      <span style="font-size:13px;font-weight:700">시공완료</span>
+    </div>
+    <div class="con-list" id="conDoneList"></div>
+  </div>
+
+  <!-- 관련자료 -->
+  <div id="conSec_docs" class="con-section">
+    <div class="con-toolbar">
+      <span style="font-size:13px;font-weight:700">관련자료</span>
+      <label style="cursor:pointer">
+        <input type="file" id="docFileInput" style="display:none" onchange="uploadConDoc()">
+        <span class="con-btn-primary" style="padding:6px 14px;font-size:12px;font-weight:700;border-radius:5px;background:#1a3a5c;color:#fff;cursor:pointer">+ 파일 업로드</span>
+      </label>
+    </div>
+    <div class="doc-list" id="conDocList"></div>
+  </div>
+</div>
+</div><!-- /csSecConstruction -->
+
+<!-- 시공 추가/수정 모달 -->
+<div class="con-modal-bg" id="conModalBg" onclick="if(event.target===this)closeConModal()">
+  <div class="con-modal">
+    <div class="con-modal-hd">
+      <span id="conModalTitle">시공 추가</span>
+      <button onclick="closeConModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div class="con-modal-body">
+      <input type="hidden" id="conModalId">
+      <input type="hidden" id="conModalType">
+      <div class="con-field-row">
+        <div class="con-field">
+          <label>날짜</label>
+          <input type="text" id="conFDate" placeholder="YYYY-MM-DD">
+        </div>
+        <div class="con-field">
+          <label>상태</label>
+          <select id="conFStatus">
+            <option value="예정">예정</option>
+            <option value="완료">완료</option>
+            <option value="취소">취소</option>
+          </select>
+        </div>
+      </div>
+      <div class="con-field-row">
+        <div class="con-field">
+          <label>거래처</label>
+          <input type="text" id="conFCustomer" placeholder="거래처명">
+        </div>
+        <div class="con-field">
+          <label>회사</label>
+          <select id="conFCompany">
+            <option value="">구분없음</option>
+            <option value="도어">도어</option>
+            <option value="세일즈">세일즈</option>
+          </select>
+        </div>
+      </div>
+      <div class="con-field">
+        <label>주소</label>
+        <input type="text" id="conFAddress" placeholder="시공 주소">
+      </div>
+      <div class="con-field">
+        <label>담당자</label>
+        <input type="text" id="conFManager" placeholder="담당자">
+      </div>
+      <div class="con-field">
+        <label>작업 내용</label>
+        <textarea id="conFContent" placeholder="작업 내용"></textarea>
+      </div>
+      <div class="con-field">
+        <label>특이사항</label>
+        <textarea id="conFMemo" placeholder="특이사항"></textarea>
+      </div>
+    </div>
+    <div class="con-modal-ft">
+      <button id="conModalDelBtn" onclick="deleteConItem()" style="background:#d83b01;color:#fff;border:none;font-weight:700;padding:7px 16px;border-radius:5px;cursor:pointer;display:none">삭제</button>
+      <button onclick="closeConModal()" style="background:#eee;color:#555;border:none;font-weight:700;padding:7px 16px;border-radius:5px;cursor:pointer">취소</button>
+      <button onclick="saveConItem()" style="background:#1a3a5c;color:#fff;border:none;font-weight:700;padding:7px 16px;border-radius:5px;cursor:pointer">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 외부 탭 전환 ──
+function switchCSTab(tab){
+  document.querySelectorAll('.cs-outer-tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.cs-section').forEach(s=>s.classList.remove('show'));
+  var tabMap={as:'AS',construction:'Construction'};
+  var key=tabMap[tab]||tab;
+  document.getElementById('csTab'+key).classList.add('on');
+  document.getElementById('csSec'+key).classList.add('show');
+  if(tab==='construction'){loadConTab();}
+}
+// ── 시공관리 서브탭 ──
+var conCurrentTab='measure';
+var conFilters={measure:'',install:''};
+function switchConTab(tab){
+  conCurrentTab=tab;
+  document.querySelectorAll('.con-sub-tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.con-section').forEach(s=>s.classList.remove('show'));
+  document.getElementById('conTab_'+tab).classList.add('on');
+  document.getElementById('conSec_'+tab).classList.add('show');
+  if(tab!=='docs')loadConList(tab);
+  else loadConDocs();
+}
+function loadConTab(){switchConTab(conCurrentTab);}
+function setConFilter(tab,status){
+  conFilters[tab]=status;
+  var par=document.getElementById('con'+tab.charAt(0).toUpperCase()+tab.slice(1)+'Filter');
+  if(par)par.querySelectorAll('.con-filter-btn').forEach(b=>{
+    var s=b.getAttribute('onclick').match(/'([^']*)'\)$/);
+    b.classList.toggle('on',s&&s[1]===status);
+  });
+  loadConList(tab);
+}
+var conAllItems={measure:[],install:[]};
+async function loadConList(tab){
+  var type=tab==='measure'?'실측':'시공';
+  var res=await fetch('/api/construction?type='+encodeURIComponent(type));
+  var items=await res.json();
+  conAllItems[tab]=items;
+  renderConList(tab,items);
+  if(tab==='done'||conCurrentTab==='done'){
+    var doneItems=[...conAllItems.measure,...conAllItems.install].filter(i=>i.status==='완료');
+    renderDoneList(doneItems);
+  }
+}
+function renderConList(tab,items){
+  var status=conFilters[tab]||'';
+  var filtered=status?items.filter(i=>i.status===status):items;
+  var listId=tab==='measure'?'conMeasureList':'conInstallList';
+  var el=document.getElementById(listId);
+  if(!filtered.length){el.innerHTML='<div class="con-empty">등록된 항목이 없습니다</div>';return;}
+  el.innerHTML=filtered.map(i=>conCardHtml(i)).join('');
+}
+function renderDoneList(items){
+  var el=document.getElementById('conDoneList');
+  if(!el)return;
+  var done=items.filter(i=>i.status==='완료');
+  if(!done.length){el.innerHTML='<div class="con-empty">완료된 항목이 없습니다</div>';return;}
+  el.innerHTML=done.map(i=>conCardHtml(i)).join('');
+}
+function conCardHtml(i){
+  var typeBadge=i.type==='실측'?'<span style="background:#f0f4ff;color:#1a3a5c;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">실측</span>':'<span style="background:#fff7ed;color:#c2410c;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">시공</span>';
+  return '<div class="con-card" onclick="openConModal('+i.id+')">'
+    +'<div class="con-card-row1">'
+    +typeBadge
+    +'<span class="con-badge '+i.status+'">'+i.status+'</span>'
+    +(i.company?'<span style="background:#f5f5f5;color:#666;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px">'+esc(i.company)+'</span>':'')
+    +'<span class="con-customer">'+esc(i.customer||'-')+'</span>'
+    +'<span class="con-date">'+esc(i.scheduled_date||'')+'</span>'
+    +'</div>'
+    +'<div class="con-card-row2">'
+    +(i.address?'<span>📍 '+esc(i.address)+'</span>':'')
+    +(i.manager?'<span>👤 '+esc(i.manager)+'</span>':'')
+    +(i.content?'<span>📋 '+esc(i.content)+'</span>':'')
+    +'</div>'
+    +'</div>';
+}
+function esc(v){return String(v||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+// ── 모달 ──
+var conFlatpickrs=[];
+function openConModal(id,defaultType){
+  var modal=document.getElementById('conModalBg');
+  document.getElementById('conModalId').value=id||'';
+  document.getElementById('conModalType').value=defaultType||'실측';
+  document.getElementById('conModalDelBtn').style.display=id?'':'none';
+  document.getElementById('conFDate').value='';
+  document.getElementById('conFStatus').value='예정';
+  document.getElementById('conFCustomer').value='';
+  document.getElementById('conFCompany').value='';
+  document.getElementById('conFAddress').value='';
+  document.getElementById('conFManager').value='';
+  document.getElementById('conFContent').value='';
+  document.getElementById('conFMemo').value='';
+  if(id){
+    var tab=conCurrentTab==='done'?null:conCurrentTab;
+    var arr=tab?conAllItems[tab]:[...conAllItems.measure,...conAllItems.install];
+    var item=arr.find(i=>i.id===id);
+    if(item){
+      document.getElementById('conModalTitle').textContent=(item.type||'시공')+' 수정';
+      document.getElementById('conFDate').value=item.scheduled_date||'';
+      document.getElementById('conFStatus').value=item.status||'예정';
+      document.getElementById('conFCustomer').value=item.customer||'';
+      document.getElementById('conFCompany').value=item.company||'';
+      document.getElementById('conFAddress').value=item.address||'';
+      document.getElementById('conFManager').value=item.manager||'';
+      document.getElementById('conFContent').value=item.content||'';
+      document.getElementById('conFMemo').value=item.memo||'';
+    }
+  }else{
+    document.getElementById('conModalTitle').textContent=(defaultType||'실측')+' 추가';
+  }
+  modal.classList.add('open');
+  if(typeof flatpickr!=='undefined'){
+    conFlatpickrs.forEach(f=>{try{f.destroy();}catch(e){}});
+    conFlatpickrs=[flatpickr('#conFDate',{dateFormat:'Y-m-d',locale:'ko'})];
+  }
+}
+function closeConModal(){document.getElementById('conModalBg').classList.remove('open');}
+async function saveConItem(){
+  var id=document.getElementById('conModalId').value;
+  var type=id?(document.getElementById('conModalType').value||'실측'):document.getElementById('conModalType').value;
+  var data={
+    type:type,
+    status:document.getElementById('conFStatus').value,
+    company:document.getElementById('conFCompany').value,
+    scheduled_date:document.getElementById('conFDate').value,
+    customer:document.getElementById('conFCustomer').value,
+    address:document.getElementById('conFAddress').value,
+    manager:document.getElementById('conFManager').value,
+    content:document.getElementById('conFContent').value,
+    memo:document.getElementById('conFMemo').value
+  };
+  var url=id?'/api/construction/'+id:'/api/construction';
+  var method=id?'PUT':'POST';
+  var res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  var d=await res.json();
+  if(d.ok){closeConModal();loadConTab();}
+  else alert(d.error||'저장 실패');
+}
+async function deleteConItem(){
+  var id=document.getElementById('conModalId').value;
+  if(!id||!confirm('삭제하시겠습니까?'))return;
+  await fetch('/api/construction/'+id,{method:'DELETE'});
+  closeConModal();loadConTab();
+}
+// ── 관련자료 ──
+async function loadConDocs(){
+  var res=await fetch('/api/construction/docs');
+  var docs=await res.json();
+  var el=document.getElementById('conDocList');
+  if(!docs.length){el.innerHTML='<div class="con-empty">등록된 자료가 없습니다</div>';return;}
+  el.innerHTML=docs.map(d=>{
+    var ext=(d.original_name||'').split('.').pop().toLowerCase();
+    var icon=['pdf','doc','docx'].includes(ext)?'📄':['jpg','jpeg','png','gif'].includes(ext)?'🖼️':['xls','xlsx'].includes(ext)?'📊':'📎';
+    return '<div class="doc-item">'
+      +'<span class="doc-icon">'+icon+'</span>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div class="doc-name"><a href="/construction_docs/'+encodeURIComponent(d.filename)+'" target="_blank" style="color:#1a3a5c;text-decoration:none">'+esc(d.title||d.original_name)+'</a></div>'
+      +'<div class="doc-sub">'+esc(d.uploaded_by)+' · '+esc(d.created_at.slice(0,10))+'</div>'
+      +'</div>'
+      +'<button class="doc-btn-del" onclick="deleteConDoc('+d.id+')">삭제</button>'
+      +'</div>';
+  }).join('');
+}
+async function uploadConDoc(){
+  var inp=document.getElementById('docFileInput');
+  if(!inp.files.length)return;
+  var form=new FormData();
+  form.append('file',inp.files[0]);
+  form.append('title',inp.files[0].name);
+  await fetch('/api/construction/docs',{method:'POST',body:form});
+  inp.value='';
+  loadConDocs();
+}
+async function deleteConDoc(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  await fetch('/api/construction/docs/'+id,{method:'DELETE'});
+  loadConDocs();
+}
 </script>
 
 </body>

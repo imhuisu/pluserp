@@ -5,6 +5,9 @@
 <link rel="icon" type="image/png" href="/static/img/logo.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>시스템도어 작업지시서</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"맑은 고딕",Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#111}
@@ -1590,6 +1593,26 @@ async function loadExisting(id) {
     toast("불러오기 실패: " + e.message, "err");
   }
 }
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');},
+    onChange:function(sel,ds,fp){fp.input.dispatchEvent(new Event('input',{bubbles:true}));}};
+  var _openDpOrig=window.openDp;
+  window.openDp=function(id){
+    var hidden=document.getElementById(id);
+    if(hidden){var wrap=hidden.closest('.date-wrap');var ti=wrap&&wrap.querySelector('input.date-input');if(ti&&ti._flatpickr){ti._flatpickr.open();return;}}
+    if(_openDpOrig)_openDpOrig(id);
+  };
+  window.addEventListener('load',function(){
+    ['f_order_date','f_prod_date','f_due_date'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el&&!el._flatpickr)flatpickr(el,_fpOpts);
+    });
+  });
+})();
 </script>
 </body>
 </html>

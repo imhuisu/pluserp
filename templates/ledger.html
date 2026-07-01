@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="/static/img/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리대장 - PLUSDOOR</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"맑은 고딕",Arial,sans-serif;background:#f0f2f5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+button{border:1px solid #ccc;background:#fff;padding:7px 14px;cursor:pointer;border-radius:5px}
+button:disabled{opacity:.5;cursor:default}
+.top-menu,.top-menu button{border-radius:0}
+.top-menu{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+.page-wrap{flex:1;display:flex;flex-direction:column;min-height:0;padding:10px 12px}
+
+.main-tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:2px solid #1a3a5c;flex-shrink:0}
+.main-tab{padding:7px 20px;background:#f0f2f5;border:1px solid #ccc;border-bottom:none;cursor:pointer;font-size:13px;font-weight:600;color:#555;border-radius:6px 6px 0 0;margin-bottom:-2px}
+.main-tab.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+
+.body-layout{display:flex;gap:12px;flex:1;min-height:0}
+
+/* 좌측 */
+.left-panel{width:250px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
+.list-tabs{display:flex;gap:4px;flex-shrink:0}
+.list-tab{flex:1;text-align:center;padding:5px 8px;background:#fff;border:1px solid #ccc;cursor:pointer;font-size:12px;font-weight:600;color:#666;border-radius:6px}
+.list-tab.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+.list-tab .cnt{background:rgba(255,255,255,.3);border-radius:10px;padding:0 5px;margin-left:3px;font-size:11px}
+.list-tab:not(.on) .cnt{background:#eee;color:#888}
+.left-top-row{display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.left-count{font-size:11px;color:#888}
+.btn-add-sm{background:#16a34a;color:#fff;border:none;font-weight:700;padding:5px 11px;border-radius:5px;cursor:pointer;font-size:12px}
+.left-search{flex-shrink:0}
+.left-search input{width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+.left-search input:focus{outline:none;border-color:#1a3a5c}
+.vehicle-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+.v-card{background:#fff;border:2px solid #e8e8e8;border-radius:7px;padding:9px 11px;cursor:pointer;transition:border-color .12s}
+.v-card:hover{border-color:#1a3a5c}
+.v-card.selected{border-color:#1a3a5c;background:#f0f4ff}
+.vc-row1{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.vc-unit{background:#1a3a5c;color:#fff;font-size:10px;font-weight:700;border-radius:3px;padding:1px 6px;flex-shrink:0}
+.vc-type{font-size:13px;font-weight:700;color:#1a3a5c}
+.vc-co{font-size:10px;color:#fff;background:#6b7f99;border-radius:3px;padding:2px 6px;margin-left:auto;flex-shrink:0;font-weight:600}
+.vc-no{font-size:12px;color:#333;margin-top:1px}
+.vc-manager{font-size:11px;color:#888;margin-top:2px}
+.sold-badge{background:#d83b01;color:#fff;font-size:10px;font-weight:700;border-radius:3px;padding:1px 5px;margin-left:4px}
+.doc-drop-zone{border:2px dashed #c5d5f0;border-radius:6px;padding:10px;text-align:center;font-size:12px;color:#888;cursor:pointer;margin-bottom:8px;transition:background .15s}
+.doc-drop-zone:hover,.doc-drop-zone.drag-over{background:#edf2f8;border-color:#1a3a5c;color:#1a3a5c}
+
+/* 우측 */
+.right-panel{flex:1;overflow-y:auto;min-width:0}
+.detail-placeholder{display:flex;align-items:center;justify-content:center;height:200px;background:#fff;border-radius:10px;color:#ccc;font-size:15px}
+
+.detail-wrap{display:flex;flex-direction:column;gap:8px}
+
+.d-header{background:#1a3a5c;color:#fff;border-radius:8px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.dh-main{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.dh-title{font-size:15px;font-weight:700}
+.dh-sub{font-size:12px;opacity:.75}
+.dh-actions{display:flex;gap:5px;flex-shrink:0}
+.btn-hd{border:none;font-weight:700;padding:4px 11px;border-radius:4px;cursor:pointer;font-size:12px}
+.btn-hd.white{background:#fff;color:#1a3a5c}
+.btn-hd.red{background:#d83b01;color:#fff}
+.btn-hd.orange{background:#e85d04;color:#fff}
+.btn-hd.green{background:#16a34a;color:#fff}
+
+.d-section{background:#fff;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.d-sec-hd{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eef0f4;padding-bottom:6px;margin-bottom:10px}
+.d-sec-title{font-size:11px;font-weight:700;color:#1a3a5c;display:flex;align-items:center;gap:5px}
+.btn-sec-edit{background:#f0f4ff;color:#1a3a5c;border:1px solid #c5d5f0;font-weight:700;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px}
+.btn-sec-edit:hover{background:#dce8ff}
+
+/* 기본정보 */
+.info-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px 16px}
+.i-field{display:flex;flex-direction:column;gap:2px}
+.i-field label{font-size:10px;font-weight:700;color:#999;letter-spacing:.3px}
+.i-field .i-val{font-size:13px;color:#222;min-height:18px;word-break:break-word}
+.i-field .i-val.empty{color:#ccc;font-style:italic;font-size:12px}
+.info-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.info-tbl th{background:#f5f7fa;color:#555;font-weight:700;font-size:11px;padding:6px 10px;border:1px solid #e0e4ea;text-align:left;white-space:nowrap;width:90px}
+.info-tbl td{padding:6px 10px;border:1px solid #e0e4ea;color:#222;word-break:break-word}
+.info-tbl td.empty{color:#bbb;font-style:italic}
+.ins-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ins-box{background:#f7f9fc;border:1px solid #dce6f0;border-radius:6px;padding:8px 10px}
+.ins-label{font-size:10px;font-weight:700;color:#1a3a5c;margin-bottom:3px}
+.ins-company{font-size:13px;font-weight:700;color:#333}
+.ins-period{font-size:12px;color:#555;margin-top:2px}
+
+/* 운행거리 */
+.mileage-tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.mileage-tbl th{background:#f0f4ff;color:#1a3a5c;padding:5px 8px;text-align:center;font-weight:700;border:1px solid #dce6f0}
+.mileage-tbl td{border:1px solid #eee;padding:5px 8px;text-align:center;color:#333;vertical-align:middle}
+.mileage-tbl td.center{text-align:center}
+.mileage-tbl td.note{text-align:center;color:#555}
+.diff-plus{color:#16a34a;font-size:11px;font-weight:600}
+.diff-minus{color:#d83b01;font-size:11px;font-weight:600}
+.diff-zero{color:#888;font-size:11px}
+.mileage-empty{color:#ccc;font-size:12px;text-align:center;padding:12px 0}
+
+/* 차량등록증 */
+/* 설비관리대장 A4 시트 */
+.eq-viewer{display:flex;flex-direction:column;height:100%}
+.eq-pages{display:flex;gap:10px;padding:12px;background:#c8c8c8;flex:1;overflow:auto;align-items:flex-start}
+.eq-page{flex:1;min-width:220px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:14px 16px;font-size:11px;font-family:"맑은 고딕",Arial,sans-serif;box-sizing:border-box}
+.eq-page-photo{width:150px;flex-shrink:0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:12px;font-size:11px;font-family:"맑은 고딕",Arial,sans-serif;display:flex;flex-direction:column;align-items:center;gap:6px}
+.eq-page-title{font-size:13px;font-weight:700;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.eq-page-title .chk{font-size:11px;font-weight:400}
+.eq-tbl{width:100%;border-collapse:collapse;margin-bottom:5px}
+.eq-tbl th{background:#e8ecf2;font-weight:700;font-size:10.5px;color:#333;padding:4px 6px;border:1px solid #999;text-align:center;white-space:nowrap;vertical-align:middle}
+.eq-tbl td{padding:4px 6px;border:1px solid #999;color:#222;font-size:11px;vertical-align:middle;word-break:break-word}
+.eq-tbl td.center{text-align:center}
+.eq-page-footer{font-size:9px;color:#888;text-align:right;margin-top:6px;border-top:1px solid #ddd;padding-top:4px}
+.eq-sec-title{font-size:11px;font-weight:700;text-align:center;background:#d8dde8;border:1px solid #999;border-bottom:none;padding:3px 0;letter-spacing:1px}
+.doc-grid{display:flex;flex-wrap:wrap;gap:10px;padding:4px 0}
+.doc-item{position:relative;display:inline-flex;flex-direction:column;align-items:center}
+.doc-thumb{width:120px;height:90px;object-fit:cover;border:1px solid #ddd;border-radius:4px;display:block}
+.doc-pdf-link{font-size:12px;color:#1a56c4;text-decoration:none;word-break:break-all;max-width:120px}
+.doc-pdf-link:hover{text-decoration:underline}
+.doc-del{position:absolute;top:-6px;right:-6px;background:#e53935;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;cursor:pointer;padding:0}
+
+/* 관리내역 카드 */
+.mgmt-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.mgmt-card{border:1px solid #eee;border-radius:6px;overflow:hidden}
+.mgmt-card-hd{background:#f5f7fa;padding:5px 10px;font-size:11px;font-weight:700;color:#555;border-bottom:1px solid #eee}
+.mgmt-card-body{font-size:12px;color:#333;max-height:180px;overflow-y:auto;overflow-x:auto}
+
+/* 행정관리 */
+.admin-list{display:flex;flex-direction:column;gap:0}
+.admin-item{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f0f0f0}
+.admin-item:last-child{border-bottom:none}
+.admin-key{font-size:11px;font-weight:700;color:#888;padding-top:1px}
+.admin-val{font-size:13px;color:#222;white-space:pre-wrap;word-break:break-word;line-height:1.5}
+.admin-val.empty{color:#ccc;font-style:italic;font-size:12px}
+
+.coming-soon{text-align:center;padding:80px 20px;color:#999;background:#fff;border-radius:10px}
+.coming-soon .icon{font-size:48px;margin-bottom:12px}
+
+/* ── 모달 공통 ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:10px;width:min(600px,98vw);box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto}
+.modal.wide{width:min(720px,98vw)}
+.modal-hd{background:#1a3a5c;color:#fff;padding:12px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;border-radius:10px 10px 0 0}
+.modal-body{padding:16px;max-height:72vh;overflow-y:auto}
+.modal-ft{padding:11px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #eee}
+.m-sec{margin-bottom:14px}
+.m-sec-title{font-size:11px;font-weight:700;color:#1a3a5c;background:#f0f4ff;padding:4px 8px;border-radius:4px;margin-bottom:8px}
+.m-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.m-field{display:flex;flex-direction:column;gap:3px}
+.m-field.full{grid-column:1/-1}
+.m-field label{font-size:11px;font-weight:700;color:#666}
+.m-field input,.m-field select,.m-field textarea{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+.m-field input:focus,.m-field select:focus,.m-field textarea:focus{outline:none;border-color:#1a3a5c}
+.m-field textarea{resize:vertical;min-height:60px}
+.btn-primary{background:#1a3a5c;color:#fff;border:none;font-weight:700;padding:8px 18px;border-radius:5px;cursor:pointer}
+
+/* 운행거리 편집 테이블 */
+.edit-mile-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.edit-mile-tbl th{background:#f0f4ff;color:#1a3a5c;padding:6px 8px;border:1px solid #dce6f0;font-weight:700;text-align:center}
+.edit-mile-tbl td{border:1px solid #eee;padding:4px 6px;vertical-align:middle}
+.edit-mile-tbl input{width:100%;padding:4px 6px;border:1px solid #ddd;border-radius:3px;font-size:12px}
+.edit-mile-tbl input:focus{outline:none;border-color:#1a3a5c}
+.btn-row-del{background:#fff0ee;color:#d83b01;border:1px solid #f5c5bb;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:700}
+.btn-row-add{background:#f0faf0;color:#16a34a;border:1px solid #b5e0b5;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;margin-top:8px}
+
+/* 회사 필터 */
+.company-filter-row{display:flex;gap:4px;flex-shrink:0}
+.cf-btn{flex:1;text-align:center;padding:4px 5px;background:#fff;border:1px solid #ddd;cursor:pointer;font-size:11px;color:#666;border-radius:5px;white-space:nowrap}
+.cf-btn.on{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+
+/* 관리내역 표시 테이블 */
+.mgmt-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mgmt-tbl th{background:#f5f7fa;color:#555;padding:4px 8px;font-weight:700;border:1px solid #eee;text-align:left;font-size:11px}
+.mgmt-tbl td{border:1px solid #eee;padding:4px 8px;color:#333;vertical-align:middle}
+.mgmt-tbl td.dt{white-space:nowrap;color:#666;font-size:11px}
+.mgmt-tbl td.amt{text-align:right;color:#1a3a5c;font-weight:600;white-space:nowrap}
+
+/* 관리내역 편집 테이블 */
+.edit-mgmt-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
+.edit-mgmt-tbl th{background:#f0f4ff;color:#1a3a5c;padding:5px 8px;border:1px solid #dce6f0;font-weight:700;text-align:left;font-size:11px}
+.edit-mgmt-tbl td{border:1px solid #eee;padding:3px 4px;vertical-align:middle}
+.edit-mgmt-tbl input{width:100%;padding:3px 5px;border:1px solid #ddd;border-radius:3px;font-size:12px}
+.edit-mgmt-tbl input:focus{outline:none;border-color:#1a3a5c}
+
+@media(max-width:767px){
+  body{height:auto!important;overflow:auto!important}
+  .page-wrap{padding:6px 8px;flex:none}
+  .main-tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .main-tab{white-space:nowrap;padding:7px 14px;flex-shrink:0}
+  .body-layout{flex-direction:column!important;height:auto}
+  .left-panel{width:100%!important;flex-shrink:1}
+  .vehicle-list{max-height:260px}
+  .right-panel{overflow-y:visible}
+  .info-grid{grid-template-columns:repeat(3,1fr)!important}
+  .mgmt-grid{grid-template-columns:repeat(2,1fr)!important}
+  .ins-row{grid-template-columns:1fr!important}
+  .eq-pages{flex-direction:column}
+  .eq-page{min-width:0}
+}
+</style>
+</head>
+<body>
+{{ top_menu("ledger")|safe }}
+<div class="page-wrap">
+  <div class="main-tabs">
+    {% if has_perm("ledger_vehicle") %}<button class="main-tab" id="tabVehicle" onclick="switchMain('vehicle')">차량관리대장</button>{% endif %}
+    {% if has_perm("ledger_machine") %}<button class="main-tab" id="tabMachine" onclick="switchMain('machine')">설비관리대장</button>{% endif %}
+  </div>
+
+  <div id="sectionVehicle" style="flex:1;display:flex;flex-direction:column;min-height:0">
+    <div class="body-layout">
+      <div class="left-panel">
+        <div class="list-tabs">
+          <div class="list-tab on" id="ltActive" onclick="switchListTab('active')">운행차량<span class="cnt" id="cntActive">0</span></div>
+          <div class="list-tab" id="ltSold" onclick="switchListTab('sold')">매각차량<span class="cnt" id="cntSold">0</span></div>
+        </div>
+        <div class="company-filter-row">
+          <button class="cf-btn on" id="cfAll" onclick="setCompanyFilter('all')">전체</button>
+          <button class="cf-btn" id="cfDoor" onclick="setCompanyFilter('도어')">도어 <span id="cfDoorCnt">0</span>대</button>
+          <button class="cf-btn" id="cfSales" onclick="setCompanyFilter('세일즈')">세일즈 <span id="cfSalesCnt">0</span>대</button>
+        </div>
+        <div class="left-top-row">
+          <span class="left-count" id="leftCount">0대</span>
+          {% if has_write_perm("ledger_vehicle") %}<button class="btn-add-sm" onclick="openAddModal()">+ 추가</button>{% endif %}
+        </div>
+        <div class="left-search">
+          <input type="text" id="searchInput" placeholder="차량번호 / 담당자 / 차종" oninput="renderList()">
+        </div>
+        <div class="vehicle-list" id="vehicleList"><div style="text-align:center;padding:20px;color:#aaa;font-size:13px">불러오는 중...</div></div>
+      </div>
+
+      <div class="right-panel" id="rightPanel">
+        <div class="detail-placeholder">차량을 선택하세요</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sectionMachine" style="display:none;flex:1;flex-direction:column;min-height:0">
+    <div class="body-layout">
+      <div class="left-panel">
+        <div class="company-filter-row">
+          <button class="cf-btn on" id="eqCfAll" onclick="setEqFilter('all')">전체</button>
+          <button class="cf-btn" id="eqCfDoor" onclick="setEqFilter('도어')">도어<span class="cnt" id="eqCfDoorCnt">0</span></button>
+          <button class="cf-btn" id="eqCfSales" onclick="setEqFilter('세일즈')">세일즈<span class="cnt" id="eqCfSalesCnt">0</span></button>
+        </div>
+        <div class="left-top-row">
+          <span class="left-count" id="eqLeftCount">0대</span>
+          {% if has_write_perm("ledger_machine") %}<button class="btn-add-sm" onclick="openAddEqModal()">+ 추가</button>{% endif %}
+        </div>
+        <div class="left-search">
+          <input type="text" id="eqSearch" placeholder="설비명 / 관리번호 / 설치장소" oninput="renderEqList()">
+        </div>
+        <div class="vehicle-list" id="eqList"><div style="text-align:center;padding:20px;color:#aaa;font-size:13px">탭을 클릭하면 불러옵니다</div></div>
+      </div>
+      <div class="right-panel" id="eqRightPanel">
+        <div class="detail-placeholder">설비를 선택하세요</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ① 차량 추가 모달 -->
+<div class="modal-bg" id="modalAdd">
+  <div class="modal">
+    <div class="modal-hd"><span>차량 추가</span><button onclick="closeModal('modalAdd')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-sec">
+        <div class="m-sec-title">기본정보</div>
+        <div class="m-grid">
+          <div class="m-field"><label>소유주</label><select id="aOwner"><option>(주)청주금속 플러스도어</option><option>플러스세일즈 주식회사</option><option>기타</option></select></div>
+          <div class="m-field"><label>호수</label><input type="text" id="aUnitNo" placeholder="예) 1호"></div>
+          <div class="m-field"><label>차종분류</label><select id="aVehicleClass"><option value="">선택</option><option>포터</option><option>복지</option><option>특수</option><option>승용</option><option>기타</option></select></div>
+          <div class="m-field"><label>차종</label><input type="text" id="aVehicleType" placeholder="예) 포터2"></div>
+          <div class="m-field"><label>차량번호</label><input type="text" id="aVehicleNo"></div>
+          <div class="m-field"><label>유종</label><select id="aFuelType"><option value="">선택</option><option>경유</option><option>휘발유</option><option>LPG</option><option>전기</option><option>하이브리드</option></select></div>
+          <div class="m-field"><label>차량등록일</label><input type="text" id="aRegDate" placeholder="YYYY-MM-DD"></div>
+          <div class="m-field"><label>담당자</label><input type="text" id="aManager"></div>
+          <div class="m-field"><label>하이패스카드번호</label><input type="text" id="aHipassCard"></div>
+          <div class="m-field"><label>자동차보험사</label><input type="text" id="aInsCompany" placeholder="예) 삼성화재"></div>
+          <div class="m-field"><label>자동차보험기간</label><input type="text" id="aInsPeriod" placeholder="예) 2024.01.01~2025.01.01"></div>
+          <div class="m-field"><label>운전연령</label><input type="text" id="aDriverAge" placeholder="예) 만 26세 이상"></div>
+          <div class="m-field"><label>비고</label><input type="text" id="aMemo"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft"><button onclick="closeModal('modalAdd')">취소</button><button class="btn-primary" onclick="saveNew()">저장</button></div>
+  </div>
+</div>
+
+<!-- ② 기본정보 수정 모달 -->
+<div class="modal-bg" id="modalBasic">
+  <div class="modal">
+    <div class="modal-hd"><span>기본정보 수정</span><button onclick="closeModal('modalBasic')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-grid">
+        <div class="m-field"><label>소유주</label><select id="bOwner"><option>(주)청주금속 플러스도어</option><option>플러스세일즈 주식회사</option><option>기타</option></select></div>
+        <div class="m-field"><label>호수</label><input type="text" id="bUnitNo"></div>
+        <div class="m-field"><label>차종분류</label><select id="bVehicleClass"><option value="">선택</option><option>포터</option><option>복지</option><option>특수</option><option>승용</option><option>기타</option></select></div>
+        <div class="m-field"><label>차종</label><input type="text" id="bVehicleType"></div>
+        <div class="m-field"><label>차량번호</label><input type="text" id="bVehicleNo"></div>
+        <div class="m-field"><label>유종</label><select id="bFuelType"><option value="">선택</option><option>경유</option><option>휘발유</option><option>LPG</option><option>전기</option><option>하이브리드</option></select></div>
+        <div class="m-field"><label>차량등록일</label><input type="text" id="bRegDate" placeholder="YYYY-MM-DD"></div>
+        <div class="m-field"><label>담당자</label><input type="text" id="bManager"></div>
+        <div class="m-field"><label>하이패스 카드번호</label><input type="text" id="bHipassCard"></div>
+        <div class="m-field"><label>자동차보험사</label><input type="text" id="bInsCompany" placeholder="예) 삼성화재"></div>
+        <div class="m-field"><label>자동차보험기간</label><input type="text" id="bInsPeriod" placeholder="예) 2024.01.01~2025.01.01"></div>
+        <div class="m-field"><label>운전연령</label><input type="text" id="bDriverAge" placeholder="예) 만 26세 이상"></div>
+        <div class="m-field"><label>비고</label><input type="text" id="bMemo"></div>
+      </div>
+    </div>
+    <div class="modal-ft"><button onclick="closeModal('modalBasic')">취소</button><button class="btn-primary" onclick="saveSection('basic')">저장</button></div>
+  </div>
+</div>
+
+<!-- ③ 운행거리 수정 모달 -->
+<div class="modal-bg" id="modalMileage">
+  <div class="modal wide">
+    <div class="modal-hd"><span>연도별 운행거리 수정</span><button onclick="closeModal('modalMileage')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <table class="edit-mile-tbl">
+        <thead><tr><th style="width:130px">점검일</th><th style="width:110px">운행거리</th><th>비고</th><th style="width:50px"></th></tr></thead>
+        <tbody id="mileageTbody"></tbody>
+      </table>
+      <button class="btn-row-add" onclick="addMileageRow()">+ 행 추가</button>
+    </div>
+    <div class="modal-ft"><button onclick="closeModal('modalMileage')">취소</button><button class="btn-primary" onclick="saveSection('mileage')">저장</button></div>
+  </div>
+</div>
+
+<!-- ④ 관리내역 수정 모달 -->
+<div class="modal-bg" id="modalMgmt">
+  <div class="modal wide">
+    <div class="modal-hd"><span>관리내역 수정</span><button onclick="closeModal('modalMgmt')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-sec">
+        <div class="m-sec-title">🛢 엔진오일</div>
+        <table class="edit-mgmt-tbl"><thead><tr><th style="width:105px">일자</th><th style="width:85px">교환km</th><th>내용</th><th style="width:90px">금액</th><th style="width:46px"></th></tr></thead><tbody id="mgmtBodyEngineOil"></tbody></table>
+        <button class="btn-row-add" onclick="addMgmtRow('EngineOil')">+ 추가</button>
+      </div>
+      <div class="m-sec">
+        <div class="m-sec-title">🔵 타이어</div>
+        <table class="edit-mgmt-tbl"><thead><tr><th style="width:105px">일자</th><th>내용</th><th style="width:90px">금액</th><th style="width:46px"></th></tr></thead><tbody id="mgmtBodyTire"></tbody></table>
+        <button class="btn-row-add" onclick="addMgmtRow('Tire')">+ 추가</button>
+      </div>
+      <div class="m-sec">
+        <div class="m-sec-title">🔨 수리</div>
+        <table class="edit-mgmt-tbl"><thead><tr><th style="width:105px">일자</th><th>내용</th><th style="width:90px">금액</th><th style="width:46px"></th></tr></thead><tbody id="mgmtBodyRepair"></tbody></table>
+        <button class="btn-row-add" onclick="addMgmtRow('Repair')">+ 추가</button>
+      </div>
+      <div class="m-sec">
+        <div class="m-sec-title">💧 요소수</div>
+        <table class="edit-mgmt-tbl"><thead><tr><th style="width:105px">일자</th><th>내용</th><th style="width:90px">금액</th><th style="width:46px"></th></tr></thead><tbody id="mgmtBodyUrea"></tbody></table>
+        <button class="btn-row-add" onclick="addMgmtRow('Urea')">+ 추가</button>
+      </div>
+      <div class="m-sec">
+        <div class="m-sec-title">⚠️ 위반</div>
+        <table class="edit-mgmt-tbl"><thead><tr><th style="width:105px">일자</th><th>내용</th><th style="width:90px">금액</th><th style="width:46px"></th></tr></thead><tbody id="mgmtBodyViolation"></tbody></table>
+        <button class="btn-row-add" onclick="addMgmtRow('Violation')">+ 추가</button>
+      </div>
+    </div>
+    <div class="modal-ft"><button onclick="closeModal('modalMgmt')">취소</button><button class="btn-primary" onclick="saveSection('mgmt')">저장</button></div>
+  </div>
+</div>
+
+<!-- ⑤ 행정관리 수정 모달 -->
+<div class="modal-bg" id="modalAdmin">
+  <div class="modal">
+    <div class="modal-hd"><span>행정관리 수정</span><button onclick="closeModal('modalAdmin')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-grid">
+        <div class="m-field full"><label>자동차종합검사</label><input type="text" id="adInspection"></div>
+        <div class="m-field"><label>세금</label><input type="text" id="adTax"></div>
+      </div>
+    </div>
+    <div class="modal-ft"><button onclick="closeModal('modalAdmin')">취소</button><button class="btn-primary" onclick="saveSection('admin')">저장</button></div>
+  </div>
+</div>
+
+<!-- 설비관리대장 모달: 신규 등록 -->
+<div class="modal-bg" id="eqModalAdd" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hd"><span>설비 신규 등록</span><button onclick="document.getElementById('eqModalAdd').classList.remove('open')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-grid">
+        <div class="m-field"><label>회사</label><select id="eqAddCompany"><option value="도어">도어</option><option value="세일즈">세일즈</option></select></div>
+        <div class="m-field"><label>구분</label><select id="eqAddCategory"><option value="">-</option><option value="제조">제조</option><option value="검사">검사</option></select></div>
+        <div class="m-field"><label>설비명 *</label><input type="text" id="eqAddName" placeholder="설비명 입력"></div>
+        <div class="m-field"><label>구매사</label><input type="text" id="eqAddSupplier"></div>
+        <div class="m-field"><label>관리번호</label><input type="text" id="eqAddManageNo"></div>
+        <div class="m-field"><label>제조번호</label><input type="text" id="eqAddMfgNo"></div>
+        <div class="m-field"><label>형식</label><input type="text" id="eqAddType"></div>
+        <div class="m-field"><label>등급</label><input type="text" id="eqAddGrade"></div>
+        <div class="m-field"><label>사용전압</label><input type="text" id="eqAddVoltage"></div>
+        <div class="m-field"><label>제조사</label><input type="text" id="eqAddMaker"></div>
+        <div class="m-field"><label>제조일자</label><input type="text" id="eqAddMfgDate" placeholder="YYYY.MM.DD"></div>
+        <div class="m-field"><label>설치일자</label><input type="text" id="eqAddInstallDate" placeholder="YYYY.MM.DD"></div>
+        <div class="m-field full"><label>설치장소</label><input type="text" id="eqAddLocation"></div>
+        <div class="m-field full"><label>비고</label><textarea id="eqAddMemo" rows="2" style="width:100%;border:1px solid #ddd;border-radius:4px;padding:6px;resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-ft"><button onclick="document.getElementById('eqModalAdd').classList.remove('open')">취소</button><button class="btn-primary" onclick="saveNewEq()">등록</button></div>
+  </div>
+</div>
+
+<!-- 설비관리대장 모달: 기본정보 수정 -->
+<div class="modal-bg" id="eqModalBasic" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-hd"><span>기본정보 수정</span><button onclick="document.getElementById('eqModalBasic').classList.remove('open')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-sec"><div class="m-sec-title">구분</div>
+        <div class="m-grid">
+          <div class="m-field"><label>회사</label><select id="eqBscCompany"><option value="도어">도어</option><option value="세일즈">세일즈</option></select></div>
+          <div class="m-field"><label>구분</label><select id="eqBscCategory"><option value="">-</option><option value="제조">제조</option><option value="검사">검사</option></select></div>
+        </div>
+      </div>
+      <div class="m-sec"><div class="m-sec-title">설비 기본</div>
+        <div class="m-grid">
+          <div class="m-field"><label>설비명 *</label><input type="text" id="eqBscName"></div>
+          <div class="m-field"><label>제조번호</label><input type="text" id="eqBscMfgNo"></div>
+          <div class="m-field"><label>관리번호</label><input type="text" id="eqBscManageNo"></div>
+          <div class="m-field"><label>형식</label><input type="text" id="eqBscType"></div>
+          <div class="m-field full"><label>등급</label><input type="text" id="eqBscGrade"></div>
+        </div>
+      </div>
+      <div class="m-sec"><div class="m-sec-title">제조사 정보</div>
+        <div class="m-grid">
+          <div class="m-field"><label>제조사</label><input type="text" id="eqBscMaker"></div>
+          <div class="m-field"><label>제조일자</label><input type="text" id="eqBscMfgDate"></div>
+          <div class="m-field"><label>사용전압</label><input type="text" id="eqBscVoltage"></div>
+          <div class="m-field"><label>제조사 연락처</label><input type="text" id="eqBscMakerContact"></div>
+          <div class="m-field full"><label>제조사 비고</label><input type="text" id="eqBscMakerNote"></div>
+        </div>
+      </div>
+      <div class="m-sec"><div class="m-sec-title">구매사 정보</div>
+        <div class="m-grid">
+          <div class="m-field"><label>구매사</label><input type="text" id="eqBscSupplier"></div>
+          <div class="m-field"><label>설치일자</label><input type="text" id="eqBscInstallDate"></div>
+          <div class="m-field"><label>설치장소</label><input type="text" id="eqBscLocation"></div>
+          <div class="m-field"><label>구매사 연락처</label><input type="text" id="eqBscSupplierContact"></div>
+          <div class="m-field full"><label>구매사 비고</label><input type="text" id="eqBscSupplierNote"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft"><button onclick="document.getElementById('eqModalBasic').classList.remove('open')">취소</button><button class="btn-primary" onclick="saveEqSection('basic')">저장</button></div>
+  </div>
+</div>
+
+<!-- 설비관리대장 모달: 부품 수정 -->
+<div class="modal-bg" id="eqModalParts" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal wide">
+    <div class="modal-hd"><span>부품 및 부속품</span><button onclick="document.getElementById('eqModalParts').classList.remove('open')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <table class="mgmt-tbl" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr><th>명칭</th><th style="width:60px">수량</th><th>구입업체</th><th>연락처</th><th>비고</th><th style="width:30px"></th></tr></thead>
+        <tbody id="partsTbody"></tbody>
+      </table>
+      <button style="margin-top:8px;font-size:12px" onclick="addPartsRow()">+ 행 추가</button>
+    </div>
+    <div class="modal-ft"><button onclick="document.getElementById('eqModalParts').classList.remove('open')">취소</button><button class="btn-primary" onclick="saveEqSection('parts')">저장</button></div>
+  </div>
+</div>
+
+<!-- 설비관리대장 모달: 부품 상세 팝업 -->
+<div class="modal-bg" id="eqModalPartDetail" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-hd"><span id="eqPartDetailTitle">부품 상세</span><button onclick="document.getElementById('eqModalPartDetail').classList.remove('open')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <div class="m-grid" style="margin-bottom:12px">
+        <div class="m-field"><label>명칭</label><input type="text" id="pdName"></div>
+        <div class="m-field"><label>수량</label><input type="text" id="pdQty"></div>
+        <div class="m-field full"><label>비고</label><input type="text" id="pdNote"></div>
+      </div>
+      <div class="m-sec-title">구입업체 목록</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+        <thead><tr>
+          <th style="background:#f0f4ff;padding:5px 8px;border:1px solid #dce6f0;text-align:left">구입업체</th>
+          <th style="background:#f0f4ff;padding:5px 8px;border:1px solid #dce6f0;text-align:left">연락처</th>
+          <th style="background:#f0f4ff;padding:5px 8px;border:1px solid #dce6f0;text-align:left">모델</th>
+          <th style="background:#f0f4ff;border:1px solid #dce6f0;width:30px"></th>
+        </tr></thead>
+        <tbody id="pdSupplierTbody"></tbody>
+      </table>
+      <button class="btn-row-add" style="margin-top:6px" onclick="addPdSupplierRow()">+ 업체 추가</button>
+    </div>
+    <div class="modal-ft"><button onclick="document.getElementById('eqModalPartDetail').classList.remove('open')">닫기</button><button class="btn-primary" id="pdSaveBtn" onclick="savePartDetail()">저장</button></div>
+  </div>
+</div>
+
+<!-- 설비관리대장 모달: 수리 수정 -->
+<div class="modal-bg" id="eqModalRepair" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hd"><span>수리 및 교정내역</span><button onclick="document.getElementById('eqModalRepair').classList.remove('open')" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button></div>
+    <div class="modal-body">
+      <table class="mgmt-tbl" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr><th style="width:110px">년월일</th><th>수리및교정내역</th><th style="width:90px">수리비</th><th style="width:110px">수리및교정처</th><th style="width:36px"></th></tr></thead>
+        <tbody id="repairTbody"></tbody>
+      </table>
+      <button style="margin-top:8px;font-size:12px" onclick="addRepairRow()">+ 행 추가</button>
+    </div>
+    <div class="modal-ft"><button onclick="document.getElementById('eqModalRepair').classList.remove('open')">취소</button><button class="btn-primary" onclick="saveEqSection('repair')">저장</button></div>
+  </div>
+</div>
+
+<script>
+var allVehicles = [];
+var selectedId = null;
+var listTab = 'active';
+var companyFilter = 'all';
+var editingId = null;
+var canWrite = {{ 'true' if has_write_perm('ledger_vehicle') else 'false' }};
+var canWriteMachine = {{ 'true' if has_write_perm('ledger_machine') else 'false' }};
+
+var allEquipment = null;
+var eqSelectedId = null;
+var eqCompanyFilter = 'all';
+var eqEditingId = null;
+
+function isSold(v){ return (v.status||'운행')==='매각'; }
+
+function switchMain(tab) {
+  var secV=document.getElementById('sectionVehicle');
+  var secM=document.getElementById('sectionMachine');
+  var tbV=document.getElementById('tabVehicle');
+  var tbM=document.getElementById('tabMachine');
+  if(secV) secV.style.display = tab==='vehicle'?'flex':'none';
+  if(secM) secM.style.display = tab==='machine'?'flex':'none';
+  if(tbV) tbV.className='main-tab'+(tab==='vehicle'?' on':'');
+  if(tbM) tbM.className='main-tab'+(tab==='machine'?' on':'');
+  if(tab==='machine' && allEquipment===null) loadEquipment();
+}
+
+function switchListTab(t) {
+  listTab=t; selectedId=null; companyFilter='all';
+  document.getElementById('rightPanel').innerHTML='<div class="detail-placeholder">차량을 선택하세요</div>';
+  document.getElementById('ltActive').className='list-tab'+(t==='active'?' on':'');
+  document.getElementById('ltSold').className='list-tab'+(t==='sold'?' on':'');
+  document.getElementById('cfAll').className='cf-btn on';
+  document.getElementById('cfDoor').className='cf-btn';
+  document.getElementById('cfSales').className='cf-btn';
+  document.getElementById('searchInput').value='';
+  updateCounts(); renderList();
+}
+
+function setCompanyFilter(f){
+  companyFilter=f;
+  document.getElementById('cfAll').className='cf-btn'+(f==='all'?' on':'');
+  document.getElementById('cfDoor').className='cf-btn'+(f==='도어'?' on':'');
+  document.getElementById('cfSales').className='cf-btn'+(f==='세일즈'?' on':'');
+  renderList();
+}
+
+async function loadVehicles() {
+  try {
+    var r=await fetch('/api/ledger/vehicles');
+    allVehicles=await r.json();
+    updateCounts(); renderList();
+  } catch(e){
+    document.getElementById('vehicleList').innerHTML='<div style="color:#d83b01;text-align:center;padding:20px;font-size:13px">불러오기 실패</div>';
+  }
+}
+
+function updateCounts(){
+  var active=allVehicles.filter(function(v){return !isSold(v);});
+  var sold=allVehicles.filter(function(v){return isSold(v);});
+  document.getElementById('cntActive').textContent=active.length;
+  document.getElementById('cntSold').textContent=sold.length;
+  var pool=listTab==='sold'?sold:active;
+  document.getElementById('cfDoorCnt').textContent=pool.filter(function(v){return (v.company||'').includes('도어');}).length;
+  document.getElementById('cfSalesCnt').textContent=pool.filter(function(v){return (v.company||'').includes('세일즈');}).length;
+}
+
+function renderList(){
+  var q=(document.getElementById('searchInput').value||'').toLowerCase();
+  var pool=allVehicles.filter(function(v){return listTab==='sold'?isSold(v):!isSold(v);});
+  if(companyFilter!=='all') pool=pool.filter(function(v){return (v.company||'').includes(companyFilter);});
+  var filtered=pool.filter(function(v){
+    return !q||(v.vehicle_no||'').toLowerCase().includes(q)||(v.manager||'').toLowerCase().includes(q)||(v.vehicle_type||'').toLowerCase().includes(q);
+  });
+  document.getElementById('leftCount').textContent=filtered.length+'대';
+  if(!filtered.length){
+    document.getElementById('vehicleList').innerHTML='<div style="text-align:center;padding:20px;color:#aaa;font-size:13px">'+(q?'검색 결과 없음':'차량이 없습니다')+'</div>';
+    return;
+  }
+  var html='';
+  filtered.forEach(function(v){
+    var sel=v.id===selectedId?' selected':'';
+    html+='<div class="v-card'+sel+'" onclick="selectVehicle('+v.id+')">';
+    html+='<div class="vc-row1">';
+    if(v.unit_no) html+='<span class="vc-unit">'+esc(v.unit_no)+'</span>';
+    html+='<span class="vc-type">'+esc(v.vehicle_type||'-')+'</span>';
+    if(isSold(v)) html+='<span class="sold-badge">매각</span>';
+    html+='<span class="vc-co">'+esc((v.company||'').replace('플러스',''))+'</span>';
+    html+='</div>';
+    html+='<div class="vc-manager">'+esc(v.vehicle_no||'-')+' / 담당자 : '+esc(v.manager||'-')+'</div></div>';
+  });
+  document.getElementById('vehicleList').innerHTML=html;
+}
+
+function esc(v){return String(v||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+function val(v){var s=(v||'').trim();return s?esc(s):'<span class="empty">-</span>';}
+
+function parseInsurance(raw){
+  if(!raw||!raw.trim()) return null;
+  var s=raw.trim();
+  var m=s.match(/(\d[\d\-\.]+~[\d\-\.]+)\s*[\(\（]([^\)\）]+)[\)\）]/);
+  if(m) return {period:m[1].trim(),company:m[2].trim()};
+  return {period:'',company:'',raw:s};
+}
+
+function insHtml(label,raw){
+  var p=parseInsurance(raw);
+  if(!p) return '<div class="ins-box"><div class="ins-label">'+label+'</div><div style="color:#ccc;font-size:12px;font-style:italic">-</div></div>';
+  return '<div class="ins-box"><div class="ins-label">'+label+'</div>'
+    +(p.company?'<div class="ins-company">'+esc(p.company)+'</div>':'')
+    +(p.period?'<div class="ins-period">'+esc(p.period)+'</div>':'')
+    +(!p.company&&!p.period&&p.raw?'<div class="ins-period">'+esc(p.raw)+'</div>':'')
+    +'</div>';
+}
+
+function parseDist(s){
+  if(!s) return NaN;
+  var parts=String(s).trim().split(/\s+/);
+  return parseInt(parts[parts.length-1].replace(/,/g,''))||NaN;
+}
+
+function parseRecords(txt){
+  if(!txt) return [];
+  try{var a=JSON.parse(txt);if(Array.isArray(a)) return a;}catch(e){}
+  var s=(txt||'').trim();
+  return s?[{date:'',content:s,amount:''}]:[];
+}
+
+function selectVehicle(id){
+  selectedId=id; renderList();
+  var v=allVehicles.find(function(x){return x.id===id;});
+  if(v) renderDetail(v);
+}
+
+function renderDetail(v){
+  var mileage=[];
+  try{mileage=JSON.parse(v.mileage_json||'[]');}catch(e){}
+  var reg=(v.reg_date||'').split(' ')[0].replace('00:00:00','').trim();
+  if(reg==='-') reg='';
+
+  var isSoldV=isSold(v);
+  var statusBtn=isSoldV
+    ?'<button class="btn-hd green" onclick="changeStatus('+v.id+',\'운행\')">↩ 운행 복귀</button>'
+    :'<button class="btn-hd orange" onclick="changeStatus('+v.id+',\'매각\')">매각 처리</button>';
+  var editBtns=canWrite
+    ?statusBtn+'<button class="btn-hd red" onclick="deleteVehicle('+v.id+')">삭제</button>'
+    :'';
+
+  function secBtn(section){return canWrite?'<button class="btn-sec-edit" onclick="openSectionModal(\''+section+'\','+v.id+')">수정</button>':'';}
+
+  // 운행거리 테이블
+  var mHtml='';
+  if(mileage.length){
+    // 오름차순 정렬 후 전달대비 계산, 표시는 최신순으로 역순
+    mileage.sort(function(a,b){var da=a.date||'',db=b.date||'';return da<db?-1:da>db?1:0;});
+    mHtml='<table class="mileage-tbl"><thead><tr><th style="width:120px">점검일</th><th style="width:120px">운행거리</th><th style="width:120px">전달대비</th><th>비고</th></tr></thead><tbody>';
+    var mRows=[];
+    mileage.forEach(function(m,i){
+      var dist=m.distance||'';
+      var currLast=parseDist(dist);
+      var prevDist=i>0?parseDist(mileage[i-1].distance||''):NaN;
+      var diff=(!isNaN(currLast)&&!isNaN(prevDist))?currLast-prevDist:null;
+      var diffStr='<span class="diff-zero">-</span>';
+      if(diff!==null){
+        if(diff>0) diffStr='<span class="diff-plus">+'+diff.toLocaleString()+'</span>';
+        else if(diff<0) diffStr='<span class="diff-minus">'+diff.toLocaleString()+'</span>';
+        else diffStr='<span class="diff-zero">0</span>';
+      }
+      mRows.push('<tr><td>'+esc(m.date||'-')+'</td><td>'+esc(dist)+'</td><td>'+diffStr+'</td><td class="note">'+esc(m.note||'')+'</td></tr>');
+    });
+    mHtml+=mRows.reverse().join('');
+    mHtml+='</tbody></table>';
+  } else {
+    mHtml='<div class="mileage-empty">기록 없음</div>';
+  }
+
+  function mgmtCard(icon,label,txt,full,showKm){
+    var cls=full?' full':'';
+    var records=parseRecords(txt);
+    var bodyHtml='';
+    if(!records.length){
+      bodyHtml='<div style="padding:6px 10px;color:#ccc;font-size:12px;font-style:italic">-</div>';
+    } else {
+      var sorted=records.slice().sort(function(a,b){
+        var da=a.date||'',db=b.date||'';
+        if(!da&&!db) return 0;
+        if(!da) return 1;
+        if(!db) return -1;
+        return da>db?-1:da<db?1:0;
+      });
+      if(showKm){
+        bodyHtml='<table class="mgmt-tbl"><thead><tr><th style="width:88px">일자</th><th style="width:72px">교환km</th><th>내용</th><th style="width:72px;text-align:right">금액</th></tr></thead><tbody>';
+        sorted.forEach(function(r){
+          bodyHtml+='<tr><td class="dt">'+esc(r.date||'-')+'</td><td class="dt">'+esc(r.km||'-')+'</td><td>'+esc(r.content||'-')+'</td><td class="amt">'+esc(r.amount||'-')+'</td></tr>';
+        });
+      } else {
+        bodyHtml='<table class="mgmt-tbl"><thead><tr><th style="width:88px">일자</th><th>내용</th><th style="width:72px;text-align:right">금액</th></tr></thead><tbody>';
+        sorted.forEach(function(r){
+          bodyHtml+='<tr><td class="dt">'+esc(r.date||'-')+'</td><td>'+esc(r.content||'-')+'</td><td class="amt">'+esc(r.amount||'-')+'</td></tr>';
+        });
+      }
+      bodyHtml+='</tbody></table>';
+    }
+    return '<div class="mgmt-card'+cls+'"><div class="mgmt-card-hd">'+icon+' '+label+'</div>'
+      +'<div class="mgmt-card-body">'+bodyHtml+'</div></div>';
+  }
+
+  var html='<div class="detail-wrap">';
+
+  // 헤더
+  html+='<div class="d-header"><div class="dh-main">'
+    +'<div class="dh-title">'+(v.unit_no?'['+esc(v.unit_no)+'] ':'')+esc(v.vehicle_type||'-')+' '+esc(v.vehicle_no||'-')+'</div>'
+    +'<div class="dh-sub">담당: '+esc(v.manager||'-')+' · '+esc(v.company||'')+(v.vehicle_class?' · '+esc(v.vehicle_class):'')+'</div>'
+    +'</div><div class="dh-actions">'+editBtns+'</div></div>';
+
+  // 기본정보
+  html+='<div class="d-section"><div class="d-sec-hd"><div class="d-sec-title">🚗 기본정보</div>'+secBtn('basic')+'</div>';
+  var ins=parseInsurance(v.car_insurance);
+  function ifield(label,val){var e=!val||!val.trim();return '<div class="i-field"><label>'+label+'</label><div class="i-val'+(e?' empty':'')+'">'+( e?'-':esc(val))+'</div></div>';}
+  html+='<div class="info-grid">';
+  html+=ifield('소유주',v.owner);
+  html+=ifield('호수',v.unit_no);
+  html+=ifield('차종분류',v.vehicle_class);
+  html+=ifield('차종',v.vehicle_type);
+  html+=ifield('차량번호',v.vehicle_no);
+  html+=ifield('유종',v.fuel_type);
+  html+=ifield('차량등록일',reg);
+  html+=ifield('담당자',v.manager);
+  html+=ifield('하이패스카드번호',v.hipass_card);
+  html+=ifield('보험사',(ins&&ins.company?ins.company:ins&&ins.raw?ins.raw:''));
+  html+=ifield('보험기간',(ins&&ins.period?ins.period:''));
+  html+=ifield('운전연령',v.driver_age);
+  html+='</div>';
+  html+='</div>';
+
+  // 운행거리
+  html+='<div class="d-section"><div class="d-sec-hd"><div class="d-sec-title">📍 연도별 운행거리</div>'+secBtn('mileage')+'</div>';
+  html+=mHtml+'</div>';
+
+  // 관리내역
+  html+='<div class="d-section"><div class="d-sec-hd"><div class="d-sec-title">🔧 관리내역</div>'+secBtn('mgmt')+'</div>';
+  html+='<div class="mgmt-grid">';
+  html+=mgmtCard('🛢','엔진오일',v.engine_oil,false,true);
+  html+=mgmtCard('🔵','타이어',v.tire,false);
+  html+=mgmtCard('🔨','수리',v.repair,false);
+  html+=mgmtCard('⚠️','위반',v.violation,false);
+  html+=mgmtCard('💧','요소수',v.urea,false);
+  html+='</div></div>';
+
+  // 행정관리
+  html+='<div class="d-section"><div class="d-sec-hd"><div class="d-sec-title">📋 행정관리</div>'+secBtn('admin')+'</div>';
+  html+='<div class="admin-list">';
+  html+='<div class="admin-item"><div class="admin-key">자동차종합검사</div><div class="admin-val'+(v.inspection?' ':' empty')+'">'+val(v.inspection)+'</div></div>';
+  html+='<div class="admin-item"><div class="admin-key">세금</div><div class="admin-val'+(v.tax?' ':' empty')+'">'+val(v.tax)+'</div></div>';
+  html+='</div></div>';
+
+  // 차량등록증
+  html+='<div class="d-section" id="docSection_'+v.id+'">';
+  html+='<div class="d-sec-hd"><div class="d-sec-title">📄 차량등록증</div>';
+  if(canWrite) html+='<label class="btn-sec-edit" style="cursor:pointer">파일 업로드<input type="file" id="docFileInput_'+v.id+'" accept="image/*,.pdf" style="display:none" onchange="uploadVehicleDoc('+v.id+',this)"></label>';
+  html+='</div>';
+  if(canWrite) html+='<div class="doc-drop-zone" id="docDrop_'+v.id+'" onclick="document.getElementById(\'docFileInput_'+v.id+'\').click()" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="event.preventDefault();this.classList.remove(\'drag-over\');uploadVehicleDocFile('+v.id+',event.dataTransfer.files[0])">이미지를 드래그하거나 Ctrl+V로 붙여넣기</div>';
+  html+='<div class="doc-list" id="docList_'+v.id+'"><div style="color:#aaa;font-size:12px;padding:8px 0">불러오는 중...</div></div>';
+  html+='</div>';
+
+  html+='</div>';
+  document.getElementById('rightPanel').innerHTML=html;
+  loadVehicleDocs(v.id);
+}
+
+// ── 모달 열기 ──
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function openAddModal(){
+  ['aVehicleClass','aVehicleType','aUnitNo','aVehicleNo','aFuelType','aRegDate','aManager','aHipassCard','aInsCompany','aInsPeriod','aDriverAge','aMemo'].forEach(function(k){document.getElementById(k).value='';});
+  document.getElementById('aOwner').value='(주)청주금속 플러스도어';
+  document.getElementById('modalAdd').classList.add('open');
+}
+
+// 헤더 전체 수정 버튼 (기존 호환)
+function openEditModal(id){
+  openSectionModal('basic',id);
+}
+
+function openSectionModal(section, id){
+  editingId=id;
+  var v=allVehicles.find(function(x){return x.id===id;});
+  if(!v) return;
+  if(section==='basic'){
+    var reg=(v.reg_date||'').split(' ')[0]; if(reg==='-'||reg==='0000-00-00') reg='';
+    document.getElementById('bVehicleClass').value=v.vehicle_class||'';
+    document.getElementById('bVehicleType').value=v.vehicle_type||'';
+    document.getElementById('bUnitNo').value=v.unit_no||'';
+    document.getElementById('bVehicleNo').value=v.vehicle_no||'';
+    document.getElementById('bFuelType').value=v.fuel_type||'';
+    document.getElementById('bRegDate').value=reg;
+    document.getElementById('bOwner').value=v.owner||'';
+    document.getElementById('bManager').value=v.manager||'';
+    document.getElementById('bHipassCard').value=v.hipass_card||'';
+    var insP=parseInsurance(v.car_insurance||'');
+    document.getElementById('bInsCompany').value=insP?(insP.company||insP.raw||''):'';
+    document.getElementById('bInsPeriod').value=insP?(insP.period||''):'';
+    document.getElementById('bDriverAge').value=v.driver_age||'';
+    document.getElementById('bMemo').value=v.memo||'';
+    document.getElementById('modalBasic').classList.add('open');
+  } else if(section==='mileage'){
+    var mileage=[];
+    try{mileage=JSON.parse(v.mileage_json||'[]');}catch(e){}
+    renderMileageEditRows(mileage);
+    document.getElementById('modalMileage').classList.add('open');
+  } else if(section==='mgmt'){
+    renderMgmtRows('EngineOil', parseRecords(v.engine_oil||''));
+    renderMgmtRows('Tire', parseRecords(v.tire||''));
+    renderMgmtRows('Repair', parseRecords(v.repair||''));
+    renderMgmtRows('Urea', parseRecords(v.urea||''));
+    renderMgmtRows('Violation', parseRecords(v.violation||''));
+    document.getElementById('modalMgmt').classList.add('open');
+  } else if(section==='admin'){
+    document.getElementById('adInspection').value=v.inspection||'';
+    document.getElementById('adTax').value=v.tax||'';
+    document.getElementById('modalAdmin').classList.add('open');
+  }
+}
+
+// ── 운행거리 행 렌더링 ──
+function renderMileageEditRows(rows){
+  // 여러 값이 공백으로 합쳐진 행을 개별 행으로 분리
+  var expanded=[];
+  rows.forEach(function(m){
+    var dists=(m.distance||'').trim().split(/\s+/).filter(Boolean);
+    var dates=(m.date||'').trim().split(/\s+/).filter(Boolean);
+    if(dists.length<=1){
+      expanded.push({period:m.period||'',distance:dists[0]||'',date:dates[0]||'',note:m.note||''});
+    } else {
+      dists.forEach(function(d,i){
+        expanded.push({period:m.period||'',distance:d,date:dates[i]||'',note:i===0?m.note||'':''});
+      });
+    }
+  });
+  var tbody=document.getElementById('mileageTbody');
+  var html='';
+  expanded.forEach(function(m){
+    html+='<tr>'
+      +'<td><input type="text" value="'+esc(m.date)+'" placeholder="YYYY-MM-DD"></td>'
+      +'<td><input type="text" value="'+esc(m.distance)+'" placeholder="예) 12345"></td>'
+      +'<td><input type="text" value="'+esc(m.note||'')+'" placeholder="비고"></td>'
+      +'<td><button class="btn-row-del" onclick="delMileageRow(this)">삭제</button></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+function addMileageRow(){
+  var tbody=document.getElementById('mileageTbody');
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td><input type="text" placeholder="YYYY-MM-DD"></td>'
+    +'<td><input type="text" placeholder="예) 12345"></td>'
+    +'<td><input type="text" placeholder="비고"></td>'
+    +'<td><button class="btn-row-del" onclick="delMileageRow(this)">삭제</button></td>';
+  tbody.appendChild(tr);
+}
+
+function delMileageRow(btn){ btn.closest('tr').remove(); }
+
+function renderMgmtRows(key, records){
+  var tbody=document.getElementById('mgmtBody'+key);
+  var html='';
+  records.forEach(function(r){
+    if(key==='EngineOil'){
+      html+='<tr>'
+        +'<td><input type="text" value="'+esc(r.date||'')+'" placeholder="YYYY-MM-DD" style="width:95px"></td>'
+        +'<td><input type="text" value="'+esc(r.km||'')+'" placeholder="예)82,000" style="width:78px"></td>'
+        +'<td><input type="text" value="'+esc(r.content||'')+'" placeholder="내용"></td>'
+        +'<td><input type="text" value="'+esc(r.amount||'')+'" placeholder="금액" style="width:78px"></td>'
+        +'<td><button class="btn-row-del" onclick="this.closest(\'tr\').remove()">삭제</button></td>'
+        +'</tr>';
+    } else {
+      html+='<tr>'
+        +'<td><input type="text" value="'+esc(r.date||'')+'" placeholder="YYYY-MM-DD" style="width:95px"></td>'
+        +'<td><input type="text" value="'+esc(r.content||'')+'" placeholder="내용"></td>'
+        +'<td><input type="text" value="'+esc(r.amount||'')+'" placeholder="금액" style="width:78px"></td>'
+        +'<td><button class="btn-row-del" onclick="this.closest(\'tr\').remove()">삭제</button></td>'
+        +'</tr>';
+    }
+  });
+  tbody.innerHTML=html;
+}
+
+function addMgmtRow(key){
+  var tbody=document.getElementById('mgmtBody'+key);
+  var tr=document.createElement('tr');
+  if(key==='EngineOil'){
+    tr.innerHTML='<td><input type="text" placeholder="YYYY-MM-DD" style="width:95px"></td>'
+      +'<td><input type="text" placeholder="예)82,000" style="width:78px"></td>'
+      +'<td><input type="text" placeholder="내용"></td>'
+      +'<td><input type="text" placeholder="금액" style="width:78px"></td>'
+      +'<td><button class="btn-row-del" onclick="this.closest(\'tr\').remove()">삭제</button></td>';
+  } else {
+    tr.innerHTML='<td><input type="text" placeholder="YYYY-MM-DD" style="width:95px"></td>'
+      +'<td><input type="text" placeholder="내용"></td>'
+      +'<td><input type="text" placeholder="금액" style="width:78px"></td>'
+      +'<td><button class="btn-row-del" onclick="this.closest(\'tr\').remove()">삭제</button></td>';
+  }
+  tbody.appendChild(tr);
+}
+
+function getMgmtRows(key){
+  var rows=[];
+  document.getElementById('mgmtBody'+key).querySelectorAll('tr').forEach(function(tr){
+    var inputs=tr.querySelectorAll('input');
+    if(key==='EngineOil'){
+      var d=inputs[0].value.trim(),km=inputs[1].value.trim(),c=inputs[2].value.trim(),a=inputs[3].value.trim();
+      if(d||km||c||a) rows.push({date:d,km:km,content:c,amount:a});
+    } else {
+      var d=inputs[0].value.trim(),c=inputs[1].value.trim(),a=inputs[2].value.trim();
+      if(d||c||a) rows.push({date:d,content:c,amount:a});
+    }
+  });
+  return rows;
+}
+
+function getMileageRows(){
+  var rows=[];
+  document.getElementById('mileageTbody').querySelectorAll('tr').forEach(function(tr){
+    var inputs=tr.querySelectorAll('input');
+    var date=inputs[0].value.trim();
+    var dist=inputs[1].value.trim();
+    var note=inputs[2].value.trim();
+    if(date||dist) rows.push({period:'',distance:dist,date:date,note:note});
+  });
+  // 점검일 기준 오름차순 정렬
+  rows.sort(function(a,b){
+    var da=a.date||'', db=b.date||'';
+    return da<db?-1:da>db?1:0;
+  });
+  return rows;
+}
+
+// ── 섹션 저장 ──
+async function saveSection(section){
+  var v=allVehicles.find(function(x){return x.id===editingId;});
+  if(!v){alert('차량 정보를 찾을 수 없습니다.');return;}
+  var patch={};
+  if(section==='basic'){
+    patch={
+      vehicle_class:document.getElementById('bVehicleClass').value,
+      vehicle_type:document.getElementById('bVehicleType').value.trim(),
+      unit_no:document.getElementById('bUnitNo').value.trim(),
+      vehicle_no:document.getElementById('bVehicleNo').value.trim(),
+      fuel_type:document.getElementById('bFuelType').value,
+      reg_date:document.getElementById('bRegDate').value,
+      owner:document.getElementById('bOwner').value.trim(),
+      manager:document.getElementById('bManager').value.trim(),
+      hipass_digits:v.hipass_digits||'',
+      hipass_card:document.getElementById('bHipassCard').value.trim(),
+      car_insurance:(function(){var co=document.getElementById('bInsCompany').value.trim();var pe=document.getElementById('bInsPeriod').value.trim();if(pe&&co)return pe+'('+co+')';return pe||co||'';})(),
+      driver_insurance:v.driver_insurance||'',
+      driver_age:document.getElementById('bDriverAge').value.trim(),
+      memo:document.getElementById('bMemo').value.trim()
+    };
+  } else if(section==='mileage'){
+    patch={mileage_json:JSON.stringify(getMileageRows())};
+  } else if(section==='mgmt'){
+    patch={
+      engine_oil:JSON.stringify(getMgmtRows('EngineOil')),
+      tire:JSON.stringify(getMgmtRows('Tire')),
+      repair:JSON.stringify(getMgmtRows('Repair')),
+      urea:JSON.stringify(getMgmtRows('Urea')),
+      violation:JSON.stringify(getMgmtRows('Violation'))
+    };
+  } else if(section==='admin'){
+    patch={
+      inspection:document.getElementById('adInspection').value.trim(),
+      tax:document.getElementById('adTax').value.trim()
+    };
+  }
+
+  // 기존 데이터와 병합
+  var payload=Object.assign({
+    company:v.company||'플러스도어', vehicle_class:v.vehicle_class||'',
+    vehicle_type:v.vehicle_type||'', unit_no:v.unit_no||'',
+    vehicle_no:v.vehicle_no||'', hipass_digits:v.hipass_digits||'',
+    fuel_type:v.fuel_type||'', reg_date:v.reg_date||'',
+    owner:v.owner||'', manager:v.manager||'',
+    hipass_card:v.hipass_card||'', mileage_json:v.mileage_json||'[]',
+    engine_oil:v.engine_oil||'', tire:v.tire||'', repair:v.repair||'',
+    urea:v.urea||'', violation:v.violation||'',
+    car_insurance:v.car_insurance||'', driver_insurance:v.driver_insurance||'',
+    inspection:v.inspection||'', tax:v.tax||'', memo:v.memo||''
+  }, patch);
+
+  try {
+    var res=await fetch('/api/ledger/vehicles/'+editingId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    var d=await res.json();
+    if(!d.ok){alert(d.error||'저장 실패');return;}
+    var modalMap={basic:'modalBasic',mileage:'modalMileage',mgmt:'modalMgmt',admin:'modalAdmin'};
+    closeModal(modalMap[section]);
+    await loadVehicles();
+    selectedId=editingId; renderList();
+    var updated=allVehicles.find(function(x){return x.id===editingId;});
+    if(updated) renderDetail(updated);
+  } catch(e){ alert('저장 중 오류'); }
+}
+
+// ── 새 차량 저장 ──
+async function saveNew(){
+  var aCo=document.getElementById('aInsCompany').value.trim();
+  var aPe=document.getElementById('aInsPeriod').value.trim();
+  var payload={
+    vehicle_class:document.getElementById('aVehicleClass').value,
+    vehicle_type:document.getElementById('aVehicleType').value.trim(),
+    unit_no:document.getElementById('aUnitNo').value.trim(),
+    vehicle_no:document.getElementById('aVehicleNo').value.trim(),
+    fuel_type:document.getElementById('aFuelType').value,
+    reg_date:document.getElementById('aRegDate').value,
+    owner:document.getElementById('aOwner').value.trim(),
+    manager:document.getElementById('aManager').value.trim(),
+    hipass_card:document.getElementById('aHipassCard').value.trim(),
+    car_insurance:(aPe&&aCo?aPe+'('+aCo+')':aPe||aCo||''),
+    driver_age:document.getElementById('aDriverAge').value.trim(),
+    memo:document.getElementById('aMemo').value.trim(),
+    mileage_json:'[]',engine_oil:'',tire:'',repair:'',urea:'',violation:'',
+    driver_insurance:'',inspection:'',tax:''
+  };
+  try{
+    var res=await fetch('/api/ledger/vehicles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    var d=await res.json();
+    if(!d.ok){alert(d.error||'저장 실패');return;}
+    closeModal('modalAdd');
+    await loadVehicles();
+    if(d.row){selectedId=d.row.id;renderList();renderDetail(d.row);}
+  }catch(e){alert('저장 중 오류');}
+}
+
+// ── 상태 변경 ──
+async function changeStatus(id,newStatus){
+  var v=allVehicles.find(function(x){return x.id===id;});
+  var label=v?(v.vehicle_type+' '+v.vehicle_no):id;
+  if(!confirm(label+'\n'+(newStatus==='매각'?'매각 처리':'운행 복귀')+'하시겠습니까?')) return;
+  try{
+    var res=await fetch('/api/ledger/vehicles/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+    var d=await res.json();
+    if(!d.ok){alert(d.error||'변경 실패');return;}
+    listTab=newStatus==='매각'?'sold':'active';
+    document.getElementById('ltActive').className='list-tab'+(listTab==='active'?' on':'');
+    document.getElementById('ltSold').className='list-tab'+(listTab==='sold'?' on':'');
+    await loadVehicles();
+    selectedId=id; renderList();
+    if(d.row) renderDetail(d.row);
+  }catch(e){alert('오류 발생');}
+}
+
+// ── 삭제 ──
+async function deleteVehicle(id){
+  var v=allVehicles.find(function(x){return x.id===id;});
+  if(!confirm((v?v.vehicle_type+' '+v.vehicle_no:id)+'\n이 차량을 삭제하시겠습니까?')) return;
+  try{
+    var res=await fetch('/api/ledger/vehicles/'+id,{method:'DELETE'});
+    var d=await res.json();
+    if(!d.ok){alert('삭제 실패');return;}
+    selectedId=null;
+    document.getElementById('rightPanel').innerHTML='<div class="detail-placeholder">차량을 선택하세요</div>';
+    loadVehicles();
+  }catch(e){alert('삭제 오류');}
+}
+
+// 초기 탭: 차량 권한 있으면 차량, 없으면 설비
+(function(){
+  var hasV={{ 'true' if has_perm('ledger_vehicle') else 'false' }};
+  var hasM={{ 'true' if has_perm('ledger_machine') else 'false' }};
+  if(hasV){ loadVehicles(); switchMain('vehicle'); }
+  else if(hasM){ switchMain('machine'); }
+})();
+
+// ── 차량등록증 ──
+async function loadVehicleDocs(vid){
+  var el=document.getElementById('docList_'+vid);
+  if(!el) return;
+  try{
+    var r=await fetch('/api/ledger/vehicles/'+vid+'/docs');
+    var docs=await r.json();
+    renderVehicleDocs(vid,docs);
+  }catch(e){
+    if(el) el.innerHTML='<div style="color:#d83b01;font-size:12px">불러오기 실패</div>';
+  }
+}
+
+function renderVehicleDocs(vid,docs){
+  var el=document.getElementById('docList_'+vid);
+  if(!el) return;
+  if(!docs.length){
+    el.innerHTML='<div style="color:#aaa;font-size:12px;padding:8px 0">등록된 파일이 없습니다</div>';
+    return;
+  }
+  var html='<div class="doc-grid">';
+  docs.forEach(function(d){
+    var url='/uploads/'+d.filename;
+    var isPdf=d.filename.toLowerCase().endsWith('.pdf');
+    var delBtn=canWrite?'<button class="doc-del" onclick="deleteVehicleDoc('+vid+','+d.id+',event)">✕</button>':'';
+    if(isPdf){
+      html+='<div class="doc-item">'
+        +'<a href="'+url+'" target="_blank" class="doc-pdf-link">📄 '+esc(d.original_name||'파일')+'</a>'
+        +delBtn+'</div>';
+    } else {
+      html+='<div class="doc-item">'
+        +'<a href="'+url+'" target="_blank"><img src="'+url+'" class="doc-thumb" alt="차량등록증"></a>'
+        +delBtn+'</div>';
+    }
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+async function uploadVehicleDocFile(vid,file){
+  if(!file) return;
+  var fd=new FormData();
+  fd.append('file',file);
+  try{
+    var r=await fetch('/api/ledger/vehicles/'+vid+'/docs',{method:'POST',body:fd});
+    var d=await r.json();
+    if(!d.ok){alert(d.error||'업로드 실패');return;}
+    loadVehicleDocs(vid);
+  }catch(e){alert('업로드 오류');}
+}
+async function uploadVehicleDoc(vid,input){
+  var file=input.files[0];
+  if(!file) return;
+  input.value='';
+  await uploadVehicleDocFile(vid,file);
+}
+document.addEventListener('paste',function(e){
+  var drop=document.querySelector('.doc-drop-zone');
+  if(!drop) return;
+  var vid=drop.id.replace('docDrop_','');
+  var items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+  for(var i=0;i<items.length;i++){
+    if(items[i].type.indexOf('image')!==-1){
+      var file=items[i].getAsFile();
+      if(file) uploadVehicleDocFile(parseInt(vid),file);
+      break;
+    }
+  }
+});
+
+async function deleteVehicleDoc(vid,docId,e){
+  e.preventDefault();
+  if(!confirm('이 파일을 삭제하시겠습니까?')) return;
+  try{
+    var r=await fetch('/api/ledger/vehicles/'+vid+'/docs/'+docId,{method:'DELETE'});
+    var d=await r.json();
+    if(!d.ok){alert('삭제 실패');return;}
+    loadVehicleDocs(vid);
+  }catch(e){alert('삭제 오류');}
+}
+
+/* ============ 설비관리대장 ============ */
+
+async function loadEquipment(){
+  document.getElementById('eqList').innerHTML='<div style="text-align:center;padding:20px;color:#aaa;font-size:13px">불러오는 중...</div>';
+  try{
+    var r=await fetch('/api/ledger/equipment');
+    var d=await r.json();
+    allEquipment=Array.isArray(d)?d:(d.list||[]);
+    renderEqList();
+  }catch(e){
+    document.getElementById('eqList').innerHTML='<div style="text-align:center;padding:20px;color:#e00;font-size:13px">불러오기 실패</div>';
+  }
+}
+
+function setEqFilter(f){
+  eqCompanyFilter=f;
+  eqSelectedId=null;
+  document.getElementById('eqRightPanel').innerHTML='<div class="detail-placeholder">설비를 선택하세요</div>';
+  ['All','Door','Sales'].forEach(function(x){
+    var id='eqCf'+x; if(!document.getElementById(id)) return;
+    document.getElementById(id).className='cf-btn'+(({'all':'All','도어':'Door','세일즈':'Sales'}[f]===x)?' on':'');
+  });
+  document.getElementById('eqCfAll').className='cf-btn'+(f==='all'?' on':'');
+  document.getElementById('eqCfDoor').className='cf-btn'+(f==='도어'?' on':'');
+  document.getElementById('eqCfSales').className='cf-btn'+(f==='세일즈'?' on':'');
+  renderEqList();
+}
+
+function renderEqList(){
+  if(!allEquipment) return;
+  var kw=(document.getElementById('eqSearch').value||'').trim().toLowerCase();
+  var list=allEquipment.filter(function(e){
+    if(eqCompanyFilter!=='all' && e.company!==eqCompanyFilter) return false;
+    if(kw && !(e.name||'').toLowerCase().includes(kw) && !(e.manage_no||'').toLowerCase().includes(kw) && !(e.location||'').toLowerCase().includes(kw)) return false;
+    return true;
+  });
+  var doorCnt=allEquipment.filter(function(e){return e.company==='도어';}).length;
+  var salesCnt=allEquipment.filter(function(e){return e.company==='세일즈';}).length;
+  document.getElementById('eqCfDoorCnt').textContent=doorCnt;
+  document.getElementById('eqCfSalesCnt').textContent=salesCnt;
+  document.getElementById('eqLeftCount').textContent='총 '+list.length+'건';
+  if(!list.length){document.getElementById('eqList').innerHTML='<div style="text-align:center;padding:20px;color:#aaa;font-size:13px">설비 없음</div>';return;}
+  var html='';
+  list.forEach(function(e){
+    var sel=eqSelectedId===e.id;
+    html+='<div class="v-card'+(sel?' selected':'')+'" onclick="selectEquipment('+e.id+')">';
+    html+='<div class="vc-row1">';
+    if(e.manage_no) html+='<span class="vc-unit">'+esc(e.manage_no)+'</span>';
+    html+='<span class="vc-type">'+esc(e.name||'-')+'</span>';
+    if(e.company) html+='<span class="vc-co">'+esc(e.company)+'</span>';
+    html+='</div>';
+    var sub=[e.location?esc(e.location):'',e.maker?esc(e.maker):''].filter(Boolean).join(' / ');
+    if(sub) html+='<div class="vc-manager">'+sub+'</div>';
+    html+='</div>';
+  });
+  document.getElementById('eqList').innerHTML=html;
+}
+
+function selectEquipment(id){
+  eqSelectedId=id;
+  renderEqList();
+  var eq=allEquipment.find(function(e){return e.id===id;});
+  if(!eq) return;
+  renderEqDetail(eq);
+}
+
+function renderEqDetail(eq){
+  function v(s){return esc(s||'');}
+  var parts=[];try{parts=JSON.parse(eq.parts_json||'[]');}catch(e){}
+  var repairs=[];try{repairs=JSON.parse(eq.repair_json||'[]');}catch(e){}
+  var isDoor=(eq.category==='제조'), isCheck=(eq.category==='검사');
+
+  function sheetTitle(btns){
+    return '<div class="eq-page-title">'
+      +'<span class="chk">'+(isDoor?'■':'□')+' 제 조</span>'
+      +'설 비 관 리 대 장'
+      +'<span class="chk">'+(isCheck?'■':'□')+' 검 사</span>'
+      +(btns?'<span style="margin-left:6px;display:flex;gap:4px">'+btns+'</span>':'')
+      +'</div>';
+  }
+  function sb(label,action){
+    return '<button class="btn-sec-edit" style="font-size:10px;padding:2px 7px" onclick="'+action+'">'+label+'</button>';
+  }
+
+  /* ── 패널1: 기본정보 + 부품 ── */
+  /* table-layout:fixed + 10 equal cols (5 th+td pairs each 10%) */
+  var p1='<table class="eq-tbl" style="table-layout:fixed">';
+  p1+='<colgroup>'+'<col style="width:9%"><col style="width:11%">'.repeat(5)+'</colgroup>';
+  p1+='<tr>'
+    +'<th>설비명</th><td>'+v(eq.name)+'</td>'
+    +'<th>제조번호</th><td>'+v(eq.mfg_no)+'</td>'
+    +'<th>관리번호</th><td>'+v(eq.manage_no)+'</td>'
+    +'<th>형식</th><td>'+v(eq.type)+'</td>'
+    +'<th>등급</th><td>'+v(eq.grade)+'</td>'
+    +'</tr>';
+  p1+='<tr>'
+    +'<th>제조사</th><td>'+v(eq.maker)+'</td>'
+    +'<th>제조일자</th><td>'+v(eq.mfg_date)+'</td>'
+    +'<th>사용전압</th><td>'+v(eq.voltage)+'</td>'
+    +'<th>제조사 연락처</th><td>'+v(eq.maker_contact)+'</td>'
+    +'<th>제조사 비고</th><td>'+v(eq.maker_note)+'</td>'
+    +'</tr>';
+  p1+='<tr>'
+    +'<th>구매사</th><td>'+v(eq.supplier)+'</td>'
+    +'<th>설치일자</th><td>'+v(eq.install_date)+'</td>'
+    +'<th>설치장소</th><td>'+v(eq.location)+'</td>'
+    +'<th>구매사 연락처</th><td>'+v(eq.supplier_contact)+'</td>'
+    +'<th>구매사 비고</th><td>'+v(eq.supplier_note)+'</td>'
+    +'</tr>';
+  p1+='</table>';
+
+  /* 부품 및 부속품 — 내용 있는 행만, 수정/삭제 인라인 */
+  var normedParts=parts.map(normPart);
+  var activeParts=normedParts.filter(function(pt){return pt.name||pt.qty;});
+  p1+='<div class="eq-sec-title" style="margin-top:5px">부 품 및 부 속 품</div>';
+  p1+='<table class="eq-tbl">';
+  p1+='<tr><th style="width:18%">명 칭</th><th style="width:7%">수량</th><th style="width:17%">구입업체</th><th style="width:16%">연 락 처</th><th style="width:14%">모 델</th><th style="width:11%">비 고</th>'+(canWriteMachine?'<th style="width:52px"></th>':'')+'</tr>';
+  if(activeParts.length){
+    activeParts.forEach(function(pt){
+      var idx=normedParts.indexOf(pt);
+      var sups=pt.suppliers||[];
+      function supEntry(s,i,arr){
+        var sep=i<arr.length-1?' style="border-bottom:1px solid #ccc;padding-bottom:2px;margin-bottom:2px"':'';
+        return '<div'+sep+'>'+s+'</div>';
+      }
+      var supCell=sups.map(function(s,i){return supEntry(v(s.supplier),i,sups);}).join('')||'';
+      var conCell=sups.map(function(s,i){return supEntry(v(s.contact),i,sups);}).join('')||'';
+      var modCell=sups.map(function(s,i){return supEntry(v(s.model),i,sups);}).join('')||'';
+      var btnCell=canWriteMachine?'<td style="text-align:center;white-space:nowrap;padding:3px">'
+        +'<button onclick="openPartDetail('+idx+')" style="padding:1px 5px;font-size:10px;background:#f0f4ff;border:1px solid #c5d5f0;color:#1a3a5c;border-radius:3px;cursor:pointer;margin-right:2px">수정</button>'
+        +'<button onclick="deletePartItem('+idx+')" style="padding:1px 5px;font-size:10px;background:#fff0ee;border:1px solid #f5c5bb;color:#d83b01;border-radius:3px;cursor:pointer">삭제</button>'
+        +'</td>':'';
+      p1+='<tr><td>'+v(pt.name)+'</td><td class="center">'+v(pt.qty)+'</td>'
+        +'<td>'+supCell+'</td><td>'+conCell+'</td><td>'+modCell+'</td><td>'+v(pt.note)+'</td>'+btnCell+'</tr>';
+    });
+  } else {
+    var cs=canWriteMachine?7:6;
+    p1+='<tr><td colspan="'+cs+'" style="color:#bbb;text-align:center;padding:8px;font-style:italic">등록된 부품 없음</td></tr>';
+  }
+  p1+='</table>';
+  p1+='<div class="eq-page-footer">PDF-C-201-01 &nbsp;&nbsp; (주) 플 러 스 도 어</div>';
+
+  /* ── 패널2: 사진(좌, 400px) + 수리 및 교정내역(우) ── */
+  var photoBlock='';
+  if(eq.photo){
+    photoBlock='<img src="/uploads/equipment_docs/'+v(eq.photo)+'" style="width:100%;object-fit:contain;border:1px solid #ddd;border-radius:3px;display:block">';
+  } else {
+    photoBlock='<div style="width:100%;height:220px;background:#f5f5f5;border:1px dashed #ccc;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:10px">사진 없음</div>';
+  }
+  photoBlock+='<div style="font-size:9px;color:#888;text-align:center;margin-top:4px">'+v(eq.name)+'</div>';
+  if(canWriteMachine){
+    photoBlock+='<label class="btn-sec-edit" style="display:block;text-align:center;margin-top:6px;cursor:pointer;font-size:10px">'
+      +'사진 변경<input type="file" accept="image/*" style="display:none" onchange="uploadEqPhoto('+eq.id+',this)"></label>';
+  }
+
+  var activeRepairs=repairs.filter(function(r){return r.date||r.content;});
+  var repairTable='<div class="eq-sec-title">수 리 및 교 정 내 역</div>';
+  repairTable+='<table class="eq-tbl">';
+  repairTable+='<tr><th style="width:14%">년월일</th><th>수리 및 교정내역</th><th style="width:22%">수리및교정처</th><th style="width:14%">수리비</th></tr>';
+  if(activeRepairs.length){
+    activeRepairs.forEach(function(r){
+      repairTable+='<tr><td class="center">'+v(r.date)+'</td><td>'+v(r.content)+'</td>'
+        +'<td class="center">'+v(r.place)+'</td><td class="center">'+v(r.cost)+'</td></tr>';
+    });
+  } else {
+    repairTable+='<tr><td colspan="4" style="color:#bbb;text-align:center;padding:8px;font-style:italic">등록된 수리내역 없음</td></tr>';
+  }
+  repairTable+='</table>';
+
+  var p2='<div style="display:flex;gap:8px;align-items:flex-start">'
+    +'<div style="width:400px;flex-shrink:0">'+photoBlock+'</div>'
+    +'<div style="flex:1;min-width:0">'+repairTable+'</div>'
+    +'</div>';
+  p2+='<div class="eq-page-footer">PDF-C-201-01 &nbsp;&nbsp; (주) 플 러 스 도 어</div>';
+
+  /* ── 전체 렌더 ── */
+  var p1Btns='', p2Btns='';
+  if(canWriteMachine){
+    p1Btns=sb('기본정보 수정','openEqSectionModal(\'basic\')')+sb('부품 및 부속품 수정','openEqSectionModal(\'parts\')')
+      +'<button class="btn-sec-edit" style="font-size:10px;padding:2px 7px;background:#e53935;color:#fff" onclick="deleteEquipment('+eq.id+')">삭제</button>';
+    p2Btns=sb('수리내역 수정','openEqSectionModal(\'repair\')');
+  }
+  var html='<div class="eq-viewer"><div class="eq-pages">';
+  html+='<div class="eq-page">'+sheetTitle(p1Btns)+p1+'</div>';
+  html+='<div class="eq-page">'+sheetTitle(p2Btns)+p2+'</div>';
+  html+='</div></div>';
+  document.getElementById('eqRightPanel').innerHTML=html;
+}
+
+function openAddEqModal(){
+  ['Name','ManageNo','MfgNo','Type','Grade','Voltage','Maker','MfgDate','Supplier','InstallDate','Location'].forEach(function(f){
+    document.getElementById('eqAdd'+f).value='';
+  });
+  document.getElementById('eqAddCompany').value='도어';
+  document.getElementById('eqAddCategory').value='';
+  document.getElementById('eqAddMemo').value='';
+  document.getElementById('eqModalAdd').classList.add('open');
+}
+
+async function saveNewEq(){
+  var name=document.getElementById('eqAddName').value.trim();
+  if(!name){alert('설비명을 입력하세요');return;}
+  var body={
+    company:document.getElementById('eqAddCompany').value,
+    category:document.getElementById('eqAddCategory').value,
+    name:name,
+    manage_no:document.getElementById('eqAddManageNo').value.trim(),
+    mfg_no:document.getElementById('eqAddMfgNo').value.trim(),
+    type:document.getElementById('eqAddType').value.trim(),
+    grade:document.getElementById('eqAddGrade').value.trim(),
+    voltage:document.getElementById('eqAddVoltage').value.trim(),
+    maker:document.getElementById('eqAddMaker').value.trim(),
+    mfg_date:document.getElementById('eqAddMfgDate').value.trim(),
+    supplier:document.getElementById('eqAddSupplier').value.trim(),
+    install_date:document.getElementById('eqAddInstallDate').value.trim(),
+    location:document.getElementById('eqAddLocation').value.trim(),
+    memo:document.getElementById('eqAddMemo').value.trim()
+  };
+  try{
+    var r=await fetch('/api/ledger/equipment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!d.ok){alert(d.error||'등록 실패');return;}
+    closeModal('eqModalAdd');
+    await loadEquipment();
+    selectEquipment(d.id);
+  }catch(e){alert('등록 오류');}
+}
+
+function openEqSectionModal(section){
+  var eq=allEquipment.find(function(e){return e.id===eqSelectedId;});
+  if(!eq) return;
+  eqEditingId=eqSelectedId;
+  if(section==='basic'){
+    document.getElementById('eqBscCompany').value=eq.company||'도어';
+    document.getElementById('eqBscCategory').value=eq.category||'';
+    document.getElementById('eqBscName').value=eq.name||'';
+    document.getElementById('eqBscManageNo').value=eq.manage_no||'';
+    document.getElementById('eqBscMfgNo').value=eq.mfg_no||'';
+    document.getElementById('eqBscType').value=eq.type||'';
+    document.getElementById('eqBscGrade').value=eq.grade||'';
+    document.getElementById('eqBscVoltage').value=eq.voltage||'';
+    document.getElementById('eqBscMaker').value=eq.maker||'';
+    document.getElementById('eqBscMfgDate').value=eq.mfg_date||'';
+    document.getElementById('eqBscMakerContact').value=eq.maker_contact||'';
+    document.getElementById('eqBscMakerNote').value=eq.maker_note||'';
+    document.getElementById('eqBscSupplier').value=eq.supplier||'';
+    document.getElementById('eqBscInstallDate').value=eq.install_date||'';
+    document.getElementById('eqBscLocation').value=eq.location||'';
+    document.getElementById('eqBscSupplierContact').value=eq.supplier_contact||'';
+    document.getElementById('eqBscSupplierNote').value=eq.supplier_note||'';
+    document.getElementById('eqModalBasic').classList.add('open');
+  } else if(section==='parts'){
+    var parts=[];try{parts=JSON.parse(eq.parts_json||'[]');}catch(e){}
+    renderPartsEditRows(parts);
+    document.getElementById('eqModalParts').classList.add('open');
+  } else if(section==='repair'){
+    var repairs=[];try{repairs=JSON.parse(eq.repair_json||'[]');}catch(e){}
+    renderRepairEditRows(repairs);
+    document.getElementById('eqModalRepair').classList.add('open');
+  }
+}
+
+async function saveEqSection(section){
+  var body={};
+  if(section==='basic'){
+    var name=document.getElementById('eqBscName').value.trim();
+    if(!name){alert('설비명을 입력하세요');return;}
+    body={
+      company:document.getElementById('eqBscCompany').value,
+      category:document.getElementById('eqBscCategory').value,
+      name:name,
+      manage_no:document.getElementById('eqBscManageNo').value.trim(),
+      mfg_no:document.getElementById('eqBscMfgNo').value.trim(),
+      type:document.getElementById('eqBscType').value.trim(),
+      grade:document.getElementById('eqBscGrade').value.trim(),
+      voltage:document.getElementById('eqBscVoltage').value.trim(),
+      maker:document.getElementById('eqBscMaker').value.trim(),
+      mfg_date:document.getElementById('eqBscMfgDate').value.trim(),
+      maker_contact:document.getElementById('eqBscMakerContact').value.trim(),
+      maker_note:document.getElementById('eqBscMakerNote').value.trim(),
+      supplier:document.getElementById('eqBscSupplier').value.trim(),
+      install_date:document.getElementById('eqBscInstallDate').value.trim(),
+      location:document.getElementById('eqBscLocation').value.trim(),
+      supplier_contact:document.getElementById('eqBscSupplierContact').value.trim(),
+      supplier_note:document.getElementById('eqBscSupplierNote').value.trim()
+    };
+    closeModal('eqModalBasic');
+  } else if(section==='parts'){
+    body={parts_json:JSON.stringify(getPartsRows())};
+    closeModal('eqModalParts');
+  } else if(section==='repair'){
+    body={repair_json:JSON.stringify(getRepairRows())};
+    closeModal('eqModalRepair');
+  }
+  try{
+    var r=await fetch('/api/ledger/equipment/'+eqEditingId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!d.ok){alert(d.error||'저장 실패');return;}
+    await loadEquipment();
+    selectEquipment(eqEditingId);
+  }catch(e){alert('저장 오류');}
+}
+
+function partsInputCell(val){
+  return '<td><input type="text" value="'+esc(val||'')+'" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 4px;font-size:12px"></td>';
+}
+
+function renderPartsEditRows(parts){
+  var tb=document.getElementById('partsTbody');
+  if(!parts.length){tb.innerHTML='';addPartsRow();return;}
+  tb.innerHTML=parts.map(function(p){
+    return '<tr>'+partsInputCell(p.name)+partsInputCell(p.qty)+partsInputCell(p.supplier)+partsInputCell(p.contact)+partsInputCell(p.note)
+          +'<td><button onclick="this.closest(\'tr\').remove()" style="padding:2px 5px;font-size:11px;background:#fce;border:1px solid #f99;color:#a00;border-radius:3px">✕</button></td></tr>';
+  }).join('');
+}
+
+function addPartsRow(){
+  var tb=document.getElementById('partsTbody');
+  var tr=document.createElement('tr');
+  tr.innerHTML=partsInputCell('')+partsInputCell('')+partsInputCell('')+partsInputCell('')+partsInputCell('')
+    +'<td><button onclick="this.closest(\'tr\').remove()" style="padding:2px 5px;font-size:11px;background:#fce;border:1px solid #f99;color:#a00;border-radius:3px">✕</button></td>';
+  tb.appendChild(tr);
+}
+
+function getPartsRows(){
+  var rows=[];
+  document.getElementById('partsTbody').querySelectorAll('tr').forEach(function(tr){
+    var inputs=tr.querySelectorAll('input');
+    var name=(inputs[0]||{}).value||'';
+    var qty=(inputs[1]||{}).value||'';
+    var supplier=(inputs[2]||{}).value||'';
+    var contact=(inputs[3]||{}).value||'';
+    var note=(inputs[4]||{}).value||'';
+    if(name||qty) rows.push({name:name,qty:qty,supplier:supplier,contact:contact,note:note});
+  });
+  return rows;
+}
+
+var pdEditingIdx = -1;
+
+function normPart(p){
+  if(!p.suppliers||!Array.isArray(p.suppliers)){
+    var s=[];
+    if(p.supplier||p.contact) s.push({supplier:p.supplier||'',contact:p.contact||''});
+    return {name:p.name||'',qty:p.qty||'',note:p.note||'',suppliers:s};
+  }
+  return p;
+}
+
+function addPdSupplierRow(sup,con,mod){
+  var tb=document.getElementById('pdSupplierTbody');
+  var tr=document.createElement('tr');
+  var inp=function(val){return '<input type="text" value="'+(val||'')+'" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px;font-size:12px">';};
+  tr.innerHTML='<td style="border:1px solid #eee;padding:3px 4px">'+inp(sup||'')+'</td>'
+    +'<td style="border:1px solid #eee;padding:3px 4px">'+inp(con||'')+'</td>'
+    +'<td style="border:1px solid #eee;padding:3px 4px">'+inp(mod||'')+'</td>'
+    +'<td style="border:1px solid #eee;text-align:center"><button onclick="this.closest(\'tr\').remove()" style="padding:2px 5px;font-size:11px;background:#fce;border:1px solid #f99;color:#a00;border-radius:3px">✕</button></td>';
+  tb.appendChild(tr);
+}
+
+function getPdSupplierRows(){
+  var rows=[];
+  document.getElementById('pdSupplierTbody').querySelectorAll('tr').forEach(function(tr){
+    var ins=tr.querySelectorAll('input');
+    var s=(ins[0]||{}).value||'', c=(ins[1]||{}).value||'', m=(ins[2]||{}).value||'';
+    if(s||c||m) rows.push({supplier:s,contact:c,model:m});
+  });
+  return rows;
+}
+
+function openPartDetail(idx){
+  var eq=allEquipment.find(function(e){return e.id===eqSelectedId;});
+  if(!eq) return;
+  var parts=[];try{parts=JSON.parse(eq.parts_json||'[]');}catch(e){}
+  var p=normPart(parts[idx]||{});
+  pdEditingIdx=idx;
+  eqEditingId=eqSelectedId;
+  document.getElementById('eqPartDetailTitle').textContent=(p.name||'부품')+' 수정';
+  document.getElementById('pdName').value=p.name||'';
+  document.getElementById('pdQty').value=p.qty||'';
+  document.getElementById('pdNote').value=p.note||'';
+  var ro=!canWriteMachine;
+  ['pdName','pdQty','pdNote'].forEach(function(id){
+    document.getElementById(id).readOnly=ro;
+    document.getElementById(id).style.background=ro?'#f8f8f8':'';
+  });
+  /* 구입업체 목록 */
+  document.getElementById('pdSupplierTbody').innerHTML='';
+  var sups=p.suppliers||[];
+  if(sups.length) sups.forEach(function(s){addPdSupplierRow(s.supplier,s.contact,s.model);});
+  else if(!ro) addPdSupplierRow();
+  document.getElementById('pdSaveBtn').style.display=ro?'none':'';
+  document.getElementById('eqModalPartDetail').classList.add('open');
+}
+
+async function savePartDetail(){
+  var eq=allEquipment.find(function(e){return e.id===eqEditingId;});
+  if(!eq) return;
+  var parts=[];try{parts=JSON.parse(eq.parts_json||'[]');}catch(e){}
+  var p={
+    name:document.getElementById('pdName').value.trim(),
+    qty:document.getElementById('pdQty').value.trim(),
+    note:document.getElementById('pdNote').value.trim(),
+    suppliers:getPdSupplierRows()
+  };
+  if(pdEditingIdx>=0&&pdEditingIdx<parts.length) parts[pdEditingIdx]=p;
+  else parts.push(p);
+  try{
+    var r=await fetch('/api/ledger/equipment/'+eqEditingId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({parts_json:JSON.stringify(parts)})});
+    var d=await r.json();
+    if(!d.ok){alert(d.error||'저장 실패');return;}
+    document.getElementById('eqModalPartDetail').classList.remove('open');
+    await loadEquipment();
+    selectEquipment(eqEditingId);
+  }catch(e){alert('저장 오류');}
+}
+
+async function deletePartItem(idx){
+  if(!confirm('부품을 삭제하시겠습니까?')) return;
+  var eq=allEquipment.find(function(e){return e.id===eqSelectedId;});
+  if(!eq) return;
+  var parts=[];try{parts=JSON.parse(eq.parts_json||'[]');}catch(e){}
+  parts.splice(idx,1);
+  try{
+    var r=await fetch('/api/ledger/equipment/'+eqSelectedId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({parts_json:JSON.stringify(parts)})});
+    var d=await r.json();
+    if(!d.ok){alert(d.error||'삭제 실패');return;}
+    await loadEquipment();
+    selectEquipment(eqSelectedId);
+  }catch(e){alert('삭제 오류');}
+}
+
+async function uploadEqPhoto(eid, input){
+  var file=input.files[0];
+  if(!file) return;
+  var fd=new FormData();
+  fd.append('file', file);
+  try{
+    var r=await fetch('/api/ledger/equipment/'+eid+'/photo',{method:'POST',body:fd});
+    var d=await r.json();
+    if(!d.ok){alert(d.error||'업로드 실패');return;}
+    await loadEquipment();
+    selectEquipment(eid);
+  }catch(e){alert('업로드 오류');}
+}
+
+function renderRepairEditRows(repairs){
+  var tb=document.getElementById('repairTbody');
+  if(!repairs.length){tb.innerHTML='';addRepairRow();return;}
+  tb.innerHTML=repairs.map(function(r){
+    return '<tr><td><input type="text" value="'+esc(r.date||'')+'" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px" placeholder="YYYY.MM.DD"></td>'
+          +'<td><input type="text" value="'+esc(r.content||'')+'" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px"></td>'
+          +'<td><input type="text" value="'+esc(r.cost||'')+'" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px"></td>'
+          +'<td><input type="text" value="'+esc(r.place||'')+'" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px"></td>'
+          +'<td><button onclick="this.closest(\'tr\').remove()" style="padding:2px 6px;font-size:11px;background:#fce;border-color:#f99;color:#a00">✕</button></td></tr>';
+  }).join('');
+}
+
+function addRepairRow(){
+  var tb=document.getElementById('repairTbody');
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td><input type="text" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px" placeholder="YYYY.MM.DD"></td>'
+              +'<td><input type="text" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px"></td>'
+              +'<td><input type="text" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px"></td>'
+              +'<td><input type="text" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:3px 5px"></td>'
+              +'<td><button onclick="this.closest(\'tr\').remove()" style="padding:2px 6px;font-size:11px;background:#fce;border-color:#f99;color:#a00">✕</button></td>';
+  tb.appendChild(tr);
+}
+
+function getRepairRows(){
+  var rows=[];
+  document.getElementById('repairTbody').querySelectorAll('tr').forEach(function(tr){
+    var inputs=tr.querySelectorAll('input');
+    var date=(inputs[0]||{}).value||'';
+    var content=(inputs[1]||{}).value||'';
+    var cost=(inputs[2]||{}).value||'';
+    var place=(inputs[3]||{}).value||'';
+    if(date||content) rows.push({date:date,content:content,cost:cost,place:place});
+  });
+  return rows;
+}
+
+async function deleteEquipment(id){
+  if(!confirm('이 설비를 삭제하시겠습니까?')) return;
+  try{
+    var r=await fetch('/api/ledger/equipment/'+id,{method:'DELETE'});
+    var d=await r.json();
+    if(!d.ok){alert('삭제 실패');return;}
+    eqSelectedId=null;
+    document.getElementById('eqRightPanel').innerHTML='<div class="detail-placeholder">설비를 선택하세요</div>';
+    await loadEquipment();
+  }catch(e){alert('삭제 오류');}
+}
+</script>
+<script>
+(function(){
+  if(typeof flatpickr==='undefined')return;
+  var _fpOpts={locale:'ko',dateFormat:'Y-m-d',disableMobile:true,allowInput:true,
+    parseDate:function(s){s=String(s||'').trim();if(/^\d{2}-/.test(s))s='20'+s;s=s.replace(/\./g,'-');return flatpickr.parseDate(s,'Y-m-d');}};
+  var _ids=['aRegDate','bRegDate','eqAddMfgDate','eqAddInstallDate','eqBscMfgDate','eqBscInstallDate'];
+  document.addEventListener('DOMContentLoaded',function(){
+    _ids.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el&&!el._flatpickr)flatpickr(el,_fpOpts);
+    });
+  });
+})();
+</script>
+</body>
+</html>
