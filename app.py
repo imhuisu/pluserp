@@ -1756,6 +1756,14 @@ def init_db():
     """)
 
     conn.commit()
+
+    # att_saved 마이그레이션: updated_at 컬럼 추가
+    try:
+        conn.execute("ALTER TABLE att_saved ADD COLUMN updated_at TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass
+
     conn.close()
 
 
@@ -7848,11 +7856,16 @@ def att_save():
     body = request.json or {}
     month = body.get("month", "")
     title = body.get("title") or month
+    saved_id = body.get("id")
     data = json.dumps(body, ensure_ascii=False)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_conn()
-    conn.execute("INSERT INTO att_saved (title, month, data, created_at) VALUES (?,?,?,?)",
-                 (title, month, data, now))
+    if saved_id:
+        conn.execute("UPDATE att_saved SET title=?, month=?, data=?, updated_at=? WHERE id=?",
+                     (title, month, data, now, saved_id))
+    else:
+        conn.execute("INSERT INTO att_saved (title, month, data, created_at, updated_at) VALUES (?,?,?,?,?)",
+                     (title, month, data, now, now))
     conn.commit()
     conn.close()
     return jsonify({"ok": True})
@@ -7862,9 +7875,12 @@ def att_save():
 @require_login
 def att_list():
     conn = get_conn()
-    rows = conn.execute("SELECT id, title, month, created_at FROM att_saved ORDER BY id DESC").fetchall()
+    rows = conn.execute("""
+        SELECT id, title, month, created_at, updated_at FROM att_saved
+        ORDER BY COALESCE(NULLIF(updated_at,''), created_at) DESC
+    """).fetchall()
     conn.close()
-    return jsonify([{"id": r[0], "title": r[1], "month": r[2], "created_at": r[3]} for r in rows])
+    return jsonify([{"id": r[0], "title": r[1], "month": r[2], "created_at": r[3], "updated_at": r[4]} for r in rows])
 
 
 @app.route("/api/att/load/<int:rid>", methods=["GET"])

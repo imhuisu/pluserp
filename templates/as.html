@@ -707,13 +707,16 @@ tbody tr:hover td{background:#f0f5ff!important;}
   <div id="asRefGroupTabs" class="as-ref-group-tabs">
     <button class="active" data-group="전체">전체</button>
     <button data-group="공통">공통</button>
-    <button data-group="나인도어">나인도어</button>
+    <button data-group="엔토브">엔토브</button>
     <button data-group="로이도어">로이도어</button>
     <button data-group="리젠도어">리젠도어</button>
-    <button data-group="엔토브">엔토브</button>
+    <button data-group="나인도어">나인도어</button>
     <button data-group="클래식도어">클래식도어</button>
+    <button data-group="대문">대문</button>
     <button data-group="폴딩도어">폴딩도어</button>
     <button data-group="시스템도어">시스템도어</button>
+    <button data-group="T/T창">T/T창</button>
+    <button data-group="중문">중문</button>
     <button data-group="방충망">방충망</button>
     <button data-group="기타">기타</button>
     <button data-group="A/S영상" style="border-color:#d83b01!important;color:#d83b01!important">A/S영상</button>
@@ -2919,16 +2922,25 @@ document.addEventListener("DOMContentLoaded",()=>{
 @media(max-width:700px){
   .as-ref-items-grid{grid-template-columns:1fr!important;}
 }
-.as-video-list{display:flex;flex-direction:column;gap:12px;grid-column:1/-1;max-width:50%;}
+.as-video-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;grid-column:1/-1;width:100%;}
+@media(max-width:768px){.as-video-list{grid-template-columns:1fr;}}
 .as-video-group{border:1px solid var(--border,#d0d7de);border-radius:8px;overflow:hidden;}
 .as-video-group-title{background:#1a3a5c;color:#fff;font-weight:700;font-size:13px;padding:9px 14px;}
-.as-video-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-light,#e8ecf0);}
+.as-video-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-light,#e8ecf0);cursor:pointer;}
 .as-video-item:last-child{border-bottom:none;}
-.as-video-content{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.as-video-copy-btn{flex-shrink:0;background:#1a3a5c;color:#fff;border:none!important;padding:6px 14px!important;border-radius:5px!important;cursor:pointer;font-size:12px!important;font-weight:700!important;}
-.as-video-copy-btn:hover{background:#122b45!important;}
-.as-video-open-btn{flex-shrink:0;background:#e85d04;color:#fff;border:none!important;padding:6px 14px!important;border-radius:5px!important;cursor:pointer;font-size:12px!important;font-weight:700!important;}
-.as-video-open-btn:hover{background:#c44d00!important;}
+.as-video-item:hover{background:#f5f8ff;}
+.as-video-content{flex:1;font-size:13px;white-space:normal;word-break:break-word;line-height:1.5;}
+.as-video-link-btn{flex-shrink:0;background:#1a3a5c;color:#fff;border:none!important;padding:6px 14px!important;border-radius:5px!important;cursor:pointer;font-size:12px!important;font-weight:700!important;}
+.as-video-link-btn:hover{background:#122b45!important;}
+#asVideoPopup{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:flex-end;justify-content:center;}
+#asVideoPopup.open{display:flex;}
+.as-video-popup-sheet{background:#fff;border-radius:16px 16px 0 0;padding:20px 20px 32px;width:100%;max-width:520px;box-sizing:border-box;}
+.as-video-popup-title{font-size:13px;color:#444;line-height:1.6;margin-bottom:16px;word-break:break-word;}
+.as-video-popup-btns{display:flex;gap:10px;}
+.as-video-popup-btns button,.as-video-popup-btns a{flex:1;padding:12px;border-radius:8px;border:none;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;}
+.as-video-popup-copy{background:#1a3a5c;color:#fff;}
+.as-video-popup-open{background:#e85d04;color:#fff;}
+.as-video-popup-cancel{background:#f0f0f0;color:#333;margin-top:10px;}
 </style>
 
 
@@ -2994,11 +3006,23 @@ document.addEventListener("DOMContentLoaded",()=>{
     </div>`;
   }
 
-  window.copyAsVideoLink = function(url, btn){
+  window.openAsVideoPopup = function(url, content){
+    const popup = document.getElementById('asVideoPopup');
+    document.getElementById('asVideoPopupTitle').textContent = content;
+    document.getElementById('asVideoPopupOpenBtn').href = url;
+    window._asVideoPopupUrl = url;
+    popup.classList.add('open');
+  };
+  window.closeAsVideoPopup = function(){
+    document.getElementById('asVideoPopup').classList.remove('open');
+  };
+  window.copyAsVideoLinkPopup = function(){
+    const url = window._asVideoPopupUrl;
+    if(!url) return;
     navigator.clipboard.writeText(url).then(()=>{
-      const orig = btn.textContent;
+      const btn = document.getElementById('asVideoPopupCopyBtn');
       btn.textContent = '복사됨!';
-      setTimeout(()=>{ btn.textContent = orig; }, 1500);
+      setTimeout(()=>{ btn.textContent = '링크복사'; closeAsVideoPopup(); }, 1000);
     });
   };
 
@@ -3024,14 +3048,20 @@ document.addEventListener("DOMContentLoaded",()=>{
           if(!grouped[g]) grouped[g] = [];
           grouped[g].push(item);
         }
+        const VIDEO_ORDER=['공통','엔토브','로이도어','리젠도어','나인도어','클래식도어','대문','폴딩도어','시스템도어','T/T창','중문','방충망'];
+        const sortedPgs=Object.keys(grouped).sort((a,b)=>{
+          const ai=VIDEO_ORDER.indexOf(a), bi=VIDEO_ORDER.indexOf(b);
+          if(ai<0&&bi<0) return a.localeCompare(b,'ko');
+          if(ai<0) return 1; if(bi<0) return -1;
+          return ai-bi;
+        });
         let html = '<div class="as-video-list">';
-        for(const [pg, rows] of Object.entries(grouped)){
-          html += `<div class="as-video-group"><div class="as-video-group-title">${esc(pg)}</div>`;
+        for(const pg of sortedPgs){ const rows=grouped[pg];
+          html += `<div class="as-video-group" style="align-self:start"><div class="as-video-group-title">${esc(pg)}</div>`;
           for(const row of rows){
-            html += `<div class="as-video-item">
-              <span class="as-video-content" title="${esc(row.content)}">${esc(row.content)}</span>
-              <button class="as-video-copy-btn" onclick="copyAsVideoLink('${esc(row.url)}', this)">링크복사</button>
-              <a class="as-video-open-btn" href="${esc(row.url)}" target="_blank" rel="noopener" style="text-decoration:none">링크열기</a>
+            html += `<div class="as-video-item" onclick="openAsVideoPopup('${esc(row.url)}','${esc(row.content)}')">
+              <span class="as-video-content">${esc(row.content)}</span>
+              <button class="as-video-link-btn" onclick="openAsVideoPopup('${esc(row.url)}','${esc(row.content)}');event.stopPropagation()">링크</button>
             </div>`;
           }
           html += '</div>';
@@ -3208,6 +3238,19 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
 })();
 </script>
+
+<div id="asVideoPopup" onclick="if(event.target===this)closeAsVideoPopup()">
+  <div class="as-video-popup-sheet">
+    <div class="as-video-popup-title" id="asVideoPopupTitle"></div>
+    <div class="as-video-popup-btns">
+      <button id="asVideoPopupCopyBtn" class="as-video-popup-copy" onclick="copyAsVideoLinkPopup()">링크복사</button>
+      <a id="asVideoPopupOpenBtn" class="as-video-popup-open" href="#" target="_blank" rel="noopener" onclick="closeAsVideoPopup()">링크열기</a>
+    </div>
+    <div class="as-video-popup-btns" style="margin-top:10px">
+      <button class="as-video-popup-cancel" onclick="closeAsVideoPopup()">닫기</button>
+    </div>
+  </div>
+</div>
 </div><!-- /csSecAS -->
 
 <div id="csSecConstruction" class="cs-section">

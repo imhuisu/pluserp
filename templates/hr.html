@@ -2066,6 +2066,8 @@ function attRecalcAll(){
 var attData = {};
 var attMonth = '';
 var attEmployees = [];
+var attCurrentSavedId = null;
+var attCurrentSavedOrg = null;
 var attHolidays = new Set(); // "6/15" 형식
 
 function attGetMonthYear(){
@@ -2231,6 +2233,8 @@ async function attUpload(){
   var res = await fetch('/api/hr/attendance/parse', {method:'POST', body:fd});
   var d = await res.json();
   if(!d.ok){ alert(d.error||'파싱 실패'); return; }
+  attCurrentSavedId = null;
+  attCurrentSavedOrg = null;
   attData = d.data;
   attMonth = d.month;
   attEmployees = d.employees;
@@ -2382,12 +2386,13 @@ function attBuildStatHtml(depts, empStats, primaryOf, prefix){
       html+=`<tr data-dept="${key}" style="display:none;background:#f0f4ff">
         <td colspan="4" style="${THDT}">▸ 총괄</td>
       </tr>`;
-      var gWd=0,gHol=0,gDays=0;
+      var gWd=0,gHol=0,gDays=0,gCount=0;
       directNames.forEach(function(name){
-        var r=memberRow(name,'총괄'); html+=r.html; gWd+=r.wdOT; gHol+=r.holWork; gDays+=r.workDays;
+        var r=memberRow(name,'총괄'); html+=r.html; gWd+=r.wdOT; gHol+=r.holWork; gDays+=r.workDays; if(r.wdOT!==undefined&&primaryOf[name]&&primaryOf[name].di===di&&primaryOf[name].team==='총괄') gCount++;
       });
+      gCount=directNames.filter(function(n){return primaryOf[n]&&primaryOf[n].team==='총괄';}).length;
       html+=`<tr data-dept="${key}" style="display:none">
-        <td style="${TSUM}">총괄 계</td><td style="${TSUM}">${gDays}일</td>
+        <td style="${TSUM}">총괄 계 (${gCount}명)</td><td style="${TSUM}">${gDays}일</td>
         <td style="${TSUM};color:#1a3a5c">${attMinToStr(gWd)||'-'}</td>
         <td style="${TSUM};color:#c00">${attMinToStr(gHol)||'-'}</td>
       </tr>`;
@@ -2398,11 +2403,12 @@ function attBuildStatHtml(depts, empStats, primaryOf, prefix){
       html+=`<tr data-dept="${key}" style="display:none;background:#f0f4ff">
         <td colspan="4" style="${THDT}">▸ ${team.label}</td>
       </tr>`;
+      var tCount=team.members.filter(function(n){return primaryOf[n]&&primaryOf[n].team===team.label;}).length;
       team.members.forEach(function(name){
         var r=memberRow(name,team.label); html+=r.html; tWd+=r.wdOT; tHol+=r.holWork; tDays+=r.workDays;
       });
       html+=`<tr data-dept="${key}" style="display:none">
-        <td style="${TSUM}">${team.label} 계</td><td style="${TSUM}">${tDays}일</td>
+        <td style="${TSUM}">${team.label} 계 (${tCount}명)</td><td style="${TSUM}">${tDays}일</td>
         <td style="${TSUM};color:#1a3a5c">${attMinToStr(tWd)||'-'}</td>
         <td style="${TSUM};color:#c00">${attMinToStr(tHol)||'-'}</td>
       </tr>`;
@@ -2417,8 +2423,8 @@ function attBuildStatHtml(depts, empStats, primaryOf, prefix){
   return html||'<tr><td colspan="4" style="text-align:center;padding:20px;color:#999">데이터 없음</td></tr>';
 }
 
-async function attGetOrgAndPrimary(empStats){
-  var org=await attLoadOrg();
+async function attGetOrgAndPrimary(empStats, orgOverride){
+  var org=orgOverride||await attLoadOrg();
   var depts=Array.isArray(org)?org:(org.departments||[]);
   var primaryOf={};
   depts.forEach(function(dept,di){
@@ -2448,8 +2454,114 @@ async function attRenderStat(){
     });
     empStats[name]={workDays,wdOT,holWork};
   });
-  var o=await attGetOrgAndPrimary(empStats);
+  var o=await attGetOrgAndPrimary(empStats, attCurrentSavedOrg);
   document.getElementById('attStatBody').innerHTML=attBuildStatHtml(o.depts,empStats,o.primaryOf,'m');
+}
+
+function attFormatMonths(monthSet){
+  if(!monthSet||!monthSet.size) return '';
+  var sorted=Array.from(monthSet).sort(function(a,b){return a-b;});
+  var ranges=[],start=sorted[0],end=sorted[0];
+  for(var i=1;i<sorted.length;i++){
+    if(sorted[i]===end+1) end=sorted[i];
+    else{ ranges.push(start===end?start+'월':start+'~'+end+'월'); start=end=sorted[i]; }
+  }
+  ranges.push(start===end?start+'월':start+'~'+end+'월');
+  return ranges.join(', ');
+}
+
+function attYearAccumulate(deptYearStats, monthData, orgData, fallbackOrg, monthStr){
+  var org=orgData||fallbackOrg;
+  var depts=Array.isArray(org)?org:(org.departments||[]);
+  var primaryOf={};
+  depts.forEach(function(dept){
+    var dl=dept.label;
+    if(dept.head&&monthData[dept.head.name]&&!primaryOf[dept.head.name])
+      primaryOf[dept.head.name]={dept:dl,team:'총괄'};
+    (dept.members||[]).forEach(function(m){
+      if(monthData[m.name]&&!primaryOf[m.name]) primaryOf[m.name]={dept:dl,team:'총괄'};
+    });
+    (dept.teams||[]).forEach(function(t){
+      (t.members||[]).forEach(function(m){
+        if(monthData[m.name]&&!primaryOf[m.name]) primaryOf[m.name]={dept:dl,team:t.label};
+      });
+    });
+  });
+  var mn=monthStr?(monthStr.match(/(\d+)월/)||[])[1]:null;
+  var monthNum=mn?parseInt(mn):null;
+  Object.keys(monthData).forEach(function(name){
+    var p=primaryOf[name]; if(!p) return;
+    var records=monthData[name]||[], workDays=0,wdOT=0,holWork=0;
+    records.forEach(function(r){
+      if(r.checkin&&r.checkin.trim()&&r.checkout&&r.checkout.trim()) workDays++;
+      wdOT+=typeof r.overtime==='number'?r.overtime:0;
+      holWork+=typeof r.holiday_work==='number'?r.holiday_work:0;
+    });
+    if(!deptYearStats[p.dept]) deptYearStats[p.dept]={};
+    if(!deptYearStats[p.dept][p.team]) deptYearStats[p.dept][p.team]={};
+    if(!deptYearStats[p.dept][p.team][name]) deptYearStats[p.dept][p.team][name]={workDays:0,wdOT:0,holWork:0,months:new Set()};
+    deptYearStats[p.dept][p.team][name].workDays+=workDays;
+    deptYearStats[p.dept][p.team][name].wdOT+=wdOT;
+    deptYearStats[p.dept][p.team][name].holWork+=holWork;
+    if(monthNum) deptYearStats[p.dept][p.team][name].months.add(monthNum);
+  });
+}
+
+function attBuildYearStatHtml(deptYearStats, currentDepts, prefix, totalMonths){
+  var TD='border:1px solid #ccc;padding:5px 8px;text-align:center;white-space:nowrap';
+  var TSUM='border:1px solid #ccc;padding:5px 8px;background:#efefef;font-weight:700;text-align:center;white-space:nowrap';
+  var DSUM='border:1px solid #ccc;padding:5px 8px;background:#fef6ee;font-weight:700;text-align:center;white-space:nowrap';
+  var THDR='border:1px solid #bbb;padding:6px 10px;font-weight:700;text-align:left;white-space:nowrap';
+  var THDT='border:1px solid #ddd;padding:4px 10px;font-size:11px;font-weight:700;text-align:left;color:#555;white-space:nowrap';
+  var html=''; var di=0;
+  var rendered=new Set();
+
+  function renderDept(dLabel){
+    var dData=deptYearStats[dLabel]; if(!dData||rendered.has(dLabel)) return;
+    rendered.add(dLabel);
+    var key=prefix+di;
+    var deptWd=0,deptHol=0,deptDays=0;
+    html+=`<tr style="background:#dbeafe;cursor:pointer" onclick="attStatToggle(${di},'${prefix}')">
+      <td colspan="4" style="${THDR};color:#1a3a5c"><span id="attStatArr${key}" data-open="0">▶</span>&nbsp;${dLabel}</td>
+    </tr>`;
+    var teams=Object.keys(dData).sort(function(a,b){return a==='총괄'?-1:b==='총괄'?1:0;});
+    teams.forEach(function(teamLabel){
+      var teamData=dData[teamLabel];
+      var names=Object.keys(teamData); if(!names.length) return;
+      var tWd=0,tHol=0,tDays=0,tPersonMonths=0;
+      html+=`<tr data-dept="${key}" style="display:none;background:#f0f4ff"><td colspan="4" style="${THDT}">▸ ${teamLabel}</td></tr>`;
+      names.forEach(function(name){
+        var s=teamData[name];
+        deptWd+=s.wdOT; deptHol+=s.holWork; deptDays+=s.workDays;
+        tWd+=s.wdOT; tHol+=s.holWork; tDays+=s.workDays;
+        tPersonMonths+=s.months?s.months.size:0;
+        var periodStr=s.months&&s.months.size?'<br><span style="font-size:10px;color:#888">'+attFormatMonths(s.months)+'</span>':'';
+        html+=`<tr data-dept="${key}" style="display:none">
+          <td style="${TD}">${name}${periodStr}</td><td style="${TD}">${s.workDays}일</td>
+          <td style="${TD};color:${s.wdOT>0?'#1a3a5c':'#aaa'}">${attMinToStr(s.wdOT)||'-'}</td>
+          <td style="${TD};color:${s.holWork>0?'#c00':'#aaa'}">${attMinToStr(s.holWork)||'-'}</td>
+        </tr>`;
+      });
+      var avgStr=totalMonths>0?(tPersonMonths/totalMonths).toFixed(1)+'명':''+names.length+'명';
+      html+=`<tr data-dept="${key}" style="display:none">
+        <td style="${TSUM}">${teamLabel} 계 (평균 ${avgStr})</td><td style="${TSUM}">${tDays}일</td>
+        <td style="${TSUM};color:#1a3a5c">${attMinToStr(tWd)||'-'}</td>
+        <td style="${TSUM};color:#c00">${attMinToStr(tHol)||'-'}</td>
+      </tr>`;
+    });
+    html+=`<tr>
+      <td style="${DSUM}">${dLabel} 계</td><td style="${DSUM}">${deptDays}일</td>
+      <td style="${DSUM};color:#b34700">${attMinToStr(deptWd)||'-'}</td>
+      <td style="${DSUM};color:#c00">${attMinToStr(deptHol)||'-'}</td>
+    </tr>`;
+    di++;
+  }
+
+  // 현재 org 순서 기준으로 먼저 렌더
+  currentDepts.forEach(function(dept){ renderDept(dept.label); });
+  // 현재 org에 없는 과거 부서 (이동한 부서 등)
+  Object.keys(deptYearStats).forEach(function(dLabel){ renderDept(dLabel); });
+  return html||'<tr><td colspan="4" style="text-align:center;padding:20px;color:#999">데이터 없음</td></tr>';
 }
 
 async function attRenderYearlyStat(){
@@ -2458,16 +2570,15 @@ async function attRenderYearlyStat(){
   var year=my.year;
   document.getElementById('attYearStatLabel').textContent=year+'년';
 
+  var currentOrg=await attLoadOrg();
+  var currentDepts=Array.isArray(currentOrg)?currentOrg:(currentOrg.departments||[]);
+  var deptYearStats={};
+  var allMonths=new Set();
+
   // 현재 로드된 월 합산
-  var yearStats={};
-  attEmployees.forEach(function(name){
-    if(!yearStats[name]) yearStats[name]={workDays:0,wdOT:0,holWork:0};
-    (attData[name]||[]).forEach(function(r){
-      if(r.checkin&&r.checkin.trim()&&r.checkout&&r.checkout.trim()) yearStats[name].workDays++;
-      yearStats[name].wdOT+=typeof r.overtime==='number'?r.overtime:0;
-      yearStats[name].holWork+=typeof r.holiday_work==='number'?r.holiday_work:0;
-    });
-  });
+  var mn0=attMonth?(attMonth.match(/(\d+)월/)||[])[1]:null;
+  if(mn0) allMonths.add(parseInt(mn0));
+  attYearAccumulate(deptYearStats, attData, attCurrentSavedOrg, currentOrg, attMonth);
 
   // 저장된 내역 중 같은 연도, 현재 month 제외, month별 최신만
   try{
@@ -2479,25 +2590,17 @@ async function attRenderYearlyStat(){
       if(item.month===attMonth) return;
       if(!monthMap[item.month]||item.id>monthMap[item.month].id) monthMap[item.month]=item;
     });
-    var months=Object.values(monthMap);
-    for(var i=0;i<months.length;i++){
-      var lr=await fetch('/api/att/load/'+months[i].id);
+    var savedItems=Object.values(monthMap);
+    for(var i=0;i<savedItems.length;i++){
+      var lr=await fetch('/api/att/load/'+savedItems[i].id);
       var ld=await lr.json();
-      var ldData=ld.data||{};
-      var ldEmps=ld.employees||Object.keys(ldData);
-      ldEmps.forEach(function(name){
-        if(!yearStats[name]) yearStats[name]={workDays:0,wdOT:0,holWork:0};
-        (ldData[name]||[]).forEach(function(r){
-          if(r.checkin&&r.checkin.trim()&&r.checkout&&r.checkout.trim()) yearStats[name].workDays++;
-          yearStats[name].wdOT+=typeof r.overtime==='number'?r.overtime:0;
-          yearStats[name].holWork+=typeof r.holiday_work==='number'?r.holiday_work:0;
-        });
-      });
+      var mn1=ld.month?(ld.month.match(/(\d+)월/)||[])[1]:null;
+      if(mn1) allMonths.add(parseInt(mn1));
+      attYearAccumulate(deptYearStats, ld.data||{}, ld.org||null, currentOrg, ld.month);
     }
   }catch(e){}
 
-  var o=await attGetOrgAndPrimary(yearStats);
-  document.getElementById('attYearStatBody').innerHTML=attBuildStatHtml(o.depts,yearStats,o.primaryOf,'y');
+  document.getElementById('attYearStatBody').innerHTML=attBuildYearStatHtml(deptYearStats, currentDepts, 'y', allMonths.size);
 }
 
 function attEdit(input){
@@ -2612,7 +2715,10 @@ async function attSaveData(){
     var ins=tr.querySelectorAll('input');
     extra.push([ins[0]?ins[0].value:'',ins[1]?ins[1].value:'',ins[2]?ins[2].value:'']);
   });
-  var obj={month:attMonth,title:attMonth,employees:attEmployees,data:attData,holidays:[...attHolidays],goOut:goOut,extra:extra,cond:attCond};
+  var orgSnap=attCurrentSavedOrg||attOrgCache||null;
+  if(!orgSnap){ try{ orgSnap=await attLoadOrg(); }catch(e){} }
+  var obj={month:attMonth,title:attMonth,employees:attEmployees,data:attData,holidays:[...attHolidays],goOut:goOut,extra:extra,cond:attCond,org:orgSnap};
+  if(attCurrentSavedId) obj.id=attCurrentSavedId;
   var btn=document.getElementById('attSaveBtn');
   if(btn)btn.disabled=true;
   try{
@@ -2680,6 +2786,8 @@ async function attApplySaved(id){
   var res=await fetch('/api/att/load/'+id);
   if(!res.ok){alert('불러오기 실패');return;}
   var obj=await res.json();
+  attCurrentSavedId=id;
+  attCurrentSavedOrg=obj.org||null;
   attApplyObj(obj);
   document.getElementById('attLoadModal').style.display='none';
 }
